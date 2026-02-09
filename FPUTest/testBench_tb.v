@@ -9,11 +9,13 @@ begin
 end
 
 
+`ifdef SINGLE
 initial
 begin
         $dumpfile("fpuTB.vcd");
         $dumpvars(0, test_bench_tb);
 end
+`endif
 
 
 initial

@@ -18,6 +18,8 @@ module FADDd #(
         input  wire        [NFULLSIG:0] rs2Sig_i,
         input  wire        [5:0]        rs2Class_i,
         input  wire        [2:0]        rm_i,
+        input  wire                     isFMA_i,
+        input  wire                     rs1rs2Inf_i,
 
         output wire        [FLEN-1:0]   faddOut_o
 );
@@ -91,13 +93,25 @@ always @(*) begin
                 out = rs1Class_i[CLASS_BIT_SNAN] ? rs1_i : rs2_i;
         end
         // Zero
+        else if (rs1Class_i[CLASS_BIT_ZERO] && rs2Class_i[CLASS_BIT_ZERO]) begin
+                // If both inputs are Zero and same sign, use that sign
+                // Otherwise, output is positive unless rounding is towards negative
+                if (rs1_i[FLEN-1] == rs2_i[FLEN-1] || isFMA_i)
+                        out = rs1_i;
+                else
+                        out = {(rm_i == 3'b010), {FLEN-1{1'b0}}};
+        end
         else if (rs1Class_i[CLASS_BIT_ZERO] || rs2Class_i[CLASS_BIT_ZERO]) begin
                 out = rs1Class_i[CLASS_BIT_ZERO] ? rs2_i : rs1_i;
         end
         // Infinity
         else if (rs1Class_i[CLASS_BIT_INF] && rs2Class_i[CLASS_BIT_INF]) begin
+                // if is FMA and rs1 and rs2 are not infinity, return rs2
+                if (isFMA_i && !rs1rs2Inf_i) begin
+                        out = rs2_i;
+                end
                 // if signs differ, return QNaN
-                if (rs1_i[FLEN-1] ^ rs2_i[FLEN-1]) begin
+                else if (rs1_i[FLEN-1] ^ rs2_i[FLEN-1]) begin
                         out = QNAN;
                 end
                 // If signs the same and round to nearest, return infinity
@@ -144,7 +158,7 @@ always @(*) begin
 
                 // Normalize
                 adjExpNorm = adjExp + shamtConst - {{NEXP-4{1'b0}}, sumSigCLZ};
-                if (adjExpNorm < EMIN || sumSig == 0) begin
+                if (adjExpNorm < (EMIN - NSIG) || sumSig == 0) begin
                         sumSigNorm = 0;
                         adjExpNorm = EMIN - 1;
                         sumSign = 1'b0;

@@ -57,6 +57,12 @@ always @(*) begin
         // +0 = -0
         else if (rs1Class_i[CLASS_BIT_ZERO] && rs2Class_i[CLASS_BIT_ZERO]) begin
                 out = 3'b011;
+        end
+        else if (rs1Class_i[CLASS_BIT_ZERO] && rs2Class_i[CLASS_BIT_SUB]) begin
+                out = (rs2_i[FLEN-1]) ? 3'b000 : 3'b110;
+        end
+        else if (rs2Class_i[CLASS_BIT_ZERO] && rs1Class_i[CLASS_BIT_SUB]) begin
+                out = (rs1_i[FLEN-1]) ? 3'b110 : 3'b000;
         end else begin
                 out = {X_LT_Y, X_LE_Y, X_EQ_Y};
         end

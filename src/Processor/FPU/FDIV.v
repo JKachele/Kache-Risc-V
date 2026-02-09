@@ -57,7 +57,7 @@ reg  [5:0] counter;
 // Only one cycle is needed to handle special cases
 localparam SPECIAL_CYCLES = 1;
 // Enough cycles to compute full significand with extra bits for rounding and normalizing
-localparam DIVIDE_CYCLES = NSIG + 4;
+localparam DIVIDE_CYCLES = NSIG + 5;
 
 // Status Flags
 reg special;    // Special Cases (NaN, inf, zero)
@@ -69,13 +69,14 @@ wire [FLEN-1:0] roundedInfinity = {qSign, {NEXP-1{1'b1}}, ~si, {NSIG{si}}};
 
 // Rounding
 localparam roundLen = (NSIG + 3) * 2;
+reg         [roundLen-1:0] sigIn;
 wire        [NSIG:0] sigOut;
 wire signed [NEXP+1:0]  expOut;
 FRound #(.nInt(roundLen), .nExp(NEXP), .nSig(NSIG)
-)round(qSign, {qSig, aSig}, expIn, rm_i, sigOut, expOut);
+)round(qSign, sigIn, expIn, rm_i, sigOut, expOut);
 
 always @(posedge clk_i) begin
-        if (!divEnable_i) begin
+        if (!divEnable_i || reset_i) begin
                 counter <= 0;
         end else if (counter == 0 && !reset_i) begin
                 // Treat special cases as default
@@ -131,33 +132,44 @@ always @(posedge clk_i) begin
                                 rSig = aSig - bSig;
                                 qSig = {qSig[NSIG+1:0], ~rSig[NSIG+2]};
                                 aSig = {(rSig[NSIG+2] ? aSig[NSIG+1:0] : rSig[NSIG+1:0]), 1'b0};
+                                sigIn = {qSig, aSig};
 
                                 // DEBUG: Show current state of computation
                                 divOut = {{FLEN-(NSIG+3){1'b0}}, qSig};
                         end
                 endcase
                 /* verilator lint_on CASEOVERLAP */
-        end else if (counter > 2) begin // Continue computing significand
+        end else if (counter > 3) begin // Continue computing significand
                 counter <= counter - 1;
 
                 rSig = aSig - bSig;
                 qSig = {qSig[NSIG+1:0], ~rSig[NSIG+2]};
                 aSig = {(rSig[NSIG+2] ? aSig[NSIG+1:0] : rSig[NSIG+1:0]), 1'b0};
+                sigIn = {qSig, aSig};
 
                 // DEBUG: Show current state of computation
                 divOut = {{FLEN-(NSIG+3){1'b0}}, qSig};
-        end else if (counter > 1) begin // Set exponent and normalize quotient if needed
+        end else if (counter > 2) begin // Set exponent and normalize quotient if needed
                 counter <= counter - 1;
 
                 // Set the quotient exponent and normalize if needed
                 expNorm[0] = ~qSig[NSIG+2];
                 expIn = rs1Exp_i - rs2Exp_i - expNorm;
                 qSig = qSig << ~qSig[NSIG+2];
+                sigIn = {qSig, aSig};
 
                 // expIn and {qSig, aSig} will go into the rounding module
 
                 // DEBUG: Show current state of computation
                 divOut = {{FLEN-(NSIG+3){1'b0}}, qSig};
+        end else if (counter > 1) begin // Shift significand if subnormal
+                counter <= counter - 1;
+
+                if (expIn < EMIN && expIn >= (EMIN - NSIG - 1)) begin
+                        sigIn = sigIn >> (EMIN - expIn);
+                end
+
+                divOut = sigIn[roundLen-1:roundLen-FLEN];
         end else if (counter > 0) begin // Construct final output
                 counter <= counter - 1;
 
@@ -168,9 +180,13 @@ always @(posedge clk_i) begin
                                 // Negative zero if rounding mode is towards -infinity
                                 divOut <= {rm_i == 3'b010, {FLEN-1{1'b0}}};
                         end
+                        // Underflow
+                        else if (expOut < (EMIN - NSIG - 1)) begin
+                                divOut <= {qSign, {FLEN-1{1'b0}}};
+                        end
                         // Subnormal
-                        else if (expOut < EMIN) begin
-                                divOut <= {qSign, {NEXP{1'b0}}, sigOut[NSIG-1:0]};
+                        else if (expIn < EMIN) begin
+                                divOut = {qSign, {NEXP{1'b0}}, sigOut[NSIG-1:0]};
                         end
                         // Overflow
                         else if (expOut > EMAX) begin

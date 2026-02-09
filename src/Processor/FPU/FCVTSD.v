@@ -55,7 +55,7 @@ always @(*) begin
                 classOut = CLASS_SNAN;
         end
         else if (rs1Class[CLASS_BIT_INF]) begin
-                ftodOut = {rs1[31], {10{1'b1}}, 1'b0, 52'b0};
+                ftodOut = {rs1[31], {11{1'b1}}, 52'b0};
                 classOut = CLASS_INF;
         end
         else if (rs1Class[CLASS_BIT_ZERO]) begin
@@ -100,20 +100,20 @@ FRound #(.nInt(53),.nExp(11))round(rs1_i[63], outSig, rs1Exp_i, rm_i, outSigRoun
 always @(*) begin
         outSig = 0;
         outExpBiased = 0;
-        if (rs1Class_i[CLASS_BIT_QNAN]) begin
-                dtofOut = {rs1_i[63], {8{1'b1}}, 1'b1, 22'b0};
-        end
-        else if (rs1Class_i[CLASS_BIT_SNAN]) begin
-                dtofOut = {rs1_i[63], {8{1'b1}}, rs1_i[51:29]};
+        // if (rs1Class_i[CLASS_BIT_QNAN]) begin
+        //         dtofOut = {rs1_i[63], {9{1'b1}}, 22'b0};
+        // end
+        if (rs1Class_i[CLASS_BIT_QNAN] || rs1Class_i[CLASS_BIT_SNAN]) begin
+                dtofOut = {rs1_i[63], {9{1'b1}}, rs1_i[50:29]};
         end
         else if (rs1Class_i[CLASS_BIT_INF]) begin
-                dtofOut = {rs1_i[63], {7{1'b1}}, 1'b0, 23'b0};
+                dtofOut = {rs1_i[63], {8{1'b1}}, 23'b0};
         end
         else if (rs1Class_i[CLASS_BIT_ZERO]) begin
                 dtofOut = {rs1_i[63], 31'b0};
         end
         // Underflow
-        if (rs1Exp_i < -149) begin // Too small for subnormals
+        else if (rs1Exp_i < -150) begin // Too small for subnormals
                 dtofOut = {rs1_i[63], 31'b0};
         end
         // Subnormal

@@ -11,14 +11,14 @@ module testBench (
         input wire rst
 );
 
-reg [63:0] input_a [0:999];
-reg [63:0] input_b [0:999];
-reg [63:0] input_c [0:999];
+reg [31:0] input_a [0:999];
+reg [31:0] input_b [0:999];
+reg [31:0] input_c [0:999];
 
 initial begin
         $readmemh("stim_a",input_a);
         $readmemh("stim_b",input_b);
-        // $readmemh("stim_c",input_c);
+        $readmemh("stim_c",input_c);
 end
 
 integer outputFile;
@@ -27,11 +27,12 @@ initial begin
         $fclose(outputFile);
 end
 
-reg [31:0] instr = 32'h02007053; // FADD.D
+reg [31:0] instr = 32'h00000013;
 reg [9:0] index;
 reg [63:0] rs1;
 reg [63:0] rs2;
 reg [63:0] rs3;
+reg [31:0] out;
 
 wire busy;
 wire [63:0] fpuOut;
@@ -49,27 +50,47 @@ FPU fpu(
         .fpuOut_o(fpuOut)
 );
 
-reg state;
+localparam NOP = 32'h00000013;
+localparam FLOP = 32'h2a001053;
+
+reg [1:0] state;
 always @(posedge clk) begin
         if (rst == 1'b1) begin
                 state <= 0;
                 index <= 0;
+                instr <= NOP;
         end
         else begin
                 case(state)
                         0: begin
-                                rs1 <= input_a[index];
-                                rs2 <= input_b[index];
-                                rs3 <= input_c[index];
-                                state <= 1;
+                                if (input_a[index][0] === 1'bx) begin
+                                        $finish;
+                                end else begin
+                                        rs1 <= {{32{1'b0}}, input_a[index]};
+                                        rs2 <= {{32{1'b0}}, input_b[index]};
+                                        rs3 <= {{32{1'b0}}, input_c[index]};
+                                        instr <= FLOP;
+                                        state <= 1;
+                                end
                         end
-                        1: begin
-                                $display("%f + %f = %f", rs1, rs2, fpuOut);
-                                outputFile = $fopen("resp_z", "a");
-                                $fdisplayh(outputFile, fpuOut);
-                                $fclose(outputFile);
+                        1: begin // Wait
+                                if (!busy) begin
+                                        out <= fpuOut[31:0];
+                                        instr <= NOP;
+                                        state <= 2;
+                                end
+                        end
+                        2: begin
+                                if (out[0] !== 1'bx) begin
+                                `ifdef SINGLE
+                                        $display("%x", out);
+                                `endif
+                                        outputFile = $fopen("resp_z", "a");
+                                        $fdisplayh(outputFile, out);
+                                        $fclose(outputFile);
+                                end
                                 index <= index + 1;
-                                if (index == 3)
+                                if (index == 1000)
                                         $finish;
                                 state <= 0;
                         end

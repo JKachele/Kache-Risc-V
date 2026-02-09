@@ -89,11 +89,11 @@ void graphics_set_pixel(int x, int y, float r, float g, float b) {
         uint8_t B = (uint8_t)(255.0f * b);
         // graphics output deactivated for bench run
         if(bench_run) {
-                if(y & 1) {
-                        if(x == graphics_width-1) {
-                                printf("%d",y/2);
-                        }
-                }
+                // if(y & 1) {
+                //         if(x == graphics_width-1) {
+                //                 printf("%d",y/2);
+                //         }
+                // }
                 return;
         } 
 #ifdef graphics_double_lines
@@ -426,9 +426,9 @@ vec3 cast_ray(
                         specular_light_intensity += powf(abc,def)*lights[i].intensity;
                 }
         }
-        // float f = diffuse_light_intensity * material.albedo.x;
-        // printf("\t%f: ", f);
-        // printf("(%f, %f)\n", diffuse_light_intensity, material.albedo.x);
+        float f = diffuse_light_intensity * material.albedo.x;
+        printf("\t%f: ", f);
+        printf("(%f, %f)\n", diffuse_light_intensity, material.albedo.x);
         vec3 result = vec3_scale(
                         diffuse_light_intensity * material.albedo.x, material.diffuse_color
                         );
@@ -450,7 +450,7 @@ static void render_pixel(
         float dir_x =  (i + 0.5) - graphics_width/2.;
         float dir_y = -(j + 0.5) + graphics_height/2.; // this flips the image.
         float dir_z = -graphics_height/(2.*tan(fov/2.));
-        // printf("%d, %d:\n", i, j);
+        printf("%d, %d:\n", i, j);
         vec3 C = cast_ray(
                         make_vec3(0,0,0), vec3_normalize(make_vec3(dir_x, dir_y, dir_z)),
                         spheres, nb_spheres, lights, nb_lights, 0
@@ -524,10 +524,10 @@ int main() {
         printf("Running without graphic output (for accurate measurement)...\n");
         render(spheres, nb_spheres, lights, nb_lights);
 
-        bench_run = 0;
-        graphics_width = 40;
-        graphics_height = 20;
-        render(spheres, nb_spheres, lights, nb_lights);
+        // bench_run = 0;
+        // graphics_width = 40;
+        // graphics_height = 20;
+        // render(spheres, nb_spheres, lights, nb_lights);
         graphics_terminate();
 
         return 0;

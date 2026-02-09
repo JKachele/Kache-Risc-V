@@ -21,6 +21,11 @@ module FPU (
         output wire        busy_o,
         output wire [63:0] fpuOut_o
 );
+`ifdef BENCH
+        `include "src/Processor/FPU/FClassFlags.vh"
+`else
+        `include "../src/Processor/FPU/FClassFlags.vh"
+`endif
 
 reg [31:0] out_s;
 reg [63:0] out_d;
@@ -86,6 +91,7 @@ reg        [31:0] addRs2;
 reg        [47:0] addRs2Sig;
 reg signed [10:0] addRs2Exp;
 reg        [5:0]  addRs2Class;
+wire              rs1rs2Inf = rs1Class[CLASS_BIT_INF] || rs2Class[CLASS_BIT_INF];
 
 always @(*) begin
         if (isFMA) begin
@@ -122,6 +128,8 @@ FADDd fadd(
         .rs2Sig_i(addRs2Sig),
         .rs2Class_i(addRs2Class),
         .rm_i(rm_i),
+        .isFMA_i(isFMA),
+        .rs1rs2Inf_i(rs1rs2Inf),
         .faddOut_o(faddOut)
 );
 
@@ -245,6 +253,7 @@ reg        [63:0]  addRs2_d;
 reg        [105:0] addRs2Sig_d;
 reg signed [13:0]  addRs2Exp_d;
 reg        [5:0]   addRs2Class_d;
+wire               rs1rs2Inf_d = rs1Class_d[CLASS_BIT_INF] || rs2Class_d[CLASS_BIT_INF];
 
 always @(*) begin
         if (isFMA) begin
@@ -255,7 +264,7 @@ always @(*) begin
 
                 addRs2_d      = (isFNMADD || isFMSUB) ? {~rs3_i[63], rs3_i[62:0]} : rs3_i;
                 addRs2Sig_d   = {rs3Sig_d, 53'b0};
-                addRs2Exp_d   = {rs3Exp_d[9], rs3Exp_d};
+                addRs2Exp_d   = {rs3Exp_d[12], rs3Exp_d};
                 addRs2Class_d = rs3Class_d;
         end else begin
                 addRs1_d      = rs1_i;
@@ -283,6 +292,8 @@ FADDd #(
         .rs2Sig_i(addRs2Sig_d),
         .rs2Class_i(addRs2Class_d),
         .rm_i(rm_i),
+        .isFMA_i(isFMA),
+        .rs1rs2Inf_i(rs1rs2Inf_d),
         .faddOut_o(faddOut_d)
 );
 

@@ -61,7 +61,7 @@ always @(*) begin
 end
 
 // double -> Int conversion
-wire signed [63:0] ftoiOut = {{32{1'b1}}, (rs1_i[63]) ? -$signed(ftoiRounded) : ftoiRounded};
+wire signed [63:0] ftoiOut = {{32{1'b1}}, (rs1_i[63] && normalNumber) ? -$signed(ftoiRounded) : ftoiRounded};
 wire        [31:0] ftoiRounded;
 reg         [52:0] ftoiNormal;
 reg         [52:0] ftoiRoundBits;
@@ -70,8 +70,10 @@ FRoundInt roundFtoi(rs1_i[63], ftoiNormal[31:0], ftoiRoundBits[52], |ftoiRoundBi
 
 wire signed [12:0]  ftoiShift    = 13'd52 - rs1Exp_i;
 
+reg normalNumber;
 always @(*) begin
         ftoiRoundBits = 53'b0;
+        normalNumber = 1'b0;
         /************************ Special Cases ************************/
         // Negatives are out-of-range for unsigned conversion. Returns 0
         if (rs1_i[63] && instr_i[0]) begin
@@ -83,7 +85,7 @@ always @(*) begin
         end
         // Positive infinity and NaN returns max value
         else if (|(rs1Class_i & INF_NAN_MASK)) begin
-                ftoiNormal = {21'b0, instr_i[0] ? 32'h7FFFFFFF : 32'hFFFFFFFF};
+                ftoiNormal = {21'b0, instr_i[0] ? 32'hFFFFFFFF : 32'h7FFFFFFF};
         end
         // Underflow: if float is < -2^31, return -2^31
         else if (rs1_i[63] && rs1Exp_i >= 31) begin
@@ -97,6 +99,7 @@ always @(*) begin
         end
         /************************ Conversion ************************/
         else begin
+                normalNumber = 1'b1;
                 ftoiNormal = rs1Sig_i >> ftoiShift;
                 ftoiRoundBits = rs1Sig_i << (53 - ftoiShift);
         end

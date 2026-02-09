@@ -106,7 +106,8 @@ always @(*) begin
 
                 // Pack output into 32/64 bit FP
                 // Underflow
-                if (outExp < (EMIN - NSIG)) begin // Too small for subnormals
+                // Too small for subnormals (-1 to account for rounding)
+                if (outExp < (EMIN - NSIG - 1)) begin
                         out = {outSign, {FLEN-1{1'b0}}};
                         outClass = CLASS_ZERO;
                 end
