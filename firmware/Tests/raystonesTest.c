@@ -16,7 +16,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "../libs/perf.h"
+// #include "../libs/perf.h"
 
 /*******************************************************************/
 
@@ -89,11 +89,11 @@ void graphics_set_pixel(int x, int y, float r, float g, float b) {
         uint8_t B = (uint8_t)(255.0f * b);
         // graphics output deactivated for bench run
         if(bench_run) {
-                if(y & 1) {
-                        if(x == graphics_width-1) {
-                                printf("%d",y/2);
-                        }
-                }
+                // if(y & 1) {
+                //         if(x == graphics_width-1) {
+                //                 printf("%d",y/2);
+                //         }
+                // }
                 return;
         } 
 #ifdef graphics_double_lines
@@ -162,30 +162,30 @@ static uint64_t cycles_start;
 // Begins statistics collection for current frame.
 // Leave emtpy if not needed.
 static inline void stats_begin_frame() {
-        instret_start = rdinstret();
-        cycles_start  = rdcycle();
+        // instret_start = rdinstret();
+        // cycles_start  = rdcycle();
 }
 
 // Ends statistics collection for current frame
 // and displays result.
 // Leave emtpy if not needed.
 static inline void stats_end_frame() {
-        graphics_terminate();
-        uint64_t instret = rdinstret() - instret_start;
-        uint64_t cycles = rdcycle()    - cycles_start ;
-        uint64_t kCPI       = cycles*1000/instret;
-        uint64_t pixels     = graphics_width * graphics_height;
-        uint64_t kRAYSTONES = (pixels*1000000000)/cycles;
-        printf(
-                        "\n%dx%d      %s     ",
-                        graphics_width,graphics_height,
-                        bench_run ?
-                        "no gfx output (measurement is accurate)" :
-                        "gfx output (measurement is NOT accurate)"
-              );
-        printf("CPI="); printk(kCPI); printf("     ");
-        printf("RAYSTONES="); printk(kRAYSTONES);
-        printf("\n");
+        // graphics_terminate();
+        // uint64_t instret = rdinstret() - instret_start;
+        // uint64_t cycles = rdcycle()    - cycles_start ;
+        // uint64_t kCPI       = cycles*1000/instret;
+        // uint64_t pixels     = graphics_width * graphics_height;
+        // uint64_t kRAYSTONES = (pixels*1000000000)/cycles;
+        // printf(
+        //                 "\n%dx%d      %s     ",
+        //                 graphics_width,graphics_height,
+        //                 bench_run ?
+        //                 "no gfx output (measurement is accurate)" :
+        //                 "gfx output (measurement is NOT accurate)"
+        //       );
+        // printf("CPI="); printk(kCPI); printf("     ");
+        // printf("RAYSTONES="); printk(kRAYSTONES);
+        // printf("\n");
 }
 
 // Normally you will not need to modify anything beyond that point.
@@ -415,6 +415,7 @@ vec3 cast_ray(
                                              )
                    ) continue ;
 
+                // printf("(%d: %f) ", i, diffuse_light_intensity);
                 diffuse_light_intensity  +=
                         lights[i].intensity * max(0.f, vec3_dot(light_dir,N));
 
@@ -429,6 +430,7 @@ vec3 cast_ray(
         // float f = diffuse_light_intensity * material.albedo.x;
         // printf("\t%f: ", f);
         // printf("\t%f: \t(%f, %f)\n", f, diffuse_light_intensity, material.albedo.x);
+        // printf("\t(%f, %f)\n", diffuse_light_intensity, material.albedo.x);
         vec3 result = vec3_scale(
                         diffuse_light_intensity * material.albedo.x, material.diffuse_color
                         );
@@ -455,6 +457,7 @@ static void render_pixel(
                         make_vec3(0,0,0), vec3_normalize(make_vec3(dir_x, dir_y, dir_z)),
                         spheres, nb_spheres, lights, nb_lights, 0
                         );
+        printf("(%f, %f, %f)\n", C.x, C.y, C.z);
         graphics_set_pixel(i,j,C.x,C.y,C.z);
         stats_end_pixel();
 }
@@ -462,18 +465,18 @@ static void render_pixel(
 void render(Sphere* spheres, int nb_spheres, Light* lights, int nb_lights) {
         stats_begin_frame();
 #ifdef graphics_double_lines  
-        // for (int j = 0; j<1; j+=2) { 
-        //         for (int i = 25; i<28; i++) {
-        //                 render_pixel(i,j  ,spheres,nb_spheres,lights,nb_lights);
-        //                 render_pixel(i,j+1,spheres,nb_spheres,lights,nb_lights);	  
-        //         }
-        // }
-        for (int j = 0; j<graphics_height; j+=2) { 
-                for (int i = 0; i<graphics_width; i++) {
+        for (int j = 0; j<1; j+=2) { 
+                for (int i = 25; i<28; i++) {
                         render_pixel(i,j  ,spheres,nb_spheres,lights,nb_lights);
                         render_pixel(i,j+1,spheres,nb_spheres,lights,nb_lights);	  
                 }
         }
+        // for (int j = 0; j<graphics_height; j+=2) { 
+        //         for (int i = 0; i<graphics_width; i++) {
+        //                 render_pixel(i,j  ,spheres,nb_spheres,lights,nb_lights);
+        //                 render_pixel(i,j+1,spheres,nb_spheres,lights,nb_lights);	  
+        //         }
+        // }
 #else
         for (int j = 0; j<graphics_height; j++) { 
                 for (int i = 0; i<graphics_width; i++) {
@@ -524,10 +527,10 @@ int main() {
         printf("Running without graphic output (for accurate measurement)...\n");
         render(spheres, nb_spheres, lights, nb_lights);
 
-        bench_run = 0;
-        graphics_width = 40;
-        graphics_height = 20;
-        render(spheres, nb_spheres, lights, nb_lights);
+        // bench_run = 0;
+        // graphics_width = 40;
+        // graphics_height = 20;
+        // render(spheres, nb_spheres, lights, nb_lights);
         graphics_terminate();
 
         return 0;
