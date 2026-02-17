@@ -120,7 +120,7 @@ always @(*) begin
         isBNEZ:     dcmp = {branchImm7,    x0,       reg1c, 3'b001, branchImm5,   7'b1100011};
 
         isSLLI:     dcmp = {7'b0000000,    shiftImm, reg1w, 3'b001, reg1w,        7'b0010011};
-        isFLDSP:    dcmp = {lwspImm,       sp,              3'b011, reg1w,        7'b0000111};
+        isFLDSP:    dcmp = {ldspImm,       sp,              3'b011, reg1w,        7'b0000111};
         isLWSP:     dcmp = {lwspImm,       sp,              3'b010, reg1w,        7'b0000011};
         isFLWSP:    dcmp = {lwspImm,       sp,              3'b010, reg1w,        7'b0000111};
         isJR:       dcmp = {12'b0,         reg1w,           3'b000, x0,           7'b1100111};
@@ -128,7 +128,7 @@ always @(*) begin
         isEBREAK:   dcmp = EBREAK;
         isJALR:     dcmp = {12'b0,         reg1w,           3'b000, ra,           7'b1100111};
         isADD:      dcmp = {7'b0,          reg2w,    reg1w, 3'b000, reg1w,        7'b0110011};
-        isFSDSP:    dcmp = {swspImm[11:5], reg2w,    sp,    3'b011, swspImm[4:0], 7'b0100111};
+        isFSDSP:    dcmp = {sdspImm[11:5], reg2w,    sp,    3'b011, sdspImm[4:0], 7'b0100111};
         isSWSP:     dcmp = {swspImm[11:5], reg2w,    sp,    3'b010, swspImm[4:0], 7'b0100011};
         isFSWSP:    dcmp = {swspImm[11:5], reg2w,    sp,    3'b010, swspImm[4:0], 7'b0100111};
         endcase
