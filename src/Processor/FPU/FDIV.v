@@ -185,7 +185,7 @@ always @(posedge clk_i) begin
                                 divOut <= {qSign, {FLEN-1{1'b0}}};
                         end
                         // Subnormal
-                        else if (expIn < EMIN) begin
+                        else if (expOut < EMIN) begin
                                 divOut = {qSign, {NEXP{1'b0}}, sigOut[NSIG-1:0]};
                         end
                         // Overflow

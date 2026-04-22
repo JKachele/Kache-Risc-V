@@ -31,7 +31,7 @@ reg [31:0] out_s;
 reg [63:0] out_d;
 assign fpuOut_o = isRV32D ? out_d : {{32{1'b1}}, out_s};
 assign busy_o = fpuEnable_i & ((isFDIV_S & ~fdivReady)   | (isFSQRT_S & ~fsqrtReady) | 
-                               (isFDIV_D & ~fdivReady_d));
+                               (isFDIV_D & ~fdivReady_d) | (isFSQRT_D & ~fsqrtReady_d));
 
 reg [4:0] fflags = 0;
 assign fflags_o = fflags;
@@ -118,7 +118,7 @@ always @(*) begin
 end
 
 wire [31:0] faddOut;
-FADDd fadd(
+FADD fadd(
         .rs1_i(addRs1),
         .rs1Exp_i(addRs1Exp),
         .rs1Sig_i(addRs1Sig),
@@ -280,7 +280,7 @@ always @(*) begin
 end
 
 wire [63:0] faddOut_d;
-FADDd #(
+FADD #(
         .FLEN(64)
 )fadd_d(
         .rs1_i(addRs1_d),
@@ -317,6 +317,24 @@ FDIV #(
         .rm_i(rm_i),
         .ready_o(fdivReady_d),
         .fdivOut_o(fdivOut_d)
+);
+
+// Square Root
+wire [63:0] fsqrtOut_d;
+wire        fsqrtReady_d;
+FSQRT #(
+        .FLEN(64)
+)fsqrt_d(
+        .clk_i(clk_i),
+        .reset_i(reset_i),
+        .sqrtEnable_i(fpuEnable_i & isFSQRT_D),
+        .rs1_i(rs1_i),
+        .rs1Exp_i(rs1Exp_d),
+        .rs1Sig_i(rs1Sig_d),
+        .rs1Class_i(rs1Class_d),
+        .rm_i(rm_i),
+        .ready_o(fsqrtReady_d),
+        .fsqrtOut_o(fsqrtOut_d)
 );
 
 // Comparisons
@@ -419,7 +437,7 @@ always @(*) begin
                 isFMADD_D  | isFMSUB_D   : out_d = faddOut_d;
                 isFNMADD_D | isFNMSUB_D  : out_d = faddOut_d;
                 isFDIV_D                 : out_d = fdivOut_d;
-                // isFSQRT_D                : out_d = fsqrtOut_d;
+                isFSQRT_D                : out_d = fsqrtOut_d;
                 default                  : out_d = 0;
         endcase
 end
