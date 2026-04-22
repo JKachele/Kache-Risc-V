@@ -10,6 +10,7 @@ End goal is to run Linux or a custom OS
     - (M) Integer Multiply/Divide
     - (A) Atomic memory operations
     - (F) Single-Precision floating point support
+    - (D) Double-Precision floating point support
     - (C) Compressed instruction support
     - (Zicsr) Control and Status Register support
 - Partial Machine Level ISA
@@ -18,7 +19,6 @@ End goal is to run Linux or a custom OS
 - UART for I/O
 
 #### Planed Features
-- D Extension for double-precision floating point
 - Full Machine and Supervisor Mode ISA support
 - Add support for DDR3 memory on the Arty-A7
 - Cached memory

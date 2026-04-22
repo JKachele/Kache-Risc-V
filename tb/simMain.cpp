@@ -104,6 +104,54 @@ public:
                 return TESTB<VSOC>::done();
         }
 
+        void printFReg(const char *name, QData reg) {
+                double d = *(double*)&reg;
+                float  f = *(float*)&reg;
+                printf("%s: %lx (%0.16f) (%f)\n", name, reg, d, f);
+        }
+
+        void printIReg(const char *name, IData reg) {
+                printf("%s: %x (%d)\n", name, reg, reg);
+        }
+
+        void printFRegisters(void) {
+                printFReg("ft0",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F0);
+                printFReg("ft1",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F1);
+                printFReg("ft2",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F2);
+                printFReg("ft3",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F3);
+                printFReg("ft4",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F4);
+                printFReg("ft5",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F5);
+                printFReg("ft6",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F6);
+                printFReg("ft7",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F7);
+                // printFReg("fs0",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F8);
+                // printFReg("fs1",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F9);
+                // printFReg("fa0",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F10);
+                // printFReg("fa1",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F11);
+                // printFReg("fa2",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F12);
+                // printFReg("fa3",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F13);
+                // printFReg("fa4",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F14);
+                // printFReg("fa5",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F15);
+                // printFReg("fa6",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F16);
+                // printFReg("fa7",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F17);
+                // printFReg("fs2",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F18);
+                // printFReg("fs3",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F19);
+                // printFReg("fs4",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F20);
+                // printFReg("fs5",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F21);
+                // printFReg("fs6",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F22);
+                // printFReg("fs7",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F23);
+                // printFReg("fs8",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F24);
+                // printFReg("fs9",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F25);
+                // printFReg("fs10", m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F26);
+                // printFReg("fs11", m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F27);
+                // printFReg("ft8",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F28);
+                // printFReg("ft9",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F29);
+                // printFReg("ft10", m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F30);
+                // printFReg("ft11", m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F31);
+
+                printIReg("x6" , m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_6);
+                printIReg("x7" , m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_7);
+        }
+
         void printStatusReport(void) {
                 u64 cycle = rootp->CYCLE;
                 u64 instret = rootp->INSTRET;
@@ -127,6 +175,7 @@ public:
                 printf("FPU:%3.3f\%% | ",               nbFPU*100.0/instret);
                 printf("AMO:%3.3f\%%",                  nbAMO*100.0/instret);
                 printf(")\n");
+                // printFRegisters();
         }
 
 };
@@ -148,7 +197,7 @@ int main(int argc, char **argv) {
         uart->setup(setup);
         baudclocks = setup & 0xfffffff;
 
-        tb->opentrace("trace.vcd");
+        // tb->opentrace("trace.vcd");
 
         int rxPrev = 1;
         while (!tb->done()) {

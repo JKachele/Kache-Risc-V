@@ -1,51 +1,43 @@
 .global main
 .section .text
 main:
-machine:
-        sw      ra, (sp)
-        la      t0, supervisor
-        csrw    mepc, t0
-        la      t1, m_trap
-        csrw    mtvec, t1
-        li      t2, 0x1800
-        csrc    mstatus, t2
-        li      t3, 0x800
-        csrs    mstatus, t3
-        li      t4, 0x100
-        csrs    medeleg, t4
-        call    printMachine
-        mret
+        la      t0, num1
+        fld     ft0, 0(t0)
+        la      t0, num2
+        fld     ft1, 0(t0)
+        la      t0, num3
+        fld     ft2, 0(t0)
 
-m_trap:
-        csrr    t0, mepc
-        csrr    t1, mcause
-        # la      t2, supervisor
-        # csrw    mepc, t2
-        call    printMTrap
-        mret
+        fmul.d  ft3, ft0, ft1
+        fadd.d  ft3, ft3, ft2
 
-supervisor:
-        la      t0, user
-        csrw    sepc, t0
-        la      t1, s_trap
-        csrw    stvec, t1
-        call    printSupervisor
-        sret
+        fmadd.d ft4, ft0, ft1, ft2
 
-s_trap:
-        csrr    t0, sepc
-        csrr    t1, scause
-        call    printSTrap
-        ecall
-        sret
+        la      t0, num4
+        fld     ft0, 0(t0)
+        la      t0, num5
+        fld     ft1, 0(t0)
+        la      t0, num6
+        fld     ft2, 0(t0)
 
-user:
-        csrr    t0, instret
-        call    printUser
-        ecall
-        lw      ra, (sp)
+        fmul.d  ft5, ft0, ft1
+        fadd.d  ft5, ft5, ft2
+
+        fmadd.d ft6, ft0, ft1, ft2
+
         ret
 
+
 .section .data
-Hello:
-        .ascii "Hello, World!\n"
+num1:
+        .double 24681.538200242
+num2:
+        .double 59627.161672524
+num3:
+        .double 29919.736789149
+num4:
+        .double 48984.143984087
+num5:
+        .double 23630.6752352
+num6:
+        .double 97168.891921341

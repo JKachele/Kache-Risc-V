@@ -7,24 +7,10 @@
  ************************************************/
 
 #include <stdio.h>
+#include <math.h>
 
-void printMachine() {
-        printf("In Machine Mode\n");
+int main(void) {
+        // printf("Hello, World!\n");
+
+        return 0;
 }
-
-void printMTrap() {
-        printf("In Machine Trap\n");
-}
-
-void printSupervisor() {
-        printf("In Supervisor Mode\n");
-}
-
-void printSTrap() {
-        printf("In Supervisor Trap\n");
-}
-
-void printUser() {
-        printf("In User Mode\n");
-}
-
