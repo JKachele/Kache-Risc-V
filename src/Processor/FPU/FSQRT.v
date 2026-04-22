@@ -67,7 +67,7 @@ wire si = (rm_i == 3'b001 || rm_i == 3'b010);
 wire [FLEN-1:0] roundedInfinity = {1'b0, {NEXP-1{1'b1}}, ~si, {NSIG{si}}};
 
 // Rounding
-localparam  roundLen = (NSIG + 2) * 2;
+localparam  roundLen = (NSIG + 3) * 2;
 reg         [roundLen-1:0] rootIn;
 wire        [NSIG:0] sigOut;
 wire signed [NEXP+1:0]  expOut;
@@ -125,8 +125,8 @@ always @(posedge clk_i) begin
         end else if (counter > 1) begin
                 counter <= counter - 1;
 
-                rootIn <= (rs1Exp_i[0]) ? {qNext[NSIG:0], acNext[NSIG+4:2]} :
-                        {qNext[NSIG+1:1], acNext[NSIG+4:2]};
+                rootIn <= (rs1Exp_i[0]) ? {qNext[NSIG:0], acNext[NSIG+4:0]} :
+                        {qNext[NSIG+1:1], acNext[NSIG+4:0]};
         end else if (counter > 0) begin // Construct final output
                 counter <= counter - 1;
 

@@ -10,22 +10,22 @@
 #include <math.h>
 
 int main(int argc, char *argv[]) {
-        unsigned int a;
-        unsigned int b;
-        unsigned int c;
+        unsigned long a;
+        unsigned long b;
+        unsigned long c;
 
         while (1) {
-                scanf("%u", &a);
-                scanf("%u", &b);
-                scanf("%u", &c);
-                float fa = *(float*)&a;
-                float fb = *(float*)&b;
-                float fc = *(float*)&c;
+                scanf("%lu", &a);
+                scanf("%lu", &b);
+                scanf("%lu", &c);
+                double fa = *(double*)&a;
+                double fb = *(double*)&b;
+                double fc = *(double*)&c;
 
-                float f = (fa < fb) ? fb : fa;
+                double f = sqrt(fa);
 
-                unsigned int i = *(unsigned int*)&f;
-                printf("%u\n", i);
+                unsigned long i = *(unsigned long*)&f;
+                printf("%lu\n", i);
                 fflush(stdout);
         }
 
