@@ -7,40 +7,11 @@
  ************************************************/
 
 #include "sbi.h"
+#include "extensions/legacy.h"
+#include "extensions/dbcn.h"
+#include "extensions/srst.h"
 
 extern void _putchar(char c);
-
-// EID #0x01
-long sbi_console_putchar(int ch) {
-        _putchar(ch);
-        return SBI_SUCCESS;
-}
-
-// EID #0x08
-void sbi_shutdown(void) {
-        asm volatile ("ebreak\n");
-}
-
-struct sbiret sbi_debug_console_write(u32 num_bytes, char *base_addr_lo, char *base_addr_hi) {
-        for (int i = 0; i < num_bytes; i++) {
-                _putchar(base_addr_lo[i]);
-        }
-        return (struct sbiret){.error = SBI_SUCCESS, .uvalue = num_bytes};
-}
-
-// EID #0x4442434E
-struct sbiret dbcn(long arg0, long arg1, long arg2, long arg3, long arg4,
-                       long arg5, long fid) {
-        struct sbiret ret = {0};
-        switch (fid) {
-                case 0x0:
-                        ret = sbi_debug_console_write(arg0, (char *)arg1, (char *)arg2);
-                        break;
-                default:
-                        ret.error = SBI_ERR_NOT_SUPPORTED;
-        }
-        return ret;
-}
 
 struct sbiret sbi_handler(long arg0, long arg1, long arg2, long arg3, long arg4,
                        long arg5, long fid, long eid) {
@@ -51,6 +22,9 @@ struct sbiret sbi_handler(long arg0, long arg1, long arg2, long arg3, long arg4,
                         break;
                 case 0x08:
                         sbi_shutdown();
+                        break;
+                case 0x53525354:
+                        ret = srst(arg0, arg1, arg2, arg3, arg4, arg5, fid);
                         break;
                 case 0x4442434E:
                         ret = dbcn(arg0, arg1, arg2, arg3, arg4, arg5, fid);

@@ -17,6 +17,8 @@ assign decompressed_o = dcmp;
 
 
 /*--------------INSTRUCTION DECODING--------------*/
+wire isUNIMP        = |c == 0;
+
 wire isC0           = c[1:0] == 2'b00;
 wire isC1           = c[1:0] == 2'b01;
 wire isC2           = c[1:0] == 2'b10;
@@ -94,6 +96,7 @@ wire [4:0]   branchImm5 = {c[11:10], c[4:3], c[12]};
 always @(*) begin
         case(1'b1)
         isUncompressed: dcmp = compressed_i;
+        isUNIMP:        dcmp = 32'b0;
 
         isADDI4SPN: dcmp = {addi4spnImm,   sp,              3'b000, reg2c,        7'b0010011};
         isFLD:      dcmp = {ldsdImm,       reg1c,           3'b011, reg2c,        7'b0000111};

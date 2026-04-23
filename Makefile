@@ -3,8 +3,8 @@
 # @file        : Makefile
 # @created     : Friday Oct 17, 2025 14:39:28 UTC
 ######################################################################
-RVARCH = rv32imafdc
-RVABI = ilp32d
+RVARCH := rv32imafdc
+RVABI := ilp32d
 RVTOOL_PREFIX := riscv64-unknown-elf
 RVTOOL_DIR := /opt/riscv
 RV_LIB_DIR := $(RVTOOL_DIR)/$(RVTOOL_PREFIX)/lib/$(RVARCH)/$(RVABI)
@@ -35,15 +35,15 @@ BIN_DIR := bin
 BUILD_DIR := build
 
 # Firmware
-# SRC := $(wildcard firmware/OS/*.c)
-# SRC += $(wildcard firmware/OS/*/*.c) $(wildcard firmware/OS/*/*.S) 
-# SRC += $(wildcard firmware/OS/*/*/*.c) $(wildcard firmware/OS/*/*/*.S) 
-# OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
-# LDSCRIPT = firmware/OS/kernel.ld
-SRC := firmware/Tests/startPipeline.S firmware/Tests/raystones.c
-SRC += $(wildcard firmware/libs/*.S) $(wildcard firmware/libs/*.c) 
+SRC := $(wildcard firmware/OS/*.c)     $(wildcard firmware/OS/*.S)
+SRC += $(wildcard firmware/OS/*/*.c)   $(wildcard firmware/OS/*/*.S) 
+SRC += $(wildcard firmware/OS/*/*/*.c) $(wildcard firmware/OS/*/*/*.S) 
 OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
-LDSCRIPT = firmware/Tests/ram.ld
+LDSCRIPT = firmware/OS/kernel.ld
+# SRC := firmware/Tests/startPipeline.S firmware/Tests/raystones.c
+# SRC += $(wildcard firmware/libs/*.S) $(wildcard firmware/libs/*.c) 
+# OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
+# LDSCRIPT = firmware/Tests/ram.ld
 
 ROM := $(BIN_DIR)/ROM.hex
 RAM := $(BIN_DIR)/RAM.hex
@@ -79,7 +79,7 @@ $(BUILD_DIR)/%.c.o: %.c
 sim: $(ROM) $(RAM)
 	rm -rf ./obj_dir
 	$(TB) $(TBFLAGS) $(TBSRC) $(VSRC)
-	cd obj_dir; make -f V$(TOP).mk -s
+	cd obj_dir; make -f V$(TOP).mk
 	cd obj_dir; ./V$(TOP) | tee ../$(BIN_DIR)/sim.log
 
 $(BIN_DIR):
