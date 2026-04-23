@@ -63,7 +63,7 @@ wire [5:0] normShamt = sumSigCLZ - 16;
 reg  signed [48:0] outSig;
 wire        [23:0] sumSigRound;
 wire signed [10:0] sumExpRound;
-FRound #(.nInt(48),.nExp(9)) round(
+FRound #(.NINT(48),.NEXP(9)) round(
         .sign_i(sumSign), .sig_i(outSig[47:0]), .exp_i(adjExpNorm), .rm_i(rm_i),
         .sig_o(sumSigRound), .exp_o(sumExpRound)
 );

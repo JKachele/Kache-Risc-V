@@ -46,7 +46,7 @@ reg         [10:0] outExpBiased;
 
 wire        [23:0] outSigRound;
 wire        [10:0] outExpRound;
-FRound #(.nInt(48),.nExp(9)) round(
+FRound #(.NINT(48),.NEXP(9)) round(
         .sign_i(outSign), .sig_i(outSig), .exp_i(outExp),
         .rm_i(rm_i), .sig_o(outSigRound), .exp_o(outExpRound));
 

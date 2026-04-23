@@ -1,41 +1,16 @@
-.equ IO_BASE, 0x400000
-.equ IO_LEDS, 0x04
+.global kernel_entry
+.section .text
 
-.global _start
-.section .text.bios
-_start:
-        li gp, IO_BASE
-        la sp, __stack_top_bios
+.align 2
+kernel_entry:
+        # Get kernel stack of running process
+        csrrw sp, sscratch, sp
 
-machine:
-        # Set machine mode pointer to boot function
-        la      t0, boot
-        csrw    mepc, t0
+        # Check if stack is 0, If it is, We trapped from the supervisor mode, can use current stack
+        bnez sp, s_trap_start
+        csrrw sp, sscratch, sp
 
-        # Set Machine mode Trap vector to m_trap
-        la      t1, m_trap
-        csrw    mtvec, t1
-
-        # Set previous privilege mode to Supervisor mode
-        li      t2, 0x1800
-        csrc    mstatus, t2
-        li      t3, 0x800
-        csrs    mstatus, t3
-
-        # Set user mode exceprions to be handled by the supervisor trap handler
-        li      t4, 0x104
-        csrs    medeleg, t4
-
-        # Save the current stack pointer in the scratch reister
-        csrw    mscratch, sp
-
-        # Return to boot function in s-mode
-        mret
-
-m_trap:
-        # Get Machine Mode stack
-        csrrw sp, mscratch, sp
-
+s_trap_start:
         addi sp, sp, -4 * 63
 
         sw ra,    4 * 0(sp)
@@ -103,16 +78,19 @@ m_trap:
         fsw ft11, 4 * 61(sp)
 
         # Retrieve and save sp at time of execution
-        csrr a0, mscratch
+        csrr a0, sscratch
         sw a0, 4 * 62(sp)
 
-        # Reset Machine stack
-        addi a0, sp, 4 * 63
-        csrw mscratch, a0
+        # Reset kernel stack
+        # addi a0, sp, 4 * 31
+        # csrw sscratch, a0
 
         mv a0, sp
-        csrr a1, mcause
-        call mtrap_handler
+        csrr a1, scause
+        call handleTrap
+
+        lw a0, 4 * 62(sp)
+        csrw sscratch, a0
 
         lw ra,    4 * 0(sp)
         lw gp,    4 * 1(sp)
@@ -178,6 +156,12 @@ m_trap:
         flw ft10, 4 * 60(sp)
         flw ft11, 4 * 61(sp)
 
-        lw sp,    4 * 62(sp)
+        addi sp, sp, 4 * 63
+        csrrw sp, sscratch, sp
 
-        mret
+        # If trapped from supervisor mode, switch back to kernel stack
+        bnez sp, s_trap_end
+        csrrw sp, sscratch, sp
+
+s_trap_end:
+        sret

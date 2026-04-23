@@ -62,7 +62,7 @@ wire [31:0] roundedInfinity = {qSign, {7{1'b1}}, ~si, {23{si}}};
 // Rounding
 wire        [23:0] sigOut;
 wire signed [9:0]  expOut;
-FRound #(.nInt(52)) round(
+FRound #(.NINT(52)) round(
         .sign_i(qSign), .sig_i({qSig, aSig}), .exp_i(expIn), .rm_i(rm_i),
         .sig_o(sigOut), .exp_o(expOut));
 

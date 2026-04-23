@@ -114,22 +114,25 @@ localparam NOP = 32'b0000000_00000_00000_000_00000_0110011;
 wire [31:0] D_instr;
 Decompressor decomp(.compressed_i(FD_instr_i), .decompressed_o(D_instr));
 
+// Handle Unimplemented instructions
+wire D_isUNIMP = |D_instr == 0;
+
 /*--------------INSTRUCTION DECODING--------------*/
 // 11 RV32I OpCodes
 // bits [1:0] are always 00 for all opcodes
-wire D_isLUI      = (D_instr[6:2] == 5'b01101);
-wire D_isAUIPC    = (D_instr[6:2] == 5'b00101);
-wire D_isJAL      = (D_instr[6:2] == 5'b11011);
-wire D_isJALR     = (D_instr[6:2] == 5'b11001);
-wire D_isBranch   = (D_instr[6:2] == 5'b11000);
-wire D_isLoad     = (D_instr[6:3] == 4'b0000);  // instr[2]: FLW
-wire D_isStore    = (D_instr[6:3] == 4'b0100);  // instr[2]: FSW
-wire D_isALUI     = (D_instr[6:2] == 5'b00100);
-wire D_isALUR     = (D_instr[6:2] == 5'b01100);
-wire D_isFENCE    = (D_instr[6:2] == 5'b00011);
-wire D_isSYS      = (D_instr[6:2] == 5'b11100);
-wire D_isAMO      = (D_instr[6:2] == 5'b01011);
-wire D_isFPU      = (D_instr[6:5] == 2'b10);
+wire D_isLUI      = !D_isUNIMP && (D_instr[6:2] == 5'b01101);
+wire D_isAUIPC    = !D_isUNIMP && (D_instr[6:2] == 5'b00101);
+wire D_isJAL      = !D_isUNIMP && (D_instr[6:2] == 5'b11011);
+wire D_isJALR     = !D_isUNIMP && (D_instr[6:2] == 5'b11001);
+wire D_isBranch   = !D_isUNIMP && (D_instr[6:2] == 5'b11000);
+wire D_isLoad     = !D_isUNIMP && (D_instr[6:3] == 4'b0000);  // instr[2]: FLW
+wire D_isStore    = !D_isUNIMP && (D_instr[6:3] == 4'b0100);  // instr[2]: FSW
+wire D_isALUI     = !D_isUNIMP && (D_instr[6:2] == 5'b00100);
+wire D_isALUR     = !D_isUNIMP && (D_instr[6:2] == 5'b01100);
+wire D_isFENCE    = !D_isUNIMP && (D_instr[6:2] == 5'b00011);
+wire D_isSYS      = !D_isUNIMP && (D_instr[6:2] == 5'b11100);
+wire D_isAMO      = !D_isUNIMP && (D_instr[6:2] == 5'b01011);
+wire D_isFPU      = !D_isUNIMP && (D_instr[6:5] == 2'b10);
 
 // Instruction Functions
 wire [2:0] D_funct3 = D_instr[14:12];
@@ -256,25 +259,37 @@ localparam US = 2'b00, SU = 2'b01, MA = 2'b11;
 reg [1:0] DD_privilege = MA;
 /*verilator public_off*/
 
-wire D_isTrap = D_isECALL;
+wire D_isTrap = D_isECALL | D_isUNIMP;
 wire D_isPrivileged = D_isTrap | D_isMRET | D_isSRET;
 
 // Set PC, CSRs, and privilege level for traps
-wire [1:0] D_trapPrivilege =
-        (DD_privilege == US)? (csrMedeleg_i[8] ? SU : MA) :
-        (DD_privilege == SU)? (csrMedeleg_i[9] ? SU : MA) : MA;
-wire [31:0] D_trapCause = D_isECALL ? (
-        DD_privilege == US ? 32'd8 :
-        DD_privilege == SU ? 32'd9 : 32'd11) : 32'b0;
+reg [31:0] D_trapCause;
+always @(*) begin
+        if (D_isECALL) begin
+                if (DD_privilege == US)
+                        D_trapCause = 32'd8;
+                else if (DD_privilege == SU)
+                        D_trapCause = 32'd9;
+                else
+                        D_trapCause = 32'd11;
+        end else if (D_isUNIMP) begin
+                D_trapCause = 32'd2;
+        end else begin
+                D_trapCause = 32'd19; // Default to hardware error
+        end
+end
+
+wire [1:0] D_trapPrivilege = csrMedeleg_i[D_trapCause] ? SU : MA;
 
 wire [31:0] D_MRetJumpAddr = csrMepc_i;
 wire [31:0] D_SRetJumpAddr = csrSepc_i;
 wire [31:0] D_trapJumpAddr = (D_trapPrivilege == SU) ? csrStvec_i : csrMtvec_i;
 
-wire [1:0]  D_privilegeSet = D_isTrap ?
-        ((D_trapPrivilege == SU) ? SU : MA) :
+wire [1:0]  D_privilegeSet =
+         D_isTrap ? ((D_trapPrivilege == SU) ? SU : MA) :
         (D_isMRET ? csrMStatus_i[12:11] :
         (D_isSRET ? {1'b0, csrMStatus_i[8]} : DD_privilege));
+
 wire D_isMTrap = D_isTrap && D_trapPrivilege == MA;
 wire D_isSTrap = D_isTrap && D_trapPrivilege == SU;
 
@@ -303,7 +318,7 @@ end
 
 /*------------Branch Prediction Result------------*/
 assign D_predictPC_o = !FD_nop_i &&
-        (D_isJAL || D_isJALR || D_isECALL || D_isMRET || D_isSRET ||
+        (D_isJAL || D_isJALR || D_isTrap || D_isMRET || D_isSRET ||
         (D_isBranch && D_predictBranch));
 
 assign D_PCprediction_o =
