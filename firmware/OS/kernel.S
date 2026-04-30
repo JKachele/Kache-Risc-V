@@ -1,4 +1,5 @@
 .global kernel_entry
+.global switch_context
 .section .text
 
 .align 2
@@ -9,7 +10,6 @@ kernel_entry:
         # Check if stack is 0, If it is, We trapped from the supervisor mode, can use current stack
         bnez sp, s_trap_start
         csrrw sp, sscratch, sp
-
 s_trap_start:
         addi sp, sp, -4 * 63
 
@@ -162,6 +162,67 @@ s_trap_start:
         # If trapped from supervisor mode, switch back to kernel stack
         bnez sp, s_trap_end
         csrrw sp, sscratch, sp
-
 s_trap_end:
         sret
+
+switch_context: # a0: prev_sp, a1: next_sp
+        # Save callee-saved registers to old process stack
+        addi    sp, sp, -4 * 25
+        sw      ra,    4 * 0(sp)
+        sw      s0,    4 * 1(sp)
+        sw      s1,    4 * 2(sp)
+        sw      s2,    4 * 3(sp)
+        sw      s3,    4 * 4(sp)
+        sw      s4,    4 * 5(sp)
+        sw      s5,    4 * 6(sp)
+        sw      s6,    4 * 7(sp)
+        sw      s7,    4 * 8(sp)
+        sw      s8,    4 * 9(sp)
+        sw      s9,    4 * 10(sp)
+        sw      s10,   4 * 11(sp)
+        sw      s11,   4 * 12(sp)
+        fsw     fs0,   4 * 13(sp)
+        fsw     fs1,   4 * 14(sp)
+        fsw     fs2,   4 * 15(sp)
+        fsw     fs3,   4 * 16(sp)
+        fsw     fs4,   4 * 17(sp)
+        fsw     fs5,   4 * 18(sp)
+        fsw     fs6,   4 * 19(sp)
+        fsw     fs7,   4 * 20(sp)
+        fsw     fs8,   4 * 21(sp)
+        fsw     fs9,   4 * 22(sp)
+        fsw     fs10,  4 * 23(sp)
+        fsw     fs11,  4 * 24(sp)
+
+        # Switch Stack Pointers
+        sw      sp, (a0)        # *prev_sp = sp;
+        lw      sp, (a1)        # sp = *next_sp;
+
+        # Restore callee-saved registers from new process stack
+        lw      ra,    4 * 0(sp)
+        lw      s0,    4 * 1(sp)
+        lw      s1,    4 * 2(sp)
+        lw      s2,    4 * 3(sp)
+        lw      s3,    4 * 4(sp)
+        lw      s4,    4 * 5(sp)
+        lw      s5,    4 * 6(sp)
+        lw      s6,    4 * 7(sp)
+        lw      s7,    4 * 8(sp)
+        lw      s8,    4 * 9(sp)
+        lw      s9,    4 * 10(sp)
+        lw      s10,   4 * 11(sp)
+        lw      s11,   4 * 12(sp)
+        flw     fs0,   4 * 13(sp)
+        flw     fs1,   4 * 14(sp)
+        flw     fs2,   4 * 15(sp)
+        flw     fs3,   4 * 16(sp)
+        flw     fs4,   4 * 17(sp)
+        flw     fs5,   4 * 18(sp)
+        flw     fs6,   4 * 19(sp)
+        flw     fs7,   4 * 20(sp)
+        flw     fs8,   4 * 21(sp)
+        flw     fs9,   4 * 22(sp)
+        flw     fs10,  4 * 23(sp)
+        flw     fs11,  4 * 24(sp)
+        addi    sp, sp, 4 * 25
+        ret

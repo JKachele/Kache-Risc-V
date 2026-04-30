@@ -108,7 +108,8 @@ public:
                 u64 cycle = rootp->CYCLE;
                 u64 instret = rootp->INSTRET;
 
-                printf("\n\nSimulated processor's report\n");
+                printf("\n----------------------------\n");
+                printf("Simulated processor's report\n");
                 printf("----------------------------\n");
                 printf("Branch hit = %3.3f\%%\n", nbBranchHit*100.0/nbBranch);
                 printf("JALR   hit = %3.3f\%%\n", nbJALRhit*100.0/nbJALR);
@@ -132,6 +133,10 @@ public:
 };
 
 int main(int argc, char **argv) {
+        printf("----------------------------\n");
+        printf("Beginning simulation...\n");
+        printf("----------------------------\n");
+
         // Initialize Verilators variables
         Verilated::commandArgs(argc, argv);
 
