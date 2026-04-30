@@ -1,41 +1,16 @@
-.equ IO_BASE, 0x400000
-.equ IO_LEDS, 0x04
+.global kernel_entry
+.global switch_context
+.section .text
 
-.global _start
-.section .text.bios
-_start:
-        li gp, IO_BASE
-        la sp, __stack_top_bios
+.align 2
+kernel_entry:
+        # Get kernel stack of running process
+        csrrw sp, sscratch, sp
 
-machine:
-        # Set machine mode pointer to boot function
-        la      t0, boot
-        csrw    mepc, t0
-
-        # Set Machine mode Trap vector to m_trap
-        la      t1, m_trap
-        csrw    mtvec, t1
-
-        # Set previous privilege mode to Supervisor mode
-        li      t2, 0x1800
-        csrc    mstatus, t2
-        li      t3, 0x800
-        csrs    mstatus, t3
-
-        # Set user mode exceprions to be handled by the supervisor trap handler
-        li      t4, 0x104
-        csrs    medeleg, t4
-
-        # Save the current stack pointer in the scratch reister
-        csrw    mscratch, sp
-
-        # Return to boot function in s-mode
-        mret
-
-m_trap:
-        # Get Machine Mode stack
-        csrrw sp, mscratch, sp
-
+        # Check if stack is 0, If it is, We trapped from the supervisor mode, can use current stack
+        bnez sp, s_trap_start
+        csrrw sp, sscratch, sp
+s_trap_start:
         addi sp, sp, -4 * 95
 
         sw ra,    4 * 0(sp)
@@ -103,16 +78,19 @@ m_trap:
         fsd ft11, 4 * 92(sp)
 
         # Retrieve and save sp at time of execution
-        csrr a0, mscratch
+        csrr a0, sscratch
         sw a0, 4 * 94(sp)
 
-        # Reset Machine stack
-        addi a0, sp, 4 * 95
-        csrw mscratch, a0
+        # Reset kernel stack
+        # addi a0, sp, 4 * 31
+        # csrw sscratch, a0
 
         mv a0, sp
-        csrr a1, mcause
-        call mtrap_handler
+        csrr a1, scause
+        call handleTrap
+
+        lw a0, 4 * 94(sp)
+        csrw sscratch, a0
 
         lw ra,    4 * 0(sp)
         lw gp,    4 * 1(sp)
@@ -178,6 +156,73 @@ m_trap:
         fld ft10, 4 * 90(sp)
         fld ft11, 4 * 92(sp)
 
-        lw sp,    4 * 94(sp)
+        addi sp, sp, 4 * 95
+        csrrw sp, sscratch, sp
 
-        mret
+        # If trapped from supervisor mode, switch back to kernel stack
+        bnez sp, s_trap_end
+        csrrw sp, sscratch, sp
+s_trap_end:
+        sret
+
+switch_context: # a0: prev_sp, a1: next_sp
+        # Save callee-saved registers to old process stack
+        addi    sp, sp, -4 * 38
+        sw      ra,    4 * 0(sp)
+        sw      s0,    4 * 1(sp)
+        sw      s1,    4 * 2(sp)
+        sw      s2,    4 * 3(sp)
+        sw      s3,    4 * 4(sp)
+        sw      s4,    4 * 5(sp)
+        sw      s5,    4 * 6(sp)
+        sw      s6,    4 * 7(sp)
+        sw      s7,    4 * 8(sp)
+        sw      s8,    4 * 9(sp)
+        sw      s9,    4 * 10(sp)
+        sw      s10,   4 * 11(sp)
+        sw      s11,   4 * 12(sp)
+        fsd     fs0,   4 * 14(sp)
+        fsd     fs1,   4 * 16(sp)
+        fsd     fs2,   4 * 18(sp)
+        fsd     fs3,   4 * 20(sp)
+        fsd     fs4,   4 * 22(sp)
+        fsd     fs5,   4 * 24(sp)
+        fsd     fs6,   4 * 26(sp)
+        fsd     fs7,   4 * 28(sp)
+        fsd     fs8,   4 * 30(sp)
+        fsd     fs9,   4 * 32(sp)
+        fsd     fs10,  4 * 34(sp)
+        fsd     fs11,  4 * 36(sp)
+
+        # Switch Stack Pointers
+        sw      sp, (a0)        # *prev_sp = sp;
+        lw      sp, (a1)        # sp = *next_sp;
+
+        # Restore callee-saved registers from new process stack
+        lw      ra,    4 * 0(sp)
+        lw      s0,    4 * 1(sp)
+        lw      s1,    4 * 2(sp)
+        lw      s2,    4 * 3(sp)
+        lw      s3,    4 * 4(sp)
+        lw      s4,    4 * 5(sp)
+        lw      s5,    4 * 6(sp)
+        lw      s6,    4 * 7(sp)
+        lw      s7,    4 * 8(sp)
+        lw      s8,    4 * 9(sp)
+        lw      s9,    4 * 10(sp)
+        lw      s10,   4 * 11(sp)
+        lw      s11,   4 * 12(sp)
+        fld     fs0,   4 * 14(sp)
+        fld     fs1,   4 * 16(sp)
+        fld     fs2,   4 * 18(sp)
+        fld     fs3,   4 * 20(sp)
+        fld     fs4,   4 * 22(sp)
+        fld     fs5,   4 * 24(sp)
+        fld     fs6,   4 * 26(sp)
+        fld     fs7,   4 * 28(sp)
+        fld     fs8,   4 * 30(sp)
+        fld     fs9,   4 * 32(sp)
+        fld     fs10,  4 * 34(sp)
+        fld     fs11,  4 * 36(sp)
+        addi    sp, sp, 4 * 38
+        ret

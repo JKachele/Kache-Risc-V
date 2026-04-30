@@ -19,7 +19,7 @@ module Memory (
 );
 
 reg [15:0] INSTMEM [0:32767];
-reg [31:0] DATAMEM [0:32767];
+reg [31:0] DATAMEM [0:131071];
 // reg [31:0] DATAMEM [0:16383];
 
 initial begin

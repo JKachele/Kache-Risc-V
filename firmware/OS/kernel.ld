@@ -1,6 +1,6 @@
 MEMORY {
         PROGROM (RX) : ORIGIN = 0x00000, LENGTH = 0x10000
-        DATARAM (RW) : ORIGIN = 0x10000, LENGTH = 0x10000
+        DATARAM (RW) : ORIGIN = 0x10000, LENGTH = 0x40000
 }
 
 ENTRY(_start)
@@ -38,5 +38,10 @@ SECTIONS {
 
                 . += 8 * 1024; /* 8KB */
                 __stack_top = .;
+
+                . = ALIGN(4096);
+                __free_ram = .;
+                . += 128 * 1024; /*128KB */
+                __free_ram_end = .;
         } > DATARAM
 }
