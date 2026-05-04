@@ -52,11 +52,11 @@ assign fullClass_o = {
 
 // First bit set = 63 - clz
 wire [5:0] sigClz;
-CLZ #(.W_IN(64))clz({{64-SigLen{1'b0}}, reg_i[SigLen-1:0]}, sigClz);
+CLZ #(.W_IN(64))clz(.in({{64-SigLen{1'b0}}, reg_i[SigLen-1:0]}), .out(sigClz));
 // Shift so leading 1 is at bit SigLen:
 // shamt = SigLen - first_bit_set = SigLen - (63 - clz) = clz - (63 - SigLen)
-localparam shamtConst = 63 - SigLen;
-wire [5:0] lshamt = sigClz - shamtConst;
+localparam SHAMT_CONST = 63 - SigLen;
+wire [5:0] lshamt = sigClz - SHAMT_CONST;
 
 localparam BIAS = ((1 << (ExpLen - 1)) - 1);
 localparam EMIN = 1 - BIAS;

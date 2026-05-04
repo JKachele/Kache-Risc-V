@@ -54,7 +54,7 @@ reg [NSIG+4:0] test;
 // Cycle counter
 reg  [5:0] counter;
 // Only one cycle is needed to handle special cases
-localparam SPECIAL_CYCLES = 6'b1;
+localparam SPECIAL_CYCLES = 6'd1;
 // Enough cycles to compute full significand with extra bits for rounding and normalizing
 localparam SQRT_CYCLES = NSIG + 3;
 
@@ -67,12 +67,13 @@ wire si = (rm_i == 3'b001 || rm_i == 3'b010);
 wire [FLEN-1:0] roundedInfinity = {1'b0, {NEXP-1{1'b1}}, ~si, {NSIG{si}}};
 
 // Rounding
-localparam  roundLen = (NSIG + 3) * 2;
-reg         [roundLen-1:0] rootIn;
+localparam  ROUND_LEN = (NSIG + 3) * 2;
+reg         [ROUND_LEN-1:0] rootIn;
 wire        [NSIG:0] sigOut;
 wire signed [NEXP+1:0]  expOut;
-FRound #(.nInt(roundLen), .nExp(NEXP), .nSig(NSIG)
-)round(1'b0, rootIn, expIn, rm_i, sigOut, expOut);
+FRound #(.NINT(ROUND_LEN), .NEXP(NEXP), .NSIG(NSIG))round(
+        .sign_i(1'b0), .sig_i(rootIn), .exp_i(expIn),
+        .rm_i(rm_i), .sig_o(sigOut), .exp_o(expOut));
 
 always @(posedge clk_i) begin
         if (!sqrtEnable_i) begin

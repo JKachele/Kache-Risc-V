@@ -30,7 +30,7 @@ module FPU (
 reg [31:0] out_s;
 reg [63:0] out_d;
 assign fpuOut_o = isRV32D ? out_d : {{32{1'b1}}, out_s};
-assign busy_o = fpuEnable_i & ((isFDIV_S & ~fdivReady)   | (isFSQRT_S & ~fsqrtReady) | 
+assign busy_o = fpuEnable_i & ((isFDIV_S & ~fdivReady)   | (isFSQRT_S & ~fsqrtReady) |
                                (isFDIV_D & ~fdivReady_d) | (isFSQRT_D & ~fsqrtReady_d));
 
 reg [4:0] fflags = 0;
@@ -257,7 +257,8 @@ wire               rs1rs2Inf_d = rs1Class_d[CLASS_BIT_INF] || rs2Class_d[CLASS_B
 
 always @(*) begin
         if (isFMA) begin
-                addRs1_d      = (isFNMADD || isFNMSUB) ? {~fmulOut_d[63], fmulOut_d[62:0]} : fmulOut_d;
+                addRs1_d      = (isFNMADD || isFNMSUB) ?
+                        {~fmulOut_d[63], fmulOut_d[62:0]} : fmulOut_d;
                 addRs1Sig_d   = fmulSig_d;
                 addRs1Exp_d   = fmulExp_d;
                 addRs1Class_d = fmulClass_d;
@@ -393,8 +394,8 @@ always @(*) begin
                 /******** Single Precision ********/
                 // Move and convert
                 isFSGNJ_S                : out_s = {           rs2_s[31], rs1_s[30:0]};
-	        isFSGNJN_S               : out_s = {          !rs2_s[31], rs1_s[30:0]};
-	        isFSGNJX_S               : out_s = { rs1_s[31]^rs2_s[31], rs1_s[30:0]};
+                isFSGNJN_S               : out_s = {          !rs2_s[31], rs1_s[30:0]};
+                isFSGNJX_S               : out_s = { rs1_s[31]^rs2_s[31], rs1_s[30:0]};
                 isFMVXW  | isFMVWX       : out_s = rs1_s;
                 isFCVTSW | isFCVTSWU     : out_s = fcvtOut;
                 isFCVTWS | isFCVTWUS     : out_s = fcvtOut;
@@ -417,8 +418,8 @@ always @(*) begin
                 /******** Double Precision ********/
                 // Move and convert
                 isFSGNJ_D                : out_d = {           rs2_i[63], rs1_i[62:0]};
-	        isFSGNJN_D               : out_d = {          !rs2_i[63], rs1_i[62:0]};
-	        isFSGNJX_D               : out_d = { rs1_i[63]^rs2_i[63], rs1_i[62:0]};
+                isFSGNJN_D               : out_d = {          !rs2_i[63], rs1_i[62:0]};
+                isFSGNJX_D               : out_d = { rs1_i[63]^rs2_i[63], rs1_i[62:0]};
                 isFCVTSD                 : out_s = fcvtOut_sd;
                 isFCVTDS                 : out_d = fcvtOut_ds;
                 isFCVTDW | isFCVTDWU     : out_d = fcvtOut_d;
@@ -465,7 +466,7 @@ wire isFADD     = (!isFMA && (instr_i[31:27] == 5'b00000));
 wire isFSUB     = (!isFMA && (instr_i[31:27] == 5'b00001));
 wire isFMUL     = (!isFMA && (instr_i[31:27] == 5'b00010));
 wire isFDIV     = (!isFMA && (instr_i[31:27] == 5'b00011));
-wire isFSQRT    = (!isFMA && (instr_i[31:27] == 5'b01011));   
+wire isFSQRT    = (!isFMA && (instr_i[31:27] == 5'b01011));
 
 wire isFADD_S   = isFADD  && !isRV32D;
 wire isFSUB_S   = isFSUB  && !isRV32D;
@@ -496,7 +497,7 @@ wire isFMAX     = (!isFMA && (instr_i[31:27] == 5'b00101) &&  instr_i[12]);
 wire isFEQ      = (!isFMA && (instr_i[31:27]==5'b10100)   && (instr_i[13:12] == 2'b10));
 wire isFLT      = (!isFMA && (instr_i[31:27]==5'b10100)   && (instr_i[13:12] == 2'b01));
 wire isFLE      = (!isFMA && (instr_i[31:27]==5'b10100)   && (instr_i[13:12] == 2'b00));
-wire isFCLASS   = (!isFMA && (instr_i[31:27] == 5'b11100) &&  instr_i[12]); 
+wire isFCLASS   = (!isFMA && (instr_i[31:27] == 5'b11100) &&  instr_i[12]);
 
 wire isFMIN_S   = isFMIN   && !isRV32D;
 wire isFMAX_S   = isFMAX   && !isRV32D;
@@ -522,8 +523,8 @@ wire isFCVTSWU  = (!isFMA && (instr_i[31:27] == 5'b11010) &&  instr_i[20] && !is
 wire isFCVTDW   = (!isFMA && (instr_i[31:27] == 5'b11010) && !instr_i[20] &&  isRV32D);
 wire isFCVTDWU  = (!isFMA && (instr_i[31:27] == 5'b11010) &&  instr_i[20] &&  isRV32D);
 
-wire isFCVTSD   = (!isFMA && (instr_i[31:27] == 5'b01000) &&  instr_i[20] && !isRV32D); 
-wire isFCVTDS   = (!isFMA && (instr_i[31:27] == 5'b01000) && !instr_i[20] &&  isRV32D); 
+wire isFCVTSD   = (!isFMA && (instr_i[31:27] == 5'b01000) &&  instr_i[20] && !isRV32D);
+wire isFCVTDS   = (!isFMA && (instr_i[31:27] == 5'b01000) && !instr_i[20] &&  isRV32D);
 
 wire isFMVXW    = (!isFMA && (instr_i[31:27] == 5'b11100) && !instr_i[12]);
 wire isFMVWX    = (!isFMA && (instr_i[31:27] == 5'b11110));

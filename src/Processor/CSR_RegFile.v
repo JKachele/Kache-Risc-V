@@ -43,7 +43,7 @@ module CSR_RegFile (
 
 // Counters
 reg [63:0] CSR_cycle = 0;   // 0xC00 / 0xC80 ([31:0] / [63:32])
-reg [63:0] CSR_instret = 0; // 0xC02 / 0xC82 ([31:0] / [63:32]) 
+reg [63:0] CSR_instret = 0; // 0xC02 / 0xC82 ([31:0] / [63:32])
 
 // Floating Point Extension
 reg [31:0] CSR_fcsr = 0;    // 0x001 - 0x003 (fflags, frm, fcsr)

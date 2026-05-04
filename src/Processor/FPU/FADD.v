@@ -67,18 +67,18 @@ wire rs2_lt_rs1 = expDiff[NEXP+2] || (rs1Exp_i == rs2Exp_i && sigDiff[NFULLSIG+1
 
 // Normalization logic
 wire [6:0] sumSigCLZ;
-CLZ #(.W_IN(128))clz({{126-NFULLSIG{1'b0}}, sumSig}, sumSigCLZ);
+CLZ #(.W_IN(128))clz(.in({{126-NFULLSIG{1'b0}}, sumSig}), .out(sumSigCLZ));
 // Shift amount is sigLen - firstBitSet = sigLen - (127 - CLZ) = CLZ - (127 - sigLen)
-localparam shamtConst = 127 - NFULLSIG;
-wire [6:0] normShamt = sumSigCLZ - shamtConst;
+localparam SHAMT_CONST = 127 - NFULLSIG;
+wire [6:0] normShamt = sumSigCLZ - SHAMT_CONST;
 
 // Rounding
 reg  signed [NFULLSIG+1:0] outSig;
 wire        [NSIG:0] sumSigRound;
 wire signed [NEXP+2:0] sumExpRound;
-FRound #(.nInt(NFULLSIG+1),.nExp(NEXP+1), .nSig(NSIG)) round(
-        sumSign, outSig[NFULLSIG:0], adjExpNorm, rm_i,
-        sumSigRound, sumExpRound
+FRound #(.NINT(NFULLSIG+1),.NEXP(NEXP+1), .NSIG(NSIG)) round(
+        .sign_i(sumSign), .sig_i(outSig[NFULLSIG:0]), .exp_i(adjExpNorm), .rm_i(rm_i),
+        .sig_o(sumSigRound), .exp_o(sumExpRound)
 );
 
 always @(*) begin
@@ -157,7 +157,7 @@ always @(*) begin
                 sumSig = augendSig + addendSig;
 
                 // Normalize
-                adjExpNorm = adjExp + shamtConst - {{NEXP-4{1'b0}}, sumSigCLZ};
+                adjExpNorm = adjExp + SHAMT_CONST - {{NEXP-4{1'b0}}, sumSigCLZ};
                 if (adjExpNorm < (EMIN - NSIG) || sumSig == 0) begin
                         sumSigNorm = 0;
                         adjExpNorm = EMIN - 1;

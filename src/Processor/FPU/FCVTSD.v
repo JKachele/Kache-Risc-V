@@ -95,7 +95,8 @@ reg         [12:0] outExpBiased;
 
 wire        [23:0] outSigRound;
 wire signed [12:0] outExpRound;
-FRound #(.nInt(53),.nExp(11))round(rs1_i[63], outSig, rs1Exp_i, rm_i, outSigRound, outExpRound);
+FRound #(.NINT(53),.NEXP(11))round(.sign_i(rs1_i[63]), .sig_i(outSig), .exp_i(rs1Exp_i),
+        .rm_i(rm_i), .sig_o(outSigRound), .exp_o(outExpRound));
 
 always @(*) begin
         outSig = 0;

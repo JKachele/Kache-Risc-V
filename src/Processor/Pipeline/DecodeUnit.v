@@ -112,7 +112,7 @@ localparam NOP = 32'b0000000_00000_00000_000_00000_0110011;
 
 /*------------Instruction Decompression-----------*/
 wire [31:0] D_instr;
-Decompressor decomp(FD_instr_i, D_instr);
+Decompressor decomp(.compressed_i(FD_instr_i), .decompressed_o(D_instr));
 
 // Handle Unimplemented instructions
 wire D_isUNIMP = |D_instr == 0;
@@ -210,11 +210,11 @@ reg [BH_BITS-1:0] branchHist;
 always @(posedge clk_i) begin
         if (!E_stall_i && DE_isBranch_o) begin
                 branchHist <= {E_takeBranch_i, branchHist[BH_BITS-1:1]};
-                BHT[DE_bhtIndex_o] <= 
+                BHT[DE_bhtIndex_o] <=
                         {E_takeBranch_i, BHT[DE_bhtIndex_o]} == 3'b000 ? 2'b00 :
                         {E_takeBranch_i, BHT[DE_bhtIndex_o]} == 3'b001 ? 2'b00 :
                         {E_takeBranch_i, BHT[DE_bhtIndex_o]} == 3'b010 ? 2'b01 :
-                        {E_takeBranch_i, BHT[DE_bhtIndex_o]} == 3'b011 ? 2'b10 :		
+                        {E_takeBranch_i, BHT[DE_bhtIndex_o]} == 3'b011 ? 2'b10 :
                         {E_takeBranch_i, BHT[DE_bhtIndex_o]} == 3'b100 ? 2'b01 :
                         {E_takeBranch_i, BHT[DE_bhtIndex_o]} == 3'b101 ? 2'b10 :
                         {E_takeBranch_i, BHT[DE_bhtIndex_o]} == 3'b110 ? 2'b11 :
@@ -287,7 +287,7 @@ wire [31:0] D_trapJumpAddr = (D_trapPrivilege == SU) ? csrStvec_i : csrMtvec_i;
 
 wire [1:0]  D_privilegeSet =
          D_isTrap ? ((D_trapPrivilege == SU) ? SU : MA) :
-        (D_isMRET ? csrMStatus_i[12:11] : 
+        (D_isMRET ? csrMStatus_i[12:11] :
         (D_isSRET ? {1'b0, csrMStatus_i[8]} : DD_privilege));
 
 wire D_isMTrap = D_isTrap && D_trapPrivilege == MA;

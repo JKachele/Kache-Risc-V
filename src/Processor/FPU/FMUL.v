@@ -55,8 +55,9 @@ reg         [NEXP+2:0]   outExpBiased;
 
 wire        [NSIG:0] outSigRound;
 wire        [NEXP+2:0] outExpRound;
-FRound #(.nInt(NFULLSIG+1), .nExp(NEXP+1), .nSig(NSIG)
-)round(outSign, outSig, outExp, rm_i, outSigRound, outExpRound);
+FRound #(.NINT(NFULLSIG+1), .NEXP(NEXP+1), .NSIG(NSIG))round(
+        .sign_i(outSign), .sig_i(outSig), .exp_i(outExp),
+        .rm_i(rm_i), .sig_o(outSigRound), .exp_o(outExpRound));
 
 always @(*) begin
         outSigNorm = 0;

@@ -31,11 +31,12 @@ wire [23:0] outSig;
 
 reg  [31:0] unsignedRs1;
 wire [4:0]  intClz;
-CLZ #(.W_IN(32))clz(unsignedRs1, intClz);
+CLZ #(.W_IN(32))clz(.in(unsignedRs1), .out(intClz));
 
 reg [31:0] normalSig;
 reg [9:0] normalExp;
-FRound round(outSign, normalSig, normalExp, rm_i, outSig, outExp);
+FRound round(.sign_i(outSign), .sig_i(normalSig), .exp_i(normalExp), .rm_i(rm_i),
+        .sig_o(outSig), .exp_o(outExp));
 
 always @(*) begin
         if (rs1_i == 0) begin
@@ -68,7 +69,8 @@ wire signed [31:0] ftoiOut = (rs1_i[31]) ? -$signed(ftoiRounded) : ftoiRounded;
 wire        [31:0] ftoiRounded;
 reg         [31:0] ftoiNormal;
 reg         [31:0] ftoiRoundBits;
-FRoundInt roundFtoi(rs1_i[31], ftoiNormal, ftoiRoundBits[31], |ftoiRoundBits[30:0], rm_i, ftoiRounded);
+FRoundInt roundFtoi(.sign_i(rs1_i[31]), .int_i(ftoiNormal), .roundBit_i(ftoiRoundBits[31]),
+        .stickyBit_i(|ftoiRoundBits[30:0]), .rm_i(rm_i), .int_o(ftoiRounded));
 
 wire signed [9:0]  ftoiShift    = 10'd23 - rs1Exp_i;
 wire signed [9:0]  negFtoiShift = -ftoiShift;

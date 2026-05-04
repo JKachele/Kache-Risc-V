@@ -19,22 +19,22 @@ module IO (
 wire [13:0] IO_wordAddr = IO_memAddr_i[15:2];
 
 // Output Indicators
-localparam IO_LEDS_bit          = 0;
-localparam IO_UART_DAT_bit      = 1;
-localparam IO_UART_CTRL_bit     = 2;
+localparam IO_LEDS_BIT          = 0;
+localparam IO_UART_DAT_BIT      = 1;
+localparam IO_UART_CTRL_BIT     = 2;
 
 reg [3:0] leds;
 always @(posedge clk_i) begin
         if (IO_memWr_i) begin
-                if (IO_wordAddr[IO_LEDS_bit])
+                if (IO_wordAddr[IO_LEDS_BIT])
                         leds[3:0] <= IO_memWData_i[3:0];
         end
 end
 
-wire uartValid = IO_memWr_i & IO_wordAddr[IO_UART_DAT_bit];
+wire uartValid = IO_memWr_i & IO_wordAddr[IO_UART_DAT_BIT];
 wire uartBusy;
 
-assign IO_memRData_o = IO_wordAddr[IO_UART_CTRL_bit] ? {22'b0, uartBusy, 9'b0}
+assign IO_memRData_o = IO_wordAddr[IO_UART_CTRL_BIT] ? {22'b0, uartBusy, 9'b0}
                                                     : 32'b0;
 // 115200 baud, 8-bit, no parity, 1 stop bit
 localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h0000D9};
@@ -69,7 +69,7 @@ localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h0000D9};
                 .leds_i(leds),
                 .leds_o(leds_o)
         );
-`endif   
+`endif
 
 endmodule
 

@@ -68,12 +68,13 @@ wire si = (rm_i == 3'b001 || (rm_i == 3'b010 && ~qSign) || (rm_i == 3'b011 &&  q
 wire [FLEN-1:0] roundedInfinity = {qSign, {NEXP-1{1'b1}}, ~si, {NSIG{si}}};
 
 // Rounding
-localparam roundLen = (NSIG + 3) * 2;
-reg         [roundLen-1:0] sigIn;
+localparam ROUND_LEN = (NSIG + 3) * 2;
+reg         [ROUND_LEN-1:0] sigIn;
 wire        [NSIG:0] sigOut;
 wire signed [NEXP+1:0]  expOut;
-FRound #(.nInt(roundLen), .nExp(NEXP), .nSig(NSIG)
-)round(qSign, sigIn, expIn, rm_i, sigOut, expOut);
+FRound #(.NINT(ROUND_LEN), .NEXP(NEXP), .NSIG(NSIG))round(
+        .sign_i(qSign), .sig_i(sigIn), .exp_i(expIn), .rm_i(rm_i),
+        .sig_o(sigOut), .exp_o(expOut));
 
 always @(posedge clk_i) begin
         if (!divEnable_i || reset_i) begin
@@ -169,7 +170,7 @@ always @(posedge clk_i) begin
                         sigIn = sigIn >> (EMIN - expIn);
                 end
 
-                divOut = sigIn[roundLen-1:roundLen-FLEN];
+                divOut = sigIn[ROUND_LEN-1:ROUND_LEN-FLEN];
         end else if (counter > 0) begin // Construct final output
                 counter <= counter - 1;
 
@@ -191,7 +192,7 @@ always @(posedge clk_i) begin
                         // Overflow
                         else if (expOut > EMAX) begin
                                 // // Round to infinity or largest normal depending on rounding mode
-                                // si = (rm_i == 3'b001 || 
+                                // si = (rm_i == 3'b001 ||
                                 //         (rm_i == 3'b010 && ~qSign) ||
                                 //         (rm_i == 3'b011 &&  qSign));
                                 // divOut <= {qSign, {7{1'b1}}, ~si, {23{si}}};

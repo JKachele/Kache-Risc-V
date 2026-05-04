@@ -33,7 +33,7 @@ reg  [52:0] outSig;
 wire signed [31:0] rs1_32 = rs1_i[31:0];
 reg         [31:0] unsignedRs1;
 wire        [4:0]  intClz;
-CLZ #(.W_IN(32))clz(unsignedRs1, intClz);
+CLZ #(.W_IN(32))clz(.in(unsignedRs1), .out(intClz));
 
 always @(*) begin
         if (rs1_32 == 0) begin
@@ -61,12 +61,15 @@ always @(*) begin
 end
 
 // double -> Int conversion
-wire signed [63:0] ftoiOut = {{32{1'b1}}, (rs1_i[63] && normalNumber) ? -$signed(ftoiRounded) : ftoiRounded};
+wire signed [63:0] ftoiOut = {{32{1'b1}}, (rs1_i[63] && normalNumber) ?
+        -$signed(ftoiRounded) : ftoiRounded};
 wire        [31:0] ftoiRounded;
 reg         [52:0] ftoiNormal;
 reg         [52:0] ftoiRoundBits;
-FRoundInt roundFtoi(rs1_i[63], ftoiNormal[31:0], ftoiRoundBits[52], |ftoiRoundBits[51:0],
-        rm_i, ftoiRounded);
+// FRoundInt roundFtoi(rs1_i[63], ftoiNormal[31:0], ftoiRoundBits[52], |ftoiRoundBits[51:0],
+//         rm_i, ftoiRounded);
+FRoundInt roundFtoi(.sign_i(rs1_i[63]), .int_i(ftoiNormal[31:0]), .roundBit_i(ftoiRoundBits[52]),
+        .stickyBit_i(|ftoiRoundBits[51:0]), .rm_i(rm_i), .int_o(ftoiRounded));
 
 wire signed [12:0]  ftoiShift    = 13'd52 - rs1Exp_i;
 
