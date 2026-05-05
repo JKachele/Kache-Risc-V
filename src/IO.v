@@ -9,14 +9,16 @@
 module IO (
         input  wire        clk_i,
         input  wire        reset_i,
-        input  wire [31:0] IO_memAddr_i,
+        input  wire [31:0] IO_memRAddr_i,
         output wire [31:0] IO_memRData_o,
+        input  wire [31:0] IO_memWAddr_i,
         input  wire [31:0] IO_memWData_i,
         input  wire        IO_memWr_i,
         output wire [3:0]  leds_o,
         output wire        txd_o
 );
-wire [13:0] IO_wordAddr = IO_memAddr_i[15:2];
+wire [13:0] IO_wordRAddr = IO_memRAddr_i[15:2];
+wire [13:0] IO_wordWAddr = IO_memWAddr_i[15:2];
 
 // Output Indicators
 localparam IO_LEDS_BIT          = 0;
@@ -26,18 +28,19 @@ localparam IO_UART_CTRL_BIT     = 2;
 reg [3:0] leds;
 always @(posedge clk_i) begin
         if (IO_memWr_i) begin
-                if (IO_wordAddr[IO_LEDS_BIT])
+                if (IO_wordWAddr[IO_LEDS_BIT])
                         leds[3:0] <= IO_memWData_i[3:0];
         end
 end
 
-wire uartValid = IO_memWr_i & IO_wordAddr[IO_UART_DAT_BIT];
+wire uartValid = IO_memWr_i & IO_wordWAddr[IO_UART_DAT_BIT];
 wire uartBusy;
 
-assign IO_memRData_o = IO_wordAddr[IO_UART_CTRL_BIT] ? {22'b0, uartBusy, 9'b0}
+assign IO_memRData_o = IO_wordRAddr[IO_UART_CTRL_BIT] ? {22'b0, uartBusy, 9'b0}
                                                     : 32'b0;
 // 115200 baud, 8-bit, no parity, 1 stop bit
 localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h0000D9};
+// localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h000364};
 
 `ifndef BENCH
         txuart TXUART (
@@ -52,11 +55,16 @@ localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h0000D9};
                 .o_busy(uartBusy)
         );
 `else
+        // reg [15:0] count;
+        // initial count = 16'b0;
         assign uartBusy = 1'b0;
         always @(posedge clk_i) begin
                 if(uartValid) begin
                         $write("%c", IO_memWData_i[7:0]);
                         $fflush(32'h8000_0001);
+                //         count <= 16'hFFFF;
+                // end else if (count != 0) begin
+                //         count <= count - 1;
                 end
         end
 `endif

@@ -114,25 +114,59 @@ localparam NOP = 32'b0000000_00000_00000_000_00000_0110011;
 wire [31:0] D_instr;
 Decompressor decomp(.compressed_i(FD_instr_i), .decompressed_o(D_instr));
 
-// Handle Unimplemented instructions
-wire D_isUNIMP = |D_instr == 0;
-
 /*--------------INSTRUCTION DECODING--------------*/
 // 11 RV32I OpCodes
-// bits [1:0] are always 00 for all opcodes
-wire D_isLUI      = !D_isUNIMP && (D_instr[6:2] == 5'b01101);
-wire D_isAUIPC    = !D_isUNIMP && (D_instr[6:2] == 5'b00101);
-wire D_isJAL      = !D_isUNIMP && (D_instr[6:2] == 5'b11011);
-wire D_isJALR     = !D_isUNIMP && (D_instr[6:2] == 5'b11001);
-wire D_isBranch   = !D_isUNIMP && (D_instr[6:2] == 5'b11000);
-wire D_isLoad     = !D_isUNIMP && (D_instr[6:3] == 4'b0000);  // instr[2]: FLW
-wire D_isStore    = !D_isUNIMP && (D_instr[6:3] == 4'b0100);  // instr[2]: FSW
-wire D_isALUI     = !D_isUNIMP && (D_instr[6:2] == 5'b00100);
-wire D_isALUR     = !D_isUNIMP && (D_instr[6:2] == 5'b01100);
-wire D_isFENCE    = !D_isUNIMP && (D_instr[6:2] == 5'b00011);
-wire D_isSYS      = !D_isUNIMP && (D_instr[6:2] == 5'b11100);
-wire D_isAMO      = !D_isUNIMP && (D_instr[6:2] == 5'b01011);
-wire D_isFPU      = !D_isUNIMP && (D_instr[6:5] == 2'b10);
+// bits [1:0] are always 11 for all opcodes
+reg D_isLUI;
+reg D_isAUIPC;
+reg D_isJAL;
+reg D_isJALR;
+reg D_isBranch;
+reg D_isLoad;
+reg D_isStore;
+reg D_isALUI;
+reg D_isALUR;
+reg D_isFENCE;
+reg D_isSYS;
+reg D_isAMO;
+reg D_isFPU;
+
+// Handle Unimplemented instructions
+reg D_isUNIMP;
+
+always @(*) begin
+        D_isLUI   = 1'b0;
+        D_isAUIPC = 1'b0;
+        D_isJAL   = 1'b0;
+        D_isJALR  = 1'b0;
+        D_isBranch= 1'b0;
+        D_isLoad  = 1'b0;
+        D_isStore = 1'b0;
+        D_isALUI  = 1'b0;
+        D_isALUR  = 1'b0;
+        D_isFENCE = 1'b0;
+        D_isSYS   = 1'b0;
+        D_isAMO   = 1'b0;
+        D_isFPU   = 1'b0;
+        D_isUNIMP = 1'b0;
+
+        casez (D_instr[6:0])
+                7'b0110111: D_isLUI    = 1'b1;
+                7'b0010111: D_isAUIPC  = 1'b1;
+                7'b1101111: D_isJAL    = 1'b1;
+                7'b1100111: D_isJALR   = 1'b1;
+                7'b1100011: D_isBranch = 1'b1;
+                7'b0000?11: D_isLoad   = 1'b1;  // instr[2]: FLW
+                7'b0100?11: D_isStore  = 1'b1;  // instr[2]: FSW
+                7'b0010011: D_isALUI   = 1'b1;
+                7'b0110011: D_isALUR   = 1'b1;
+                7'b0001111: D_isFENCE  = 1'b1;
+                7'b1110011: D_isSYS    = 1'b1;
+                7'b0101111: D_isAMO    = 1'b1;
+                7'b10???11: D_isFPU    = 1'b1;
+                default:    D_isUNIMP  = 1'b1;
+        endcase
+end
 
 // Instruction Functions
 wire [2:0] D_funct3 = D_instr[14:12];

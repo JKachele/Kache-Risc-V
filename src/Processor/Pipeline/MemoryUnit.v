@@ -14,8 +14,8 @@ module MemoryUnit (
         output wire [31:0] DMemWAddr_o,
         output wire [31:0] DMemWData_o,
         output wire [3:0]  DMemWMask_o,
-        output wire [31:0] IO_memAddr_o,
-        input  wire [31:0] IO_memRData_i,
+        output wire [31:0] IO_memWAddr_o,
+        // input  wire [31:0] IO_memRData_i,
         output wire [31:0] IO_memWData_o,
         output wire        IO_memWr_o,
         // CSR Interface
@@ -138,7 +138,25 @@ end
 wire M_isIO  = EM_addr_i[22];
 wire M_isRAM = !M_isIO;
 
-assign IO_memAddr_o  = EM_addr_i;
+reg M_isSDRAM;
+reg M_isSPI;
+reg M_isBRAM;
+reg M_isIO2;
+
+always @(*) begin
+        M_isSDRAM = 1'b0;
+        M_isSPI   = 1'b0;
+        M_isIO2   = 1'b0;
+        M_isBRAM  = 1'b0;
+        case (EM_addr_i[31:28])
+                4'b0000: M_isSDRAM = 1'b1;
+                4'b0001: M_isSPI   = 1'b1;
+                4'b1111: M_isBRAM  = 1'b1;
+                default: M_isIO2   = 1'b1;
+        endcase
+end
+
+assign IO_memWAddr_o  = EM_addr_i;
 assign IO_memWr_o    = (M_storeEnable) && M_isIO;
 assign IO_memWData_o = EM_rs2_i;
 
@@ -176,7 +194,8 @@ assign csrInstStep_o  = ~MW_nop_o;
 /*------------------------------------------------*/
 wire [31:0] M_wbData =
         M_isSC                     ? {31'b0, M_scWriteable} :
-        (EM_isLoad_i | EM_isAMO_i) ? (M_isIO ? IO_memRData_i : M_Mdata) :
+        // (EM_isLoad_i | EM_isAMO_i) ? (M_isIO ? IO_memRData_i : M_Mdata) :
+        (EM_isLoad_i | EM_isAMO_i) ? M_Mdata :
         EM_isCSR_i                 ? EM_CSRdata_i : EM_Eresult_i;
 
 always @(posedge clk_i) begin

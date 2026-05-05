@@ -12,7 +12,11 @@ module SOC (
         input  wire RESET,
         output wire [3:0] LEDS,
         input  wire RXD,
-        output wire TXD
+        output wire TXD,
+
+        output wire qspi_sck,
+        output wire qspi_cs,
+        inout  wire [3:0] qspi_dq
 );
 
 /*verilator public_flat_rw_on*/
@@ -30,8 +34,9 @@ wire [31:0] DMemWData;
 wire [3:0]  DMemWMask;
 
 // IO
-wire [31:0] IO_memAddr;
+wire [31:0] IO_memRAddr;
 wire [31:0] IO_memRData;
+wire [31:0] IO_memWAddr;
 wire [31:0] IO_memWData;
 wire        IO_memWr;
 
@@ -45,8 +50,9 @@ Processor CPU(
         .DMemWAddr_o(DMemWAddr),
         .DMemWData_o(DMemWData),
         .DMemWMask_o(DMemWMask),
-        .IO_memAddr_o(IO_memAddr),
+        .IO_memRAddr_o(IO_memRAddr),
         .IO_memRData_i(IO_memRData),
+        .IO_memWAddr_o(IO_memWAddr),
         .IO_memWData_o(IO_memWData),
         .IO_memWr_o(IO_memWr)
 );
@@ -65,8 +71,9 @@ Memory mem(
 IO io(
         .clk_i(clk),
         .reset_i(reset),
-        .IO_memAddr_i(IO_memAddr),
+        .IO_memRAddr_i(IO_memRAddr),
         .IO_memRData_o(IO_memRData),
+        .IO_memWAddr_i(IO_memWAddr),
         .IO_memWData_i(IO_memWData),
         .IO_memWr_i(IO_memWr),
         .leds_o(LEDS),
