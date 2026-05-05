@@ -16,6 +16,10 @@ module Memory (
         input  wire [31:0] DMemWAddr_i,
         input  wire [63:0] DMemWData_i,
         input  wire [4:0]  DMemWMask_i
+
+        // IO
+        // output wire [3:0]  leds_o,
+        // output wire        txd_o
 );
 
 reg [15:0] INSTMEM [0:32767];
@@ -26,6 +30,12 @@ initial begin
         $readmemh("../bin/ROM.hex",INSTMEM);
         $readmemh("../bin/RAM.hex",DATAMEM);
 end
+
+// Use memory map to determine if is IO
+wire isIO_r  = DMemRAddr[22];
+wire isRAM_r = !isIO_r;
+wire isIO_w  = DMemWAddr[22];
+wire isRAM_w = !isIO_w;
 
 // Instruction ROM: Can be alligned to 16 bits or 32 bits
 wire [15:0] IMemdata_1 = INSTMEM[IMemAddr_i[31:1]];

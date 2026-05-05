@@ -34,6 +34,9 @@ module ExecuteUnit (
         // Memory Interface
         output wire [31:0] DMemRAddr_o,
         input  wire [63:0] DMemRData_i,
+        // IO Interface
+        output wire [31:0] IO_memRAddr_o,
+        input  wire [31:0] IO_memRData_i,
         // Register Forwarding
         input  wire        MW_wbEnable_i,
         input  wire [5:0]  MW_rdId_i,
@@ -126,7 +129,7 @@ wire [63:0] E_rs3 = EMfwd_rs3 ? EM_Eresult_o :
 
 /*---------------ADD/SUBTRACT/SHIFT---------------*/
 wire [31:0] E_aluIn1 =
-        DE_isAMO_i ? DMemRData_i[31:0] :
+        DE_isAMO_i ? E_MemIOData[31:0] :
         DE_isCSR_i ? csrRData_i  : E_rs1[31:0];
 wire [31:0] E_aluIn2 =
         (DE_isALUR_i | DE_isBranch_i | DE_isAMO_i) ? E_rs2[31:0] :
@@ -245,7 +248,14 @@ wire [31:0] E_csrOut =
 wire [31:0] E_addr =
         DE_isAMO_i   ? E_rs1[31:0]             :
         DE_isStore_i ? E_rs1[31:0] + DE_Simm_i : E_rs1[31:0] + DE_Iimm_i;
+
+wire E_isIO  = E_addr[22];
+wire E_isRAM = !E_isIO;
+
 assign DMemRAddr_o = E_addr;
+assign IO_memRAddr_o  = E_addr;
+
+wire [63:0] E_MemIOData = (E_isIO ? {32'hFFFFFFFF, IO_memRData_i} : DMemRData_i);
 
 wire [31:0] E_amoOut =
         (DE_funct7_i[6:2] == 5'h00 ?                      E_aluPlus : 32'b0) | // amoadd.w
@@ -285,21 +295,21 @@ wire [63:0] E_aluOut = DE_isFPU_i ? E_fpuOut : {32'hFFFFFFFF, E_aluOut_32};
 assign aluBusy_o = EE_divBusy | (DE_isDIV_i & !EE_divFinished) | E_fpuBusy;
 
 /*------------------JUMP/BRANCH-------------------*/
-wire E_takeBranch =
+assign E_takeBranch_o =
         (DE_funct3_is_i[0] &  E_EQ ) | // BEQ
         (DE_funct3_is_i[1] & !E_EQ ) | // BNE
         (DE_funct3_is_i[4] &  E_LT ) | // BLT
         (DE_funct3_is_i[5] & !E_LT ) | // BGE
         (DE_funct3_is_i[6] &  E_LTU) | // BLTU
         (DE_funct3_is_i[7] & !E_LTU) ; // BGEU
-assign E_takeBranch_o = E_takeBranch;
+// assign ED_takeBranch_o = E_takeBranch;
 
 wire [31:0] E_JALRaddr/*verilator public_flat_rw*/;
 assign E_JALRaddr = {E_aluPlus[31:1],1'b0};
 
 wire E_correctPC = (
         (DE_isJALR_i    && (DE_predictRA_i != E_JALRaddr)   ) ||
-        (DE_isBranch_i  && (E_takeBranch^DE_predictBranch_i))
+        (DE_isBranch_i  && (E_takeBranch_o^DE_predictBranch_i))
 );
 assign E_correctPC_o = E_correctPC;
 
@@ -337,7 +347,7 @@ always @(posedge clk_i) begin
                 EM_rs2_o <= E_rs2;
                 EM_Eresult_o <= E_result;
                 EM_addr_o <= E_addr;
-                EM_Mdata_o <= DMemRData_i;
+                EM_Mdata_o <= E_MemIOData;
                 EM_CSRdata_o <= csrRData_i;
                 EM_wbEnable_o <= DE_wbEnable_i && (DE_rdId_i != 0);
 
