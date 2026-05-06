@@ -35,9 +35,6 @@ module ExecuteUnit (
         // Memory Interface
         output wire [31:0] DMemRAddr_o,
         input  wire [31:0] DMemRData_i,
-        // IO Interface
-        output wire [31:0] IO_memRAddr_o,
-        input  wire [31:0] IO_memRData_i,
         // Register Forwarding
         input  wire        MW_wbEnable_i,
         input  wire [5:0]  MW_rdId_i,
@@ -250,13 +247,9 @@ wire [31:0] E_addr =
         DE_isAMO_i   ? E_rs1             :
         DE_isStore_i ? E_rs1 + DE_Simm_i : E_rs1 + DE_Iimm_i;
 
-wire E_isIO  = E_addr[22];
-wire E_isRAM = !E_isIO;
-
 assign DMemRAddr_o = E_addr;
-assign IO_memRAddr_o  = E_addr;
 
-wire [31:0] E_MemIOData = (E_isIO ? IO_memRData_i : DMemRData_i);
+wire [31:0] E_MemIOData = DMemRData_i;
 
 wire [31:0] E_amoOut =
         (DE_funct7_i[6:2] == 5'h00 ?                      E_aluPlus : 32'b0) | // amoadd.w

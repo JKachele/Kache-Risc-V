@@ -49,33 +49,19 @@ Processor CPU(
         .DMemRData_i(DMemRData),
         .DMemWAddr_o(DMemWAddr),
         .DMemWData_o(DMemWData),
-        .DMemWMask_o(DMemWMask),
-        .IO_memRAddr_o(IO_memRAddr),
-        .IO_memRData_i(IO_memRData),
-        .IO_memWAddr_o(IO_memWAddr),
-        .IO_memWData_o(IO_memWData),
-        .IO_memWr_o(IO_memWr)
+        .DMemWMask_o(DMemWMask)
 );
 
 Memory mem(
         .clk_i(clk),
+        .reset_i(reset),
         .IMemAddr_i(IMemAddr),
         .IMemData_o(IMemData),
         .DMemRAddr_i(DMemRAddr),
         .DMemRData_o(DMemRData),
         .DMemWAddr_i(DMemWAddr),
         .DMemWData_i(DMemWData),
-        .DMemWMask_i(DMemWMask)
-);
-
-IO io(
-        .clk_i(clk),
-        .reset_i(reset),
-        .IO_memRAddr_i(IO_memRAddr),
-        .IO_memRData_o(IO_memRData),
-        .IO_memWAddr_i(IO_memWAddr),
-        .IO_memWData_i(IO_memWData),
-        .IO_memWr_i(IO_memWr),
+        .DMemWMask_i(DMemWMask),
         .leds_o(LEDS),
         .txd_o(TXD)
 );

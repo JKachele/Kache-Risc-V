@@ -16,13 +16,7 @@ module Processor(
         input  wire [31:0] DMemRData_i,
         output wire [31:0] DMemWAddr_o,
         output wire [31:0] DMemWData_o,
-        output wire [3:0]  DMemWMask_o,
-        // Memory Mapped IO
-        output wire [31:0] IO_memRAddr_o,
-        input  wire [31:0] IO_memRData_i,
-        output wire [31:0] IO_memWAddr_o,
-        output wire [31:0] IO_memWData_o,
-        output wire        IO_memWr_o
+        output wire [3:0]  DMemWMask_o
 );
 
 /******************************************************************************
@@ -343,8 +337,6 @@ ExecuteUnit execute(
         .csrFRM_i(csrFRM),
         .DMemRAddr_o(DMemRAddr_o),
         .DMemRData_i(DMemRData_i),
-        .IO_memRAddr_o(IO_memRAddr_o),
-        .IO_memRData_i(IO_memRData_i),
         .MW_wbEnable_i(MW_wbEnable),
         .MW_rdId_i(MW_rdId),
         .MW_wbData_i(MW_wbData),
@@ -424,10 +416,6 @@ MemoryUnit memory(
         .DMemWAddr_o(DMemWAddr_o),
         .DMemWData_o(DMemWData_o),
         .DMemWMask_o(DMemWMask_o),
-        .IO_memWAddr_o(IO_memWAddr_o),
-        // .IO_memRData_i(IO_memRData_i),
-        .IO_memWData_o(IO_memWData_o),
-        .IO_memWr_o(IO_memWr_o),
         .csrWAddr_o(csrWAddr),
         .csrWData_o(csrWData),
         .csrWEnable_o(csrWEnable),
