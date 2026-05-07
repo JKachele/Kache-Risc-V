@@ -1,14 +1,9 @@
-MEMORY {
-        PROGROM (RX) : ORIGIN = 0x00000, LENGTH = 0x10000
-        DATARAM (RW) : ORIGIN = 0x10000, LENGTH = 0x20000
-}
-
 SECTIONS {
         .text : {
                 . = ALIGN(2);
                 *startPipeline*.o (.text)
                 *(.text*)
-        } > PROGROM
+        }
 
         .data : {
                 . = ALIGN(4);
@@ -24,5 +19,5 @@ SECTIONS {
                 *(.eh_frame_hdr)
                 *(.init_array*)         
                 *(.gcc_except_table*)
-        } > DATARAM
+        }
 }

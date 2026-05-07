@@ -1,8 +1,3 @@
-MEMORY {
-        PROGROM (RX) : ORIGIN = 0x00000, LENGTH = 0x10000
-        DATARAM (RW) : ORIGIN = 0x10000, LENGTH = 0x40000
-}
-
 ENTRY(_start)
 
 SECTIONS {
@@ -10,7 +5,7 @@ SECTIONS {
                 . = ALIGN(2);
                 KEEP(*(.text.bios));
                 *(.text .text.*);
-        } > PROGROM
+        }
 
         .data : {
                 . = ALIGN(4);
@@ -43,5 +38,5 @@ SECTIONS {
                 __free_ram = .;
                 . += 128 * 1024; /*128KB */
                 __free_ram_end = .;
-        } > DATARAM
+        }
 }

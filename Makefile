@@ -45,21 +45,15 @@ SRC += $(wildcard firmware/libs/*.S) $(wildcard firmware/libs/*.c)
 OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
 LDSCRIPT = firmware/Tests/ram.ld
 
-ROM := $(BIN_DIR)/ROM.hex
-RAM := $(BIN_DIR)/RAM.hex
+BRAM := $(BIN_DIR)/BRAM.hex
 FIRMWARE := $(BIN_DIR)/firmware.elf
 
 .PHONY: hex sim lint build dirs clean
 
-hex: $(ROM) $(RAM)
+hex: $(BRAM)
 
-$(ROM): $(FIRMWARE)
-	$(OBJCOPY) $< -j .text -O binary $@.bin
-	hexdump -ve '1/2 "%04x\n"' $@.bin > $@
-	rm $@.bin
-
-$(RAM): $(FIRMWARE)
-	$(OBJCOPY) $< -j .data -O binary $@.bin
+$(BRAM): $(FIRMWARE)
+	$(OBJCOPY) $< -O binary $@.bin
 	hexdump -ve '"%08x\n"' $@.bin > $@
 	rm $@.bin
 
@@ -76,7 +70,7 @@ $(BUILD_DIR)/%.c.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) -o $@ -c $< $(CFLAGS)
 
-sim: $(ROM) $(RAM)
+sim: $(BRAM)
 	rm -rf ./obj_dir
 	$(TB) $(TBFLAGS) $(TBSRC) $(VSRC)
 	cd obj_dir; make -f V$(TOP).mk

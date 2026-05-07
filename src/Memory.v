@@ -11,7 +11,7 @@ module Memory (
         input  wire        clk_i,
         input  wire        reset_i,
         input  wire [31:0] IMemAddr_i,
-        output wire [31:0] IMemData_o,
+        output wire [63:0] IMemData_o,
         input  wire [31:0] DMemRAddr_i,
         output wire [63:0] DMemRData_o,
         input  wire [31:0] DMemWAddr_i,
@@ -71,36 +71,29 @@ IO io(
 
 
 /*---------------- Block Ram ----------------*/
-reg [15:0] INSTMEM [0:32767];
-reg [31:0] DATAMEM [0:131071];
-// reg [31:0] DATAMEM [0:16383];
+reg [31:0] BRAM [0:131071];
 
 initial begin
-        $readmemh("../bin/ROM.hex",INSTMEM);
-        $readmemh("../bin/RAM.hex",DATAMEM);
+        $readmemh("../bin/BRAM.hex",BRAM);
 end
 
 // Instruction ROM: Can be alligned to 16 bits or 32 bits
-wire [15:0] IMemdata_1 = INSTMEM[IMemAddr_i[31:1]];
-wire [15:0] IMemdata_2 = INSTMEM[IMemAddr_i[31:1] + 1];
+wire [31:0] IMemdata_1 = BRAM[IMemAddr_i[18:2]];
+wire [31:0] IMemdata_2 = BRAM[IMemAddr_i[18:2] + 1];
 assign IMemData_o = {IMemdata_2, IMemdata_1};
 
 // Data RAM: All alligned to 32 bits
-// Subtract 0x10000 from address to allow room for Instruction memory addresses
-wire [31:0] DMemRAddr = DMemRAddr_i - 32'h00010000;
-wire [31:0] DMemWAddr = DMemWAddr_i - 32'h00010000;
-
-wire [31:0] DMemRData_1 = DATAMEM[DMemRAddr[31:2]];
-wire [31:0] DMemRData_2 = DATAMEM[DMemRAddr[31:2] + 1];
+wire [31:0] DMemRData_1 = BRAM[DMemRAddr_i[18:2]];
+wire [31:0] DMemRData_2 = BRAM[DMemRAddr_i[18:2] + 1];
 assign BRamRData = {DMemRData_2, DMemRData_1};
 
-wire [29:0] wordAddr = DMemWAddr[31:2];
+wire [29:0] wordAddr = DMemWAddr_i[31:2];
 always @(posedge clk_i) begin
-        if (BRamWMask[0]) DATAMEM[wordAddr][ 7:0 ] <= DMemWData_i[ 7:0 ];
-        if (BRamWMask[1]) DATAMEM[wordAddr][15:8 ] <= DMemWData_i[15:8 ];
-        if (BRamWMask[2]) DATAMEM[wordAddr][23:16] <= DMemWData_i[23:16];
-        if (BRamWMask[3]) DATAMEM[wordAddr][31:24] <= DMemWData_i[31:24];
-        if (BRamWMask[4]) DATAMEM[wordAddr + 1]    <= DMemWData_i[63:32];
+        if (BRamWMask[0]) BRAM[wordAddr][ 7:0 ] <= DMemWData_i[ 7:0 ];
+        if (BRamWMask[1]) BRAM[wordAddr][15:8 ] <= DMemWData_i[15:8 ];
+        if (BRamWMask[2]) BRAM[wordAddr][23:16] <= DMemWData_i[23:16];
+        if (BRamWMask[3]) BRAM[wordAddr][31:24] <= DMemWData_i[31:24];
+        if (BRamWMask[4]) BRAM[wordAddr + 1]    <= DMemWData_i[63:32];
 end
 
 endmodule
