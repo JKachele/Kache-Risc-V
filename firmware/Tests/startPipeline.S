@@ -1,5 +1,5 @@
-.equ STACK_BASE, 0x20000
-.equ IO_BASE, 0x400000
+.equ STACK_BASE, 0xF0030000
+.equ IO_BASE, 0x20000000
 .equ IO_LEDS, 0x04
 
 .global _start

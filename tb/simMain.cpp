@@ -155,6 +155,8 @@ int main(int argc, char **argv) {
 
         // tb->opentrace("trace.vcd");
 
+        tb->reset();
+
         int rxPrev = 1;
         while (!tb->done()) {
                 tb->tick();
