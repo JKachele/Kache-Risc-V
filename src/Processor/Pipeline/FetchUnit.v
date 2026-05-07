@@ -18,10 +18,10 @@ module FetchUnit (
         input  wire [31:0] EM_PCcorrection_i,
         // Memory Interface
         output wire [31:0] IMemAddr_o,
-        input  wire [31:0] IMemData_i,
+        input  wire [63:0] IMemData_i,
         // Decode Unit Interface
         output reg  [31:0] FD_PC_o,
-        output reg  [31:0] FD_instr_o,
+        output reg  [63:0] FD_instr_o,
         output reg         FD_isRV32C_o,
         output reg         FD_nop_o
 );
@@ -36,7 +36,7 @@ wire [31:0] F_PC =
 assign IMemAddr_o = F_PC;
 
 // The 2 LSBs of uncompressed instructions are always 2'b11
-wire F_isCompressed = ~(&IMemData_i[1:0]);
+wire F_isCompressed = F_PC[1] ? ~(&IMemData_i[17:16]) : ~(&IMemData_i[1:0]);
 
 always @(posedge clk_i) begin
         if (!F_stall_i) begin

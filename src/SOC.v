@@ -26,7 +26,7 @@ wire reset;
 
 //Memory
 wire [31:0] IMemAddr;
-wire [31:0] IMemData;
+wire [63:0] IMemData;
 wire [31:0] DMemRAddr;
 wire [31:0] DMemRData;
 wire [31:0] DMemWAddr;
