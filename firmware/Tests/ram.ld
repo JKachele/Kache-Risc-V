@@ -1,4 +1,6 @@
 SECTIONS {
+        . = 0xF0000000;
+
         .text : {
                 . = ALIGN(2);
                 *startPipeline*.o (.text)

@@ -1,4 +1,4 @@
-.equ IO_BASE, 0x400000
+.equ IO_BASE, 0x20000000
 .equ IO_LEDS, 0x04
 
 .global _start

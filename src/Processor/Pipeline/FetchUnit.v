@@ -27,6 +27,9 @@ module FetchUnit (
 );
 
 reg [31:0] PC;
+initial begin
+        PC = 32'hF000_0000;
+end
 
 wire [31:0] F_PC =
         D_predictPC_i  ? D_PCprediction_i  :
@@ -50,7 +53,7 @@ always @(posedge clk_i) begin
         FD_nop_o <= D_flush_i | reset_i;
 
         if (reset_i) begin
-                PC <= 0;
+                PC <= 32'hF000_0000;
         end
 
 end
