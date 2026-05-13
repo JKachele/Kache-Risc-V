@@ -3,6 +3,7 @@
 #include "VSOC___024root.h"
 #include "testbench.h"
 #include "uartsim.h"
+#include "flashsim.h"
 #include "riscVDis.h"
 
 #define HALT                    SOC__DOT__CPU__DOT__HALT
@@ -18,6 +19,10 @@
 #define INSTRET                 SOC__DOT__CPU__DOT__csr__DOT__CSR_instret;
 
 class SOC_TB : public TESTB<VSOC> {
+        // SPI Flash
+        FLASHSIM *m_flash;
+        int m_flash_last_sck;
+
         // Statistics counters
         IData nbBranch = 0;
         IData nbBranchHit = 0;
@@ -69,25 +74,23 @@ public:
         IData prevLEDS;
         CData prevCLK;
 
+        SOC_TB(void) {
+                m_flash = new FLASHSIM();
+                m_flash_last_sck = 0;
+        }
+
         virtual void tick(void) {
                 TESTB<VSOC>::tick();
                 CData clk = m_core->rootp->SOC__DOT__clk;
-                // if (prevCLK != clk && clk == 1) {
-                //         printf("%4x: ", m_core->rootp->SOC__DOT__CPU__DOT__FD_PC);
-                //         printf("%x\n", m_core->rootp->SOC__DOT__CPU__DOT__FD_instr);
-                //         printf("\tPriv: %x ", m_core->rootp->SOC__DOT__CPU__DOT__decode__DOT__DD_privilege);
-                //         printf("MEPC: %x\n", m_core->rootp->SOC__DOT__CPU__DOT__csr__DOT__CSR_mepc);
-                // }
-                // if (prevLEDS != m_core->LEDS) {
-                //         printf("LEDS: ");
-                //         printf("%x - ", m_core->LEDS);
-                //         for (int i=0; i<16; i++) {
-                //                 printf("%d", (m_core->LEDS >> (15-i)) & 1);
-                //         }
-                //         printf("\n");
-                // }
                 prevLEDS = m_core->LEDS;
                 prevCLK = m_core->rootp->SOC__DOT__clk;
+
+                // if (m_flash_last_sck) {
+                //         (*m_flash)(m_core->qspi_cs, 0, m_core->qspi_mosi);
+                // }
+                // m_core->qspi_miso = ((*m_flash)(m_core->qspi_cs, 1, m_core->qspi_mosi)&2)?1:0;
+                // m_flash_last_sck = m_core->qspi_sck;
+
                 updateStats();
         }
 
@@ -107,6 +110,8 @@ public:
         void printStatusReport(void) {
                 u64 cycle = rootp->CYCLE;
                 u64 instret = rootp->INSTRET;
+                float cpi = (cycle*1.0)/(instret*1.0);
+                float ipc = (instret*1.0)/(cycle*1.0);
 
                 printf("\n----------------------------\n");
                 printf("Simulated processor's report\n");
@@ -116,7 +121,7 @@ public:
                 printf("Load hzrds = %3.3f\%%\n", nbLoadHazard*100.0/nbLoad);
                 printf("Cycles     = %ld\n", cycle);
                 printf("Instret    = %ld\n", instret);
-                printf("CPI        = %3.3f\n",(cycle*1.0)/(instret*1.0));
+                printf("CPI/IPC    = %3.3f/%3.3f\n",cpi, ipc);
 
                 printf("Instr. mix = (");
                 printf("Branch:%3.3f\%% | ",            nbBranch*100.0/instret);
@@ -152,6 +157,10 @@ int main(int argc, char **argv) {
         uart = new UARTSIM(port);
         uart->setup(setup);
         baudclocks = setup & 0xfffffff;
+
+        // FLASHSIM *m_flash = new FLASHSIM;
+        // int m_flash_last_sck = 0;
+        // m_flash->debug(true);
 
         // tb->opentrace("trace.vcd");
 
