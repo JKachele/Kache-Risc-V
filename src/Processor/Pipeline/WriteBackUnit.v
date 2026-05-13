@@ -13,9 +13,9 @@ module WriteBackUnit (
         output wire [5:0]  rdId_o,
         output wire [63:0] rdData_o,
         // Memory Unit Interface
-        input  wire [31:0] MW_PC_i,
-        input  wire [31:0] MW_instr_i,
-        input  wire        MW_nop_i,
+        // input  wire [31:0] MW_PC_i,
+        // input  wire [31:0] MW_instr_i,
+        // input  wire        MW_nop_i,
         input  wire [5:0]  MW_rdId_i,
         input  wire [63:0] MW_wbData_i,
         input  wire        MW_wbEnable_i

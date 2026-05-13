@@ -12,11 +12,14 @@ module Processor(
         // Memory
         output wire [31:0] IMemAddr_o,
         input  wire [63:0] IMemData_i,
+        output wire        DMemRStrb_o,
         output wire [31:0] DMemRAddr_o,
         input  wire [63:0] DMemRData_i,
+        input  wire        DMemRBusy_i,
         output wire [31:0] DMemWAddr_o,
         output wire [63:0] DMemWData_o,
-        output wire [4:0]  DMemWMask_o
+        output wire [4:0]  DMemWMask_o,
+        input  wire        DMemWBusy_i
 );
 
 /******************************************************************************
@@ -120,6 +123,7 @@ ControlUnit control(
         .D_isPrivileged_i(D_isPrivileged),
         .EM_isCSRWrite_i(EM_isCSRWrite),
         .aluBusy_i(aluBusy),
+        .M_busy_i(M_busy),
         .E_correctPC_i(E_correctPC),
         .F_stall_o(F_stall),
         .D_stall_o(D_stall),
@@ -335,8 +339,10 @@ ExecuteUnit execute(
         .csrRData_i(csrRData),
         .csrFFlagsSet_o(csrFFlagsSet),
         .csrFRM_i(csrFRM),
+        .DMemRStrb_o(DMemRStrb_o),
         .DMemRAddr_o(DMemRAddr_o),
-        .DMemRData_i(DMemRData_i),
+        // .DMemRData_i(DMemRData_i),
+        // .DMemRBusy_i(DMemRBusy_i),
         .MW_wbEnable_i(MW_wbEnable),
         .MW_rdId_i(MW_rdId),
         .MW_wbData_i(MW_wbData),
@@ -377,8 +383,8 @@ ExecuteUnit execute(
         .DE_wbEnable_i(DE_wbEnable),
         .DE_predictBranch_i(DE_predictBranch),
         .DE_predictRA_i(DE_predictRA),
-        .EM_PC_o(EM_PC),
-        .EM_instr_o(EM_instr),
+        // .EM_PC_o(EM_PC),
+        // .EM_instr_o(EM_instr),
         .EM_nop_o(EM_nop),
         .EM_isLoad_o(EM_isLoad),
         .EM_isStore_o(EM_isStore),
@@ -394,7 +400,7 @@ ExecuteUnit execute(
         .EM_funct7_o(EM_funct7),
         .EM_Eresult_o(EM_Eresult),
         .EM_addr_o(EM_addr),
-        .EM_Mdata_o(EM_Mdata),
+        // .EM_Mdata_o(EM_Mdata),
         .EM_CSRdata_o(EM_CSRdata),
         .EM_wbEnable_o(EM_wbEnable)
 );
@@ -410,18 +416,24 @@ wire [5:0]  MW_rdId;
 wire [63:0] MW_wbData;
 wire        MW_wbEnable;
 
+wire        M_busy;
+
 MemoryUnit memory(
         .clk_i(clk_i),
         .reset_i(reset_i),
+        .M_busy_o(M_busy),
+        .DMemRData_i(DMemRData_i),
+        .DMemRBusy_i(DMemRBusy_i),
         .DMemWAddr_o(DMemWAddr_o),
         .DMemWData_o(DMemWData_o),
         .DMemWMask_o(DMemWMask_o),
+        .DMemWBusy_i(DMemWBusy_i),
         .csrWAddr_o(csrWAddr),
         .csrWData_o(csrWData),
         .csrWEnable_o(csrWEnable),
         .csrInstStep_o(csrInstStep),
-        .EM_PC_i(EM_PC),
-        .EM_instr_i(EM_instr),
+        // .EM_PC_i(EM_PC),
+        // .EM_instr_i(EM_instr),
         .EM_nop_i(EM_nop),
         .EM_isLoad_i(EM_isLoad),
         .EM_isStore_i(EM_isStore),
@@ -436,12 +448,12 @@ MemoryUnit memory(
         .EM_funct7_i(EM_funct7),
         .EM_Eresult_i(EM_Eresult),
         .EM_addr_i(EM_addr),
-        .EM_Mdata_i(EM_Mdata),
+        // .EM_Mdata_i(EM_Mdata),
         .EM_CSRdata_i(EM_CSRdata),
         .EM_wbEnable_i(EM_wbEnable),
-        .MW_PC_o(MW_PC),
-        .MW_instr_o(MW_instr),
-        .MW_nop_o(MW_nop),
+        // .MW_PC_o(MW_PC),
+        // .MW_instr_o(MW_instr),
+        // .MW_nop_o(MW_nop),
         .MW_rdId_o(MW_rdId),
         .MW_wbData_o(MW_wbData),
         .MW_wbEnable_o(MW_wbEnable)
@@ -455,9 +467,9 @@ WriteBackUnit writeback(
         .reset_i(reset_i),
         .rdId_o(rdId),
         .rdData_o(rdData),
-        .MW_PC_i(MW_PC),
-        .MW_instr_i(MW_instr),
-        .MW_nop_i(MW_nop),
+        // .MW_PC_i(MW_PC),
+        // .MW_instr_i(MW_instr),
+        // .MW_nop_i(MW_nop),
         .MW_rdId_i(MW_rdId),
         .MW_wbData_i(MW_wbData),
         .MW_wbEnable_i(MW_wbEnable)

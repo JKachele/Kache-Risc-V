@@ -16,7 +16,9 @@ module SOC (
 
         output wire qspi_sck,
         output wire qspi_cs,
-        inout  wire [3:0] qspi_dq
+        output wire qspi_mosi,
+        input  wire qspi_miso
+        // inout  wire [3:0] qspi_dq
 );
 
 /*verilator public_flat_rw_on*/
@@ -27,11 +29,14 @@ wire reset;
 //Memory
 wire [31:0] IMemAddr;
 wire [63:0] IMemData;
+wire        DMemRStrb;
 wire [31:0] DMemRAddr;
 wire [63:0] DMemRData;
+wire        DMemRBusy;
 wire [31:0] DMemWAddr;
 wire [63:0] DMemWData;
 wire [4:0]  DMemWMask;
+wire        DMemWBusy;
 
 // IO
 wire [31:0] IO_memRAddr;
@@ -45,11 +50,14 @@ Processor CPU(
         .reset_i(reset),
         .IMemAddr_o(IMemAddr),
         .IMemData_i(IMemData),
+        .DMemRStrb_o(DMemRStrb),
         .DMemRAddr_o(DMemRAddr),
         .DMemRData_i(DMemRData),
+        .DMemRBusy_i(DMemRBusy),
         .DMemWAddr_o(DMemWAddr),
         .DMemWData_o(DMemWData),
-        .DMemWMask_o(DMemWMask)
+        .DMemWMask_o(DMemWMask),
+        .DMemWBusy_i(DMemWBusy)
 );
 
 Memory mem(
@@ -57,13 +65,20 @@ Memory mem(
         .reset_i(reset),
         .IMemAddr_i(IMemAddr),
         .IMemData_o(IMemData),
+        .DMemRStrb_i(DMemRStrb),
         .DMemRAddr_i(DMemRAddr),
         .DMemRData_o(DMemRData),
+        .DMemRBusy_o(DMemRBusy),
         .DMemWAddr_i(DMemWAddr),
         .DMemWData_i(DMemWData),
         .DMemWMask_i(DMemWMask),
+        .DMemWBusy_o(DMemWBusy),
         .leds_o(LEDS),
-        .txd_o(TXD)
+        .txd_o(TXD),
+        .spiClk_o(qspi_sck),
+        .spiCs_o(qspi_cs),
+        .spiMosi_o(qspi_mosi),
+        .spiMiso_i(qspi_miso)
 );
 
 Clockworks #(

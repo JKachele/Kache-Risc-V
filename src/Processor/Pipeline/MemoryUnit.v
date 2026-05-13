@@ -10,18 +10,22 @@ module MemoryUnit (
         input  wire clk_i,
         input  wire reset_i,
         // Pipeline Control Signals
+        output wire        M_busy_o,
         // Memory/IO Interface
+        input  wire [63:0] DMemRData_i,
+        input  wire        DMemRBusy_i,
         output wire [31:0] DMemWAddr_o,
         output wire [63:0] DMemWData_o,
         output wire [4:0]  DMemWMask_o,
+        input  wire        DMemWBusy_i,
         // CSR Interface
         output wire [11:0] csrWAddr_o,
         output wire [31:0] csrWData_o,
         output wire        csrWEnable_o,
         output wire        csrInstStep_o,
         // Execute Unit Interface
-        input  wire [31:0] EM_PC_i,
-        input  wire [31:0] EM_instr_i,
+        // input  wire [31:0] EM_PC_i,
+        // input  wire [31:0] EM_instr_i,
         input  wire        EM_nop_i,
         input  wire        EM_isLoad_i,
         input  wire        EM_isStore_i,
@@ -36,13 +40,13 @@ module MemoryUnit (
         input  wire [6:0]  EM_funct7_i,
         input  wire [63:0] EM_Eresult_i,
         input  wire [31:0] EM_addr_i,
-        input  wire [63:0] EM_Mdata_i,
+        // input  wire [63:0] EM_Mdata_i,
         input  wire [31:0] EM_CSRdata_i,
         input  wire        EM_wbEnable_i,
         // Writeback Unit Interface
-        output reg  [31:0] MW_PC_o,
-        output reg  [31:0] MW_instr_o,
-        output reg         MW_nop_o,
+        // output reg  [31:0] MW_PC_o,
+        // output reg  [31:0] MW_instr_o,
+        // output reg         MW_nop_o,
         output reg  [5:0]  MW_rdId_o,
         output reg  [63:0] MW_wbData_o,
         output reg         MW_wbEnable_o
@@ -62,15 +66,38 @@ wire M_addressReserved = (EM_addr_i == MM_reservedAddress);
 wire M_scWriteable = M_addressReserved & ~MM_reservedChanged;
 
 always @(posedge clk_i) begin
-        // Set reserved address and flag
-        if (EM_isAMO_i & M_isLR) begin
-                MM_reservedAddress <= EM_addr_i;
-                MM_reservedChanged <= 1'b0;
+        if (!M_busy_o) begin
+                // Set reserved address and flag
+                if (EM_isAMO_i & M_isLR) begin
+                        MM_reservedAddress <= EM_addr_i;
+                        MM_reservedChanged <= 1'b0;
+                end
+                // If any store to reserved address, set flag to changed
+                else if ((EM_isStore_i || EM_isAMO_i) && M_addressReserved) begin
+                        MM_reservedChanged <= 1'b1;
+                end
         end
-        // If any store to reserved address, set flag to changed
-        else if ((EM_isStore_i || EM_isAMO_i) && M_addressReserved) begin
-                MM_reservedChanged <= 1'b1;
-        end
+end
+
+/*-----------Atomic Memory Instructions-----------*/
+reg [31:0] M_amoOut;
+
+wire [32:0] M_amoMinus = {1'b0, DMemRData_i[31:0]} + {1'b1, ~EM_rs2_i[31:0]} + 33'd1;
+wire        M_amoLT  = (DMemRData_i[31] ^ EM_rs2_i[31]) ? DMemRData_i[31] : M_amoMinus[32];
+wire        M_amoLTU = M_amoMinus[32];
+always @(*) begin
+        case (EM_funct7_i[6:2])
+                5'h00: M_amoOut =             DMemRData_i[31:0] + EM_rs2_i[31:0]; // amoadd.w
+                5'h01: M_amoOut =                                 EM_rs2_i[31:0]; // amoswap.w
+                5'h04: M_amoOut =             DMemRData_i[31:0] ^ EM_rs2_i[31:0]; // amoxor.w
+                5'h08: M_amoOut =             DMemRData_i[31:0] | EM_rs2_i[31:0]; // amoor.w
+                5'h0c: M_amoOut =             DMemRData_i[31:0] & EM_rs2_i[31:0]; // amoand.w
+                5'h10: M_amoOut =  M_amoLT  ? DMemRData_i[31:0] : EM_rs2_i[31:0]; // amomin.w
+                5'h14: M_amoOut = !M_amoLT  ? DMemRData_i[31:0] : EM_rs2_i[31:0]; // amomax.w
+                5'h18: M_amoOut =  M_amoLTU ? DMemRData_i[31:0] : EM_rs2_i[31:0]; // amominu.w
+                5'h1c: M_amoOut = !M_amoLTU ? DMemRData_i[31:0] : EM_rs2_i[31:0]; // amomaxu.w
+                default: M_amoOut = 32'b0;
+        endcase
 end
 
 /*----------------------STORE---------------------*/
@@ -81,7 +108,7 @@ wire M_isW = (EM_funct3_i[1:0] == 2'b10);
 reg [63:0] M_storeData;
 always @(*) begin
         if (M_isAMO) begin
-                M_storeData[31:0] = EM_Eresult_i[31:0];
+                M_storeData[31:0] = M_amoOut;
         end
         // Store byte only
         else if (EM_addr_i[0]) begin
@@ -139,7 +166,11 @@ assign DMemWData_o = M_storeData;
 assign DMemWMask_o = {5{M_storeEnable}} & M_storeMask;
 
 /*----------------------LOAD----------------------*/
-wire [15:0] M_memHalf = EM_addr_i[1] ? EM_Mdata_i[31:16] : EM_Mdata_i[15:0];
+
+assign M_busy_o = DMemRBusy_i;
+
+// wire [15:0] M_memHalf = EM_addr_i[1] ? EM_Mdata_i[31:16] : EM_Mdata_i[15:0];
+wire [15:0] M_memHalf = EM_addr_i[1] ? DMemRData_i[31:16] : DMemRData_i[15:0];
 wire [7:0]  M_memByte = EM_addr_i[0] ? M_memHalf[15:8]  : M_memHalf[7:0];
 
 // Sign expansion
@@ -153,9 +184,11 @@ always @(*) begin
         else if(M_isH)
                 M_Mdata = {32'hFFFFFFFF, {16{M_loadSign}}, M_memHalf};
         else if(M_isW)
-                M_Mdata = {32'hFFFFFFFF, EM_Mdata_i[31:0]};
+                // M_Mdata = {32'hFFFFFFFF, EM_Mdata_i[31:0]};
+                M_Mdata = {32'hFFFFFFFF, DMemRData_i[31:0]};
         else
-                M_Mdata = EM_Mdata_i;
+                // M_Mdata = EM_Mdata_i;
+                M_Mdata = DMemRData_i;
 end
 
 
@@ -164,8 +197,8 @@ assign csrWAddr_o   = EM_isCSR_i ? EM_csrId_i : {12{1'bZ}};
 assign csrWData_o   = EM_isCSR_i ? EM_Eresult_i[31:0] : {32{1'bZ}};
 assign csrWEnable_o = EM_isCSR_i;
 
-// Step up instruction counter if not a NOP
-assign csrInstStep_o  = ~MW_nop_o;
+// Step up instruction counter if not a NOP and not stalled
+assign csrInstStep_o  = ~MW_nop & ~M_busy_o;
 
 /*------------------------------------------------*/
 wire [63:0] M_wbData =
@@ -173,14 +206,17 @@ wire [63:0] M_wbData =
         (EM_isLoad_i | EM_isAMO_i) ? M_Mdata :
         EM_isCSR_i                 ? {32'hFFFFFFFF, EM_CSRdata_i} : EM_Eresult_i;
 
+reg MW_nop;
 always @(posedge clk_i) begin
-        MW_PC_o <= EM_PC_i;
-        MW_instr_o <= EM_instr_i;
-        MW_nop_o <= EM_nop_i;
+        if (!M_busy_o) begin
+                // MW_PC_o <= EM_PC_i;
+                // MW_instr_o <= EM_instr_i;
+                MW_nop <= EM_nop_i;
 
-        MW_rdId_o <= EM_rdId_i;
-        MW_wbData_o <= M_wbData;
-        MW_wbEnable_o <= EM_wbEnable_i;
+                MW_rdId_o <= EM_rdId_i;
+                MW_wbData_o <= M_wbData;
+                MW_wbEnable_o <= EM_wbEnable_i;
+        end
 end
 
 endmodule
