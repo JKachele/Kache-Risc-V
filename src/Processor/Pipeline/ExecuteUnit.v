@@ -34,8 +34,6 @@ module ExecuteUnit (
         // Memory Interface
         output wire        DMemRStrb_o,
         output wire [31:0] DMemRAddr_o,
-        // input  wire [63:0] DMemRData_i,
-        // input  wire        DMemRBusy_i,
         // Register Forwarding
         input  wire        MW_wbEnable_i,
         input  wire [5:0]  MW_rdId_i,
@@ -79,8 +77,6 @@ module ExecuteUnit (
         input  wire        DE_predictBranch_i,
         input  wire [31:0] DE_predictRA_i,
         // Memory Unit Interface
-        // output reg  [31:0] EM_PC_o,
-        // output reg  [31:0] EM_instr_o,
         output reg         EM_nop_o,
         output reg         EM_isLoad_o,
         output reg         EM_isStore_o,
@@ -96,7 +92,6 @@ module ExecuteUnit (
         output reg  [6:0]  EM_funct7_o,
         output reg  [63:0] EM_Eresult_o,
         output reg  [31:0] EM_addr_o,
-        // output wire [63:0] EM_Mdata_o,
         output reg  [31:0] EM_CSRdata_o,
         output reg         EM_wbEnable_o
 );
@@ -250,20 +245,6 @@ wire [31:0] E_addr =
 assign DMemRAddr_o = E_addr;
 assign DMemRStrb_o = (DE_isAMO_i | DE_isLoad_i) & ~E_stall_i;
 
-// wire [63:0] E_MemIOData = DMemRData_i;
-// assign EM_Mdata_o = DMemRData_i;
-
-// wire [31:0] E_amoOut =
-//         (DE_funct7_i[6:2] == 5'h00 ?                      E_aluPlus : 32'b0) | // amoadd.w
-//         (DE_funct7_i[6:2] == 5'h01 ?                      E_aluIn2  : 32'b0) | // amoswap.w
-//         (DE_funct7_i[6:2] == 5'h04 ?                      E_aluXOR  : 32'b0) | // amoxor.w
-//         (DE_funct7_i[6:2] == 5'h08 ?                      E_aluOR   : 32'b0) | // amoor.w
-//         (DE_funct7_i[6:2] == 5'h0C ?                      E_aluAND  : 32'b0) | // amoand.w
-//         (DE_funct7_i[6:2] == 5'h10 ? ( E_LT  ? E_aluIn1 : E_aluIn2) : 32'b0) | // amomin.w
-//         (DE_funct7_i[6:2] == 5'h14 ? (!E_LT  ? E_aluIn1 : E_aluIn2) : 32'b0) | // amomax.w
-//         (DE_funct7_i[6:2] == 5'h18 ? ( E_LTU ? E_aluIn1 : E_aluIn2) : 32'b0) | // amominu.w
-//         (DE_funct7_i[6:2] == 5'h1C ? (!E_LTU ? E_aluIn1 : E_aluIn2) : 32'b0) ; // amomaxu.w
-
 wire [31:0] E_aluOut_32 = DE_isRV32M_i ? E_aluOutM :
                           DE_isCSR_i   ? E_csrOut  :
                           DE_isAMO_i   ? E_rs2[31:0]  : E_aluOutBase;
@@ -298,7 +279,6 @@ assign E_takeBranch_o =
         (DE_funct3_is_i[5] & !E_LT ) | // BGE
         (DE_funct3_is_i[6] &  E_LTU) | // BLTU
         (DE_funct3_is_i[7] & !E_LTU) ; // BGEU
-// assign ED_takeBranch_o = E_takeBranch;
 
 wire [31:0] E_JALRaddr/*verilator public_flat_rw*/;
 assign E_JALRaddr = {E_aluPlus[31:1],1'b0};
@@ -325,8 +305,6 @@ wire [63:0] E_result =
 
 always @(posedge clk_i) begin
         if (!E_stall_i) begin
-                // EM_PC_o <= DE_PC_i;
-                // EM_instr_o <= DE_instr_i;
                 EM_nop_o <= DE_nop_i;
 
                 EM_isLoad_o <= DE_isLoad_i;
@@ -343,7 +321,6 @@ always @(posedge clk_i) begin
                 EM_rs2_o <= E_rs2;
                 EM_Eresult_o <= E_result;
                 EM_addr_o <= E_addr;
-                // EM_Mdata_o <= E_MemIOData;
                 EM_CSRdata_o <= csrRData_i;
                 EM_wbEnable_o <= DE_wbEnable_i && (DE_rdId_i != 0);
 
@@ -352,7 +329,6 @@ always @(posedge clk_i) begin
         end
 
         if (M_flush_i) begin
-                // EM_instr_o     <= NOP;
                 EM_nop_o       <= 1'b1;
                 EM_isLoad_o    <= 1'b0;
                 EM_isStore_o   <= 1'b0;

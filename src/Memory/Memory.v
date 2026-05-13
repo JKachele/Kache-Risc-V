@@ -10,8 +10,10 @@
 module Memory (
         input  wire        clk_i,
         input  wire        reset_i,
+        input  wire [31:0] rvec_i,
         input  wire [31:0] IMemAddr_i,
         output wire [63:0] IMemData_o,
+        input  wire        IMemStrb_i,
         input  wire        DMemRStrb_i,
         input  wire [31:0] DMemRAddr_i,
         output wire [63:0] DMemRData_o,
@@ -33,6 +35,7 @@ module Memory (
 );
 
 reg  [31:0] DMemRAddr;
+reg  [31:0] IMemAddr;
 
 wire [63:0] SDRamRData = 64'b0;
 wire        SDRamRBusy;
@@ -41,7 +44,7 @@ wire [4:0]  SDRamWMask;
 wire [63:0] SPI_RData;
 wire        SPI_RBusy;
 reg  [63:0] BRamRData;
-wire [63:0] BRamInstr;
+reg  [63:0] BRamInstr;
 wire [4:0]  BRamWMask;
 wire [31:0] IO_RData;
 wire        IO_Wr;
@@ -51,12 +54,12 @@ assign DMemRBusy_o = (M_isSPI_r & SPI_RBusy) | (M_isSDRAM_r & SDRamRBusy);
 /*-------------------------------- Memory Map --------------------------------*/
 // Use memory map to determine destination
 wire M_isSDRAM_r = (DMemRAddr[31:28] == 4'b0000);
-wire M_isSDRAM_i = (IMemAddr_i[31:28]  == 4'b0000);
+wire M_isSDRAM_i = (IMemAddr[31:28]  == 4'b0000);
 wire M_isSDRAM_w = (DMemWAddr_i[31:28] == 4'b0000);
 wire M_isSPI_r   = (DMemRAddr[31:28] == 4'b0001);
 wire M_isSPI_w   = (DMemWAddr_i[31:28] == 4'b0001); // SPI Can't write, but still keeping this space
 wire M_isBRAM_r  = (DMemRAddr[31:28] == 4'b1111);
-wire M_isBRAM_i  = (IMemAddr_i[31:28]  == 4'b1111);
+wire M_isBRAM_i  = (IMemAddr[31:28]  == 4'b1111);
 wire M_isBRAM_w  = (DMemWAddr_i[31:28] == 4'b1111);
 wire M_isIO_r    = (!M_isSDRAM_r && !M_isSPI_r && !M_isBRAM_r);
 wire M_isIO_w    = (!M_isSDRAM_w && !M_isSPI_w && !M_isBRAM_w);
@@ -85,7 +88,8 @@ end
 // Instruction ROM: Can be alligned to 16 bits or 32 bits
 wire [31:0] IMemdata_1 = BRAM[IMemAddr_i[18:2]];
 wire [31:0] IMemdata_2 = BRAM[IMemAddr_i[18:2] + 1];
-assign BRamInstr = {IMemdata_2, IMemdata_1};
+// assign BRamInstr = {IMemdata_2, IMemdata_1};
+wire [63:0] BRamInstr_w = {IMemdata_2, IMemdata_1};
 
 // Data RAM: All alligned to 32 bits
 wire [31:0] DMemRData_1 = BRAM[DMemRAddr_i[18:2]];
@@ -102,9 +106,19 @@ always @(posedge clk_i) begin
 end
 
 always @(posedge clk_i) begin
+        if (reset_i) begin
+                DMemRAddr <= rvec_i;
+                IMemAddr  <= rvec_i;
+                BRamRData <= 64'b0;
+                BRamInstr <= 64'b0;
+        end
         if (DMemRStrb_i) begin
                 BRamRData <= BRamRData_w;
                 DMemRAddr <= DMemRAddr_i;
+        end
+        if (IMemStrb_i) begin
+                BRamInstr <= BRamInstr_w;
+                IMemAddr  <= IMemAddr_i;
         end
 end
 

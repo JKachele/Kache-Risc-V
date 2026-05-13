@@ -24,8 +24,6 @@ module MemoryUnit (
         output wire        csrWEnable_o,
         output wire        csrInstStep_o,
         // Execute Unit Interface
-        // input  wire [31:0] EM_PC_i,
-        // input  wire [31:0] EM_instr_i,
         input  wire        EM_nop_i,
         input  wire        EM_isLoad_i,
         input  wire        EM_isStore_i,
@@ -40,13 +38,9 @@ module MemoryUnit (
         input  wire [6:0]  EM_funct7_i,
         input  wire [63:0] EM_Eresult_i,
         input  wire [31:0] EM_addr_i,
-        // input  wire [63:0] EM_Mdata_i,
         input  wire [31:0] EM_CSRdata_i,
         input  wire        EM_wbEnable_i,
         // Writeback Unit Interface
-        // output reg  [31:0] MW_PC_o,
-        // output reg  [31:0] MW_instr_o,
-        // output reg         MW_nop_o,
         output reg  [5:0]  MW_rdId_o,
         output reg  [63:0] MW_wbData_o,
         output reg         MW_wbEnable_o
@@ -169,7 +163,6 @@ assign DMemWMask_o = {5{M_storeEnable}} & M_storeMask;
 
 assign M_busy_o = DMemRBusy_i;
 
-// wire [15:0] M_memHalf = EM_addr_i[1] ? EM_Mdata_i[31:16] : EM_Mdata_i[15:0];
 wire [15:0] M_memHalf = EM_addr_i[1] ? DMemRData_i[31:16] : DMemRData_i[15:0];
 wire [7:0]  M_memByte = EM_addr_i[0] ? M_memHalf[15:8]  : M_memHalf[7:0];
 
@@ -209,13 +202,13 @@ wire [63:0] M_wbData =
 reg MW_nop;
 always @(posedge clk_i) begin
         if (!M_busy_o) begin
-                // MW_PC_o <= EM_PC_i;
-                // MW_instr_o <= EM_instr_i;
                 MW_nop <= EM_nop_i;
 
                 MW_rdId_o <= EM_rdId_i;
                 MW_wbData_o <= M_wbData;
                 MW_wbEnable_o <= EM_wbEnable_i;
+        end else begin
+                MW_wbEnable_o <= 1'b0;
         end
 end
 

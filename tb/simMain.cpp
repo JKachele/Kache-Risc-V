@@ -14,7 +14,6 @@
 #define DE_predictBranch        SOC__DOT__CPU__DOT__DE_predictBranch
 #define DE_predictRA            SOC__DOT__CPU__DOT__DE_predictRA
 #define E_JALRaddr              SOC__DOT__CPU__DOT__execute__DOT__E_JALRaddr
-#define MW_instr                SOC__DOT__CPU__DOT__MW_instr
 #define CYCLE                   SOC__DOT__CPU__DOT__csr__DOT__CSR_cycle;
 #define INSTRET                 SOC__DOT__CPU__DOT__csr__DOT__CSR_instret;
 
@@ -56,15 +55,15 @@ class SOC_TB : public TESTB<VSOC> {
                                 }
                         }
                 }
-                if (riscV_isLoad(rootp->MW_instr))
+                if (riscV_isLoad(rootp->DE_instr))
                         nbLoad++;
-                if (riscV_isStore(rootp->MW_instr))
+                if (riscV_isStore(rootp->DE_instr))
                         nbStore++;
-                if (riscV_isMul(rootp->MW_instr) || riscV_isDiv(rootp->MW_instr))
+                if (riscV_isMul(rootp->DE_instr) || riscV_isDiv(rootp->DE_instr))
                         nbMULDIV++;
-                if (riscV_isFPU(rootp->MW_instr))
+                if (riscV_isFPU(rootp->DE_instr))
                         nbFPU++;
-                if (riscV_isAMO(rootp->MW_instr))
+                if (riscV_isAMO(rootp->DE_instr))
                         nbAMO++;
                 if (rootp->dataHazard == 1)
                         nbLoadHazard++;
@@ -213,6 +212,7 @@ int main(int argc, char **argv) {
 
         // tb->opentrace("trace.vcd");
 
+        tb->m_core->rvec = 0xF0000000;
         tb->reset();
 
         int rxPrev = 1;

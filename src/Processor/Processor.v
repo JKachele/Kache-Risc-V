@@ -7,11 +7,13 @@
  ************************************************/
 
 module Processor(
-        input  wire clk_i,
-        input  wire reset_i,
+        input  wire        clk_i,
+        input  wire        reset_i,
+        input  wire [31:0] rvec_i,
         // Memory
         output wire [31:0] IMemAddr_o,
         input  wire [63:0] IMemData_i,
+        output wire        IMemStrb_o,
         output wire        DMemRStrb_o,
         output wire [31:0] DMemRAddr_o,
         input  wire [63:0] DMemRData_i,
@@ -143,6 +145,7 @@ wire        FD_nop;
 FetchUnit fetch(
         .clk_i(clk_i),
         .reset_i(reset_i),
+        .rvec_i(rvec_i),
         .F_stall_i(F_stall),
         .D_flush_i(D_flush),
         .D_predictPC_i(D_predictPC),
@@ -151,6 +154,7 @@ FetchUnit fetch(
         .EM_PCcorrection_i(EF_PCcorrection),
         .IMemAddr_o(IMemAddr_o),
         .IMemData_i(IMemData_i),
+        .IMemStrb_o(IMemStrb_o),
         .FD_PC_o(FD_PC),
         .FD_instr_o(FD_instr),
         .FD_isRV32C_o(FD_isRV32C),
@@ -286,10 +290,7 @@ DecodeUnit #(
 /******************************************************************************
  ---------------------------------EXECUTE UNIT--------------------------------*
  ******************************************************************************/
-wire [31:0] EM_PC;
-wire [31:0] EM_instr;
 wire        EM_nop;
-
 wire        EM_isLoad;
 wire        EM_isStore;
 wire        EM_isCSR;
@@ -341,8 +342,6 @@ ExecuteUnit execute(
         .csrFRM_i(csrFRM),
         .DMemRStrb_o(DMemRStrb_o),
         .DMemRAddr_o(DMemRAddr_o),
-        // .DMemRData_i(DMemRData_i),
-        // .DMemRBusy_i(DMemRBusy_i),
         .MW_wbEnable_i(MW_wbEnable),
         .MW_rdId_i(MW_rdId),
         .MW_wbData_i(MW_wbData),
@@ -383,8 +382,6 @@ ExecuteUnit execute(
         .DE_wbEnable_i(DE_wbEnable),
         .DE_predictBranch_i(DE_predictBranch),
         .DE_predictRA_i(DE_predictRA),
-        // .EM_PC_o(EM_PC),
-        // .EM_instr_o(EM_instr),
         .EM_nop_o(EM_nop),
         .EM_isLoad_o(EM_isLoad),
         .EM_isStore_o(EM_isStore),
@@ -400,7 +397,6 @@ ExecuteUnit execute(
         .EM_funct7_o(EM_funct7),
         .EM_Eresult_o(EM_Eresult),
         .EM_addr_o(EM_addr),
-        // .EM_Mdata_o(EM_Mdata),
         .EM_CSRdata_o(EM_CSRdata),
         .EM_wbEnable_o(EM_wbEnable)
 );
@@ -408,10 +404,6 @@ ExecuteUnit execute(
 /******************************************************************************
  ------------------------------MEMORY ACCESS UNIT-----------------------------*
  ******************************************************************************/
-wire [31:0] MW_PC;
-wire [31:0] MW_instr;
-wire        MW_nop;
-
 wire [5:0]  MW_rdId;
 wire [63:0] MW_wbData;
 wire        MW_wbEnable;
@@ -432,8 +424,6 @@ MemoryUnit memory(
         .csrWData_o(csrWData),
         .csrWEnable_o(csrWEnable),
         .csrInstStep_o(csrInstStep),
-        // .EM_PC_i(EM_PC),
-        // .EM_instr_i(EM_instr),
         .EM_nop_i(EM_nop),
         .EM_isLoad_i(EM_isLoad),
         .EM_isStore_i(EM_isStore),
@@ -448,12 +438,8 @@ MemoryUnit memory(
         .EM_funct7_i(EM_funct7),
         .EM_Eresult_i(EM_Eresult),
         .EM_addr_i(EM_addr),
-        // .EM_Mdata_i(EM_Mdata),
         .EM_CSRdata_i(EM_CSRdata),
         .EM_wbEnable_i(EM_wbEnable),
-        // .MW_PC_o(MW_PC),
-        // .MW_instr_o(MW_instr),
-        // .MW_nop_o(MW_nop),
         .MW_rdId_o(MW_rdId),
         .MW_wbData_o(MW_wbData),
         .MW_wbEnable_o(MW_wbEnable)
@@ -467,9 +453,6 @@ WriteBackUnit writeback(
         .reset_i(reset_i),
         .rdId_o(rdId),
         .rdData_o(rdData),
-        // .MW_PC_i(MW_PC),
-        // .MW_instr_i(MW_instr),
-        // .MW_nop_i(MW_nop),
         .MW_rdId_i(MW_rdId),
         .MW_wbData_i(MW_wbData),
         .MW_wbEnable_i(MW_wbEnable)
