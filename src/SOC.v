@@ -10,6 +10,8 @@
 module SOC (
         input  wire CLK,
         input  wire RESET,
+        input  wire [31:0] rvec,
+
         output wire [3:0] LEDS,
         input  wire RXD,
         output wire TXD,
@@ -29,6 +31,7 @@ wire reset;
 //Memory
 wire [31:0] IMemAddr;
 wire [63:0] IMemData;
+wire        IMemStrb;
 wire        DMemRStrb;
 wire [31:0] DMemRAddr;
 wire [31:0] DMemRData;
@@ -48,8 +51,10 @@ wire        IO_memWr;
 Processor CPU(
         .clk_i(clk),
         .reset_i(reset),
+        .rvec_i(rvec),
         .IMemAddr_o(IMemAddr),
         .IMemData_i(IMemData),
+        .IMemStrb_o(IMemStrb),
         .DMemRStrb_o(DMemRStrb),
         .DMemRAddr_o(DMemRAddr),
         .DMemRData_i(DMemRData),
@@ -63,8 +68,10 @@ Processor CPU(
 Memory mem(
         .clk_i(clk),
         .reset_i(reset),
+        .rvec_i(rvec),
         .IMemAddr_i(IMemAddr),
         .IMemData_o(IMemData),
+        .IMemStrb_i(IMemStrb),
         .DMemRStrb_i(DMemRStrb),
         .DMemRAddr_i(DMemRAddr),
         .DMemRData_o(DMemRData),
