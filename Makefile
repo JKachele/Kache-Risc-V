@@ -54,7 +54,7 @@ hex: $(BRAM)
 
 $(BRAM): $(FIRMWARE)
 	$(OBJCOPY) $< -O binary $@.bin
-	hexdump -ve '"%08x\n"' $@.bin > $@
+	hexdump -ve '1/8 "%016x\n"' $@.bin > $@
 	rm $@.bin
 
 $(FIRMWARE): $(OBJ) $(LDSCRIPT) Makefile

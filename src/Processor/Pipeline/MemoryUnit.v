@@ -16,7 +16,7 @@ module MemoryUnit (
         input  wire        DMemRBusy_i,
         output wire [31:0] DMemWAddr_o,
         output wire [63:0] DMemWData_o,
-        output wire [4:0]  DMemWMask_o,
+        output wire [7:0]  DMemWMask_o,
         input  wire        DMemWBusy_i,
         // CSR Interface
         output wire [11:0] csrWAddr_o,
@@ -45,6 +45,15 @@ module MemoryUnit (
         output reg  [63:0] MW_wbData_o,
         output reg         MW_wbEnable_o
 );
+
+wire M_isB = (EM_funct3_i[1:0] == 2'b00);
+wire M_isH = (EM_funct3_i[1:0] == 2'b01);
+wire M_isW = (EM_funct3_i[1:0] == 2'b10);
+
+wire [31:0] M_memWord = EM_addr_i[2] ? DMemRData_i[63:32] : DMemRData_i[31:0];
+wire [15:0] M_memHalf = EM_addr_i[1] ? M_memWord[31:16]   : M_memWord[15:0];
+wire [7:0]  M_memByte = EM_addr_i[0] ? M_memHalf[15:8]    : M_memHalf[7:0];
+
 
 /*---------------------LR/SC----------------------*/
 reg [31:0] MM_reservedAddress;
@@ -76,68 +85,75 @@ end
 /*-----------Atomic Memory Instructions-----------*/
 reg [31:0] M_amoOut;
 
-wire [32:0] M_amoMinus = {1'b0, DMemRData_i[31:0]} + {1'b1, ~EM_rs2_i[31:0]} + 33'd1;
-wire        M_amoLT  = (DMemRData_i[31] ^ EM_rs2_i[31]) ? DMemRData_i[31] : M_amoMinus[32];
+wire [32:0] M_amoMinus = {1'b0, M_memWord} + {1'b1, ~EM_rs2_i[31:0]} + 33'd1;
+wire        M_amoLT  = (M_memWord[31] ^ EM_rs2_i[31]) ? M_memWord[31] : M_amoMinus[32];
 wire        M_amoLTU = M_amoMinus[32];
 always @(*) begin
         case (EM_funct7_i[6:2])
-                5'h00: M_amoOut =             DMemRData_i[31:0] + EM_rs2_i[31:0]; // amoadd.w
-                5'h01: M_amoOut =                                 EM_rs2_i[31:0]; // amoswap.w
-                5'h04: M_amoOut =             DMemRData_i[31:0] ^ EM_rs2_i[31:0]; // amoxor.w
-                5'h08: M_amoOut =             DMemRData_i[31:0] | EM_rs2_i[31:0]; // amoor.w
-                5'h0c: M_amoOut =             DMemRData_i[31:0] & EM_rs2_i[31:0]; // amoand.w
-                5'h10: M_amoOut =  M_amoLT  ? DMemRData_i[31:0] : EM_rs2_i[31:0]; // amomin.w
-                5'h14: M_amoOut = !M_amoLT  ? DMemRData_i[31:0] : EM_rs2_i[31:0]; // amomax.w
-                5'h18: M_amoOut =  M_amoLTU ? DMemRData_i[31:0] : EM_rs2_i[31:0]; // amominu.w
-                5'h1c: M_amoOut = !M_amoLTU ? DMemRData_i[31:0] : EM_rs2_i[31:0]; // amomaxu.w
+                5'h00: M_amoOut =             M_memWord + EM_rs2_i[31:0]; // amoadd.w
+                5'h01: M_amoOut =                         EM_rs2_i[31:0]; // amoswap.w
+                5'h04: M_amoOut =             M_memWord ^ EM_rs2_i[31:0]; // amoxor.w
+                5'h08: M_amoOut =             M_memWord | EM_rs2_i[31:0]; // amoor.w
+                5'h0c: M_amoOut =             M_memWord & EM_rs2_i[31:0]; // amoand.w
+                5'h10: M_amoOut =  M_amoLT  ? M_memWord : EM_rs2_i[31:0]; // amomin.w
+                5'h14: M_amoOut = !M_amoLT  ? M_memWord : EM_rs2_i[31:0]; // amomax.w
+                5'h18: M_amoOut =  M_amoLTU ? M_memWord : EM_rs2_i[31:0]; // amominu.w
+                5'h1c: M_amoOut = !M_amoLTU ? M_memWord : EM_rs2_i[31:0]; // amomaxu.w
                 default: M_amoOut = 32'b0;
         endcase
 end
 
 /*----------------------STORE---------------------*/
-wire M_isB = (EM_funct3_i[1:0] == 2'b00);
-wire M_isH = (EM_funct3_i[1:0] == 2'b01);
-wire M_isW = (EM_funct3_i[1:0] == 2'b10);
-
 reg [63:0] M_storeData;
 always @(*) begin
         if (M_isAMO) begin
-                M_storeData[31:0] = M_amoOut;
+                M_storeData = {2{M_amoOut}};
         end
         // Store byte only
         else if (EM_addr_i[0]) begin
                 M_storeData = {8{EM_rs2_i[7:0]}};
         end
-        // Store half for [31:16] or [15:0] or store byte for [23:16]
+        // Store half or store half-aligned byte
         else if (EM_addr_i[1]) begin
                 M_storeData = {4{EM_rs2_i[15:0]}};
         end
-        // Store word or store byte for [7:0]
+        // Store word or store word-aligned half/byte
+        else if (EM_addr_i[2]) begin
+                M_storeData = {2{EM_rs2_i[31:0]}};
+        end
+        // Store double or store double-aligned word/half/byte
         else begin
                 M_storeData = EM_rs2_i;
         end
 end
 
-reg [4:0] M_storeMask;
+reg [7:0] M_storeMask;
 always @(*) begin
         if (M_isB) begin
-                if (EM_addr_i[1:0] == 2'b11)
-                        M_storeMask = 5'b01000;
-                else if (EM_addr_i[1:0] == 2'b10)
-                        M_storeMask = 5'b00100;
-                else if (EM_addr_i[1:0] == 2'b01)
-                        M_storeMask = 5'b00010;
-                else
-                        M_storeMask = 5'b00001;
+                unique case (EM_addr_i[2:0])
+                        3'b000: M_storeMask = 8'b00000001;
+                        3'b001: M_storeMask = 8'b00000010;
+                        3'b010: M_storeMask = 8'b00000100;
+                        3'b011: M_storeMask = 8'b00001000;
+                        3'b100: M_storeMask = 8'b00010000;
+                        3'b101: M_storeMask = 8'b00100000;
+                        3'b110: M_storeMask = 8'b01000000;
+                        3'b111: M_storeMask = 8'b10000000;
+                endcase
         end else if (M_isH) begin
-                if (EM_addr_i[1])
-                        M_storeMask = 5'b01100;
-                else
-                        M_storeMask = 5'b00011;
+                unique case (EM_addr_i[2:1])
+                        2'b00: M_storeMask = 8'b00000011;
+                        2'b01: M_storeMask = 8'b00001100;
+                        2'b10: M_storeMask = 8'b00110000;
+                        2'b11: M_storeMask = 8'b11000000;
+                endcase
         end else if (M_isW) begin
-                M_storeMask = 5'b01111;
+                if (EM_addr_i[2])
+                        M_storeMask = 8'b11110000;
+                else
+                        M_storeMask = 8'b00001111;
         end else begin
-                M_storeMask = 5'b11111;
+                M_storeMask = 8'b11111111;
         end
 end
 
@@ -157,14 +173,11 @@ end
 
 assign DMemWAddr_o = EM_addr_i;
 assign DMemWData_o = M_storeData;
-assign DMemWMask_o = {5{M_storeEnable}} & M_storeMask;
+assign DMemWMask_o = {8{M_storeEnable}} & M_storeMask;
 
 /*----------------------LOAD----------------------*/
 
 assign M_busy_o = DMemRBusy_i;
-
-wire [15:0] M_memHalf = EM_addr_i[1] ? DMemRData_i[31:16] : DMemRData_i[15:0];
-wire [7:0]  M_memByte = EM_addr_i[0] ? M_memHalf[15:8]  : M_memHalf[7:0];
 
 // Sign expansion
 // Based on funct3[2]: 0->sign expand, 1->unsigned
@@ -178,7 +191,7 @@ always @(*) begin
                 M_Mdata = {32'hFFFFFFFF, {16{M_loadSign}}, M_memHalf};
         else if(M_isW)
                 // M_Mdata = {32'hFFFFFFFF, EM_Mdata_i[31:0]};
-                M_Mdata = {32'hFFFFFFFF, DMemRData_i[31:0]};
+                M_Mdata = {32'hFFFFFFFF, M_memWord};
         else
                 // M_Mdata = EM_Mdata_i;
                 M_Mdata = DMemRData_i;

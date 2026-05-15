@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <vector>
 #include "VSOC.h"
 #include "VSOC___024root.h"
 #include "testbench.h"
@@ -180,7 +181,6 @@ public:
                 printf("FPU:%3.3f\%% | ",               nbFPU*100.0/instret);
                 printf("AMO:%3.3f\%%",                  nbAMO*100.0/instret);
                 printf(")\n");
-                // printFRegisters();
         }
 
 };
@@ -213,11 +213,13 @@ int main(int argc, char **argv) {
         // tb->opentrace("trace.vcd");
 
         tb->m_core->rvec = 0xF0000000;
+        tb->m_core->qspi_miso = 1;
         tb->reset();
 
         int rxPrev = 1;
         while (!tb->done()) {
                 tb->tick();
+                tb->m_core->qspi_miso = !tb->m_core->qspi_miso;
                 // tb->m_core->RXD = (*uart)(tb->m_core->TXD);
                 // clocks++;
         }

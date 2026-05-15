@@ -12,7 +12,7 @@ module Memory (
         input  wire        reset_i,
         input  wire [31:0] rvec_i,
         input  wire [31:0] IMemAddr_i,
-        output wire [63:0] IMemData_o,
+        output wire [31:0] IMemData_o,
         input  wire        IMemStrb_i,
         input  wire        DMemRStrb_i,
         input  wire [31:0] DMemRAddr_i,
@@ -20,7 +20,7 @@ module Memory (
         output wire        DMemRBusy_o,
         input  wire [31:0] DMemWAddr_i,
         input  wire [63:0] DMemWData_i,
-        input  wire [4:0]  DMemWMask_i,
+        input  wire [7:0]  DMemWMask_i,
         output wire        DMemWBusy_o,
 
         // IO
@@ -39,13 +39,13 @@ reg  [31:0] IMemAddr;
 
 wire [63:0] SDRamRData = 64'b0;
 wire        SDRamRBusy;
-wire [63:0] SDRamInstr = 64'b0;
-wire [4:0]  SDRamWMask;
+wire [31:0] SDRamInstr = 32'b0;
+wire [7:0]  SDRamWMask;
 wire [63:0] SPI_RData;
 wire        SPI_RBusy;
 reg  [63:0] BRamRData;
-reg  [63:0] BRamInstr;
-wire [4:0]  BRamWMask;
+reg  [31:0] BRamInstr;
+wire [7:0]  BRamWMask;
 wire [31:0] IO_RData;
 wire        IO_Wr;
 
@@ -73,36 +73,36 @@ assign DMemRData_o = M_isSDRAM_r ? SDRamRData :
 assign IMemData_o  = M_isSDRAM_i ? SDRamInstr : BRamInstr;
 
 // Writes
-assign SDRamWMask = {5{M_isSDRAM_w}} & DMemWMask_i;
-assign BRamWMask  = {5{M_isBRAM_w}} & DMemWMask_i;
+assign SDRamWMask = {8{M_isSDRAM_w}} & DMemWMask_i;
+assign BRamWMask  = {8{M_isBRAM_w}} & DMemWMask_i;
 assign IO_Wr = (M_isIO_w) & (|DMemWMask_i);
 
 
 /*-------------------------------- Block Ram --------------------------------*/
-reg [31:0] BRAM [0:131071];
+reg [63:0] BRAM [0:65535];
 
 initial begin
         $readmemh("../bin/BRAM.hex",BRAM);
 end
 
 // Instruction ROM: Can be alligned to 16 bits or 32 bits
-wire [31:0] IMemdata_1 = BRAM[IMemAddr_i[18:2]];
-wire [31:0] IMemdata_2 = BRAM[IMemAddr_i[18:2] + 1];
-// assign BRamInstr = {IMemdata_2, IMemdata_1};
-wire [63:0] BRamInstr_w = {IMemdata_2, IMemdata_1};
+wire [63:0] BRamInstr_1 = BRAM[IMemAddr_i[18:3]];
+wire [63:0] BRamInstr_2 = BRAM[IMemAddr_i[18:3] + 1];
+wire [127:0] BRamInstr_w = {BRamInstr_2, BRamInstr_1};
 
-// Data RAM: All alligned to 32 bits
-wire [31:0] DMemRData_1 = BRAM[DMemRAddr_i[18:2]];
-wire [31:0] DMemRData_2 = BRAM[DMemRAddr_i[18:2] + 1];
-wire [63:0] BRamRData_w = {DMemRData_2, DMemRData_1};
+// Data RAM: All alligned to 64 bits
+wire [63:0] BRamRData_w = BRAM[DMemRAddr_i[18:3]];
 
-wire [16:0] wordAddr = DMemWAddr_i[18:2];
+wire [15:0] wordAddr = DMemWAddr_i[18:3];
 always @(posedge clk_i) begin
         if (BRamWMask[0]) BRAM[wordAddr][ 7:0 ] <= DMemWData_i[ 7:0 ];
         if (BRamWMask[1]) BRAM[wordAddr][15:8 ] <= DMemWData_i[15:8 ];
         if (BRamWMask[2]) BRAM[wordAddr][23:16] <= DMemWData_i[23:16];
         if (BRamWMask[3]) BRAM[wordAddr][31:24] <= DMemWData_i[31:24];
-        if (BRamWMask[4]) BRAM[wordAddr + 1]    <= DMemWData_i[63:32];
+        if (BRamWMask[4]) BRAM[wordAddr][39:32] <= DMemWData_i[39:32];
+        if (BRamWMask[5]) BRAM[wordAddr][47:40] <= DMemWData_i[47:40];
+        if (BRamWMask[6]) BRAM[wordAddr][55:48] <= DMemWData_i[55:48];
+        if (BRamWMask[7]) BRAM[wordAddr][63:56] <= DMemWData_i[63:56];
 end
 
 always @(posedge clk_i) begin
@@ -110,15 +110,20 @@ always @(posedge clk_i) begin
                 DMemRAddr <= rvec_i;
                 IMemAddr  <= rvec_i;
                 BRamRData <= 64'b0;
-                BRamInstr <= 64'b0;
+                BRamInstr <= 32'b0;
         end
         if (DMemRStrb_i) begin
                 BRamRData <= BRamRData_w;
                 DMemRAddr <= DMemRAddr_i;
         end
         if (IMemStrb_i) begin
-                BRamInstr <= BRamInstr_w;
                 IMemAddr  <= IMemAddr_i;
+                unique case (IMemAddr_i[2:1])
+                        2'b00: BRamInstr <= BRamInstr_w[31:0];
+                        2'b01: BRamInstr <= BRamInstr_w[47:16];
+                        2'b10: BRamInstr <= BRamInstr_w[63:32];
+                        2'b11: BRamInstr <= BRamInstr_w[79:48];
+                endcase
         end
 end
 
@@ -140,7 +145,7 @@ IO io(
 /*-------------------------------- SPI Flash --------------------------------*/
 spiFlash flash(
         .clk_i(clk_i),
-        .rstrb_i(M_isSPI_r & DMemRStrb_i),
+        .rstrb_i(((DMemRAddr_i[31:28] == 4'b0001) || M_isSPI_r) & DMemRStrb_i),
         .raddr_i(24'b0),
         .rdata_o(SPI_RData),
         .rbusy_o(SPI_RBusy),
