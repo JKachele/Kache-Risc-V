@@ -12,7 +12,7 @@ module Memory (
         input  wire        reset_i,
         input  wire [31:0] rvec_i,
         input  wire [31:0] IMemAddr_i,
-        output wire [63:0] IMemData_o,
+        output wire [31:0] IMemData_o,
         input  wire        IMemStrb_i,
         input  wire        DMemRStrb_i,
         input  wire [31:0] DMemRAddr_i,
@@ -39,12 +39,12 @@ reg  [31:0] IMemAddr;
 
 wire [31:0] SDRamRData = 32'b0;
 wire        SDRamRBusy;
-wire [63:0] SDRamInstr = 64'b0;
+wire [31:0] SDRamInstr = 32'b0;
 wire [4:0]  SDRamWMask;
 wire [31:0] SPI_RData;
 wire        SPI_RBusy;
 reg  [31:0] BRamRData;
-reg  [63:0] BRamInstr;
+reg  [31:0] BRamInstr;
 wire [4:0]  BRamWMask;
 wire [31:0] IO_RData;
 wire        IO_Wr;
@@ -86,10 +86,9 @@ initial begin
 end
 
 // Instruction ROM: Can be alligned to 16 bits or 32 bits
-wire [31:0] IMemdata_1 = BRAM[IMemAddr_i[18:2]];
-wire [31:0] IMemdata_2 = BRAM[IMemAddr_i[18:2] + 1];
-// assign BRamInstr = {IMemdata_2, IMemdata_1};
-wire [63:0] BRamInstr_w = {IMemdata_2, IMemdata_1};
+wire [31:0] BRamInstr_1 = BRAM[IMemAddr_i[18:2]];
+wire [31:0] BRamInstr_2 = BRAM[IMemAddr_i[18:2] + 1];
+wire [63:0] BRamInstr_w = {BRamInstr_2, BRamInstr_1};
 
 // Data RAM: All alligned to 32 bits
 wire [31:0] BRamRData_w = BRAM[DMemRAddr_i[18:2]];
@@ -114,8 +113,8 @@ always @(posedge clk_i) begin
                 DMemRAddr <= DMemRAddr_i;
         end
         if (IMemStrb_i) begin
-                BRamInstr <= BRamInstr_w;
                 IMemAddr  <= IMemAddr_i;
+                BRamInstr <= IMemAddr_i[1] ? BRamInstr_w[47:16] : BRamInstr_w[31:0];
         end
 end
 
@@ -137,7 +136,7 @@ IO io(
 /*-------------------------------- SPI Flash --------------------------------*/
 spiFlash flash(
         .clk_i(clk_i),
-        .rstrb_i(M_isSPI_r & DMemRStrb_i),
+        .rstrb_i(((DMemRAddr_i[31:28] == 4'b0001) || M_isSPI_r) & DMemRStrb_i),
         .raddr_i(24'b0),
         .rdata_o(SPI_RData),
         .rbusy_o(SPI_RBusy),

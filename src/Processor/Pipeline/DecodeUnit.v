@@ -40,7 +40,7 @@ module DecodeUnit #(
         output wire        csrTrapSetEn_o,
         // Fetch Unit Interface
         input  wire [31:0] FD_PC_i,
-        input  wire [63:0] FD_instr_i,
+        input  wire [31:0] FD_instr_i,
         input  wire        FD_isRV32C_i,
         input  wire        FD_nop_i,
         // Execute Unit Interface
@@ -112,10 +112,10 @@ localparam NOP = 32'b0000000_00000_00000_000_00000_0110011;
  */
 
 /*------------Instruction Allignment and Decompression-----------*/
-wire [31:0] D_rawInstr = (FD_PC_i[1]) ? FD_instr_i[47:16] : FD_instr_i[31:0];
+// wire [31:0] D_rawInstr = (FD_PC_i[1]) ? FD_instr_i[47:16] : FD_instr_i[31:0];
 // wire [31:0] D_rawInstr = FD_instr_i;
 wire [31:0] D_instr;
-Decompressor decomp(.compressed_i(D_rawInstr), .decompressed_o(D_instr));
+Decompressor decomp(.compressed_i(FD_instr_i), .decompressed_o(D_instr));
 
 /*--------------INSTRUCTION DECODING--------------*/
 // 11 RV32I OpCodes

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <vector>
 #include "VSOC.h"
 #include "VSOC___024root.h"
 #include "testbench.h"
@@ -93,6 +94,15 @@ public:
                 updateStats();
         }
 
+        void printFReg(const char *name, IData reg) {
+                float  f = *(float*)&reg;
+                printf("%s: %x (%f)\n", name, reg, f);
+        }
+
+        void printIReg(const char *name, IData reg) {
+                printf("%s: %x (%d)\n", name, reg, reg);
+        }
+
         virtual bool done(void) {
                 static int clocksAfterHalt = 0;
                 if (rootp->HALT == 1)
@@ -164,11 +174,13 @@ int main(int argc, char **argv) {
         // tb->opentrace("trace.vcd");
 
         tb->m_core->rvec = 0xF0000000;
+        tb->m_core->qspi_miso = 1;
         tb->reset();
 
         int rxPrev = 1;
         while (!tb->done()) {
                 tb->tick();
+                tb->m_core->qspi_miso = !tb->m_core->qspi_miso;
                 // tb->m_core->RXD = (*uart)(tb->m_core->TXD);
                 // clocks++;
         }

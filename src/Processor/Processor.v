@@ -12,7 +12,7 @@ module Processor(
         input  wire [31:0] rvec_i,
         // Memory
         output wire [31:0] IMemAddr_o,
-        input  wire [63:0] IMemData_i,
+        input  wire [31:0] IMemData_i,
         output wire        IMemStrb_o,
         output wire        DMemRStrb_o,
         output wire [31:0] DMemRAddr_o,
@@ -139,7 +139,7 @@ ControlUnit control(
  ----------------------------------FETCH UNIT----------------------------------
  ******************************************************************************/
 wire [31:0] FD_PC;
-wire [63:0] FD_instr;
+wire [31:0] FD_instr;
 wire        FD_isRV32C;
 wire        FD_nop;
 FetchUnit fetch(

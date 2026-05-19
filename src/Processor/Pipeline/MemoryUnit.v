@@ -46,6 +46,12 @@ module MemoryUnit (
         output reg         MW_wbEnable_o
 );
 
+wire M_isB = (EM_funct3_i[1:0] == 2'b00);
+wire M_isH = (EM_funct3_i[1:0] == 2'b01);
+
+wire [15:0] M_memHalf = EM_addr_i[1] ? DMemRData_i[31:16] : DMemRData_i[15:0];
+wire [7:0]  M_memByte = EM_addr_i[0] ? M_memHalf[15:8]  : M_memHalf[7:0];
+
 /*---------------------LR/SC----------------------*/
 reg [31:0] MM_reservedAddress;
 reg        MM_reservedChanged;
@@ -76,28 +82,25 @@ end
 /*-----------Atomic Memory Instructions-----------*/
 reg [31:0] M_amoOut;
 
-wire [32:0] M_amoMinus = {1'b0, DMemRData_i[31:0]} + {1'b1, ~EM_rs2_i[31:0]} + 33'd1;
+wire [32:0] M_amoMinus = {1'b0, DMemRData_i} + {1'b1, ~EM_rs2_i} + 33'd1;
 wire        M_amoLT  = (DMemRData_i[31] ^ EM_rs2_i[31]) ? DMemRData_i[31] : M_amoMinus[32];
 wire        M_amoLTU = M_amoMinus[32];
 always @(*) begin
         case (EM_funct7_i[6:2])
-                5'h00: M_amoOut =             DMemRData_i[31:0] + EM_rs2_i[31:0]; // amoadd.w
-                5'h01: M_amoOut =                                 EM_rs2_i[31:0]; // amoswap.w
-                5'h04: M_amoOut =             DMemRData_i[31:0] ^ EM_rs2_i[31:0]; // amoxor.w
-                5'h08: M_amoOut =             DMemRData_i[31:0] | EM_rs2_i[31:0]; // amoor.w
-                5'h0c: M_amoOut =             DMemRData_i[31:0] & EM_rs2_i[31:0]; // amoand.w
-                5'h10: M_amoOut =  M_amoLT  ? DMemRData_i[31:0] : EM_rs2_i[31:0]; // amomin.w
-                5'h14: M_amoOut = !M_amoLT  ? DMemRData_i[31:0] : EM_rs2_i[31:0]; // amomax.w
-                5'h18: M_amoOut =  M_amoLTU ? DMemRData_i[31:0] : EM_rs2_i[31:0]; // amominu.w
-                5'h1c: M_amoOut = !M_amoLTU ? DMemRData_i[31:0] : EM_rs2_i[31:0]; // amomaxu.w
+                5'h00: M_amoOut =             DMemRData_i + EM_rs2_i; // amoadd.w
+                5'h01: M_amoOut =                           EM_rs2_i; // amoswap.w
+                5'h04: M_amoOut =             DMemRData_i ^ EM_rs2_i; // amoxor.w
+                5'h08: M_amoOut =             DMemRData_i | EM_rs2_i; // amoor.w
+                5'h0c: M_amoOut =             DMemRData_i & EM_rs2_i; // amoand.w
+                5'h10: M_amoOut =  M_amoLT  ? DMemRData_i : EM_rs2_i; // amomin.w
+                5'h14: M_amoOut = !M_amoLT  ? DMemRData_i : EM_rs2_i; // amomax.w
+                5'h18: M_amoOut =  M_amoLTU ? DMemRData_i : EM_rs2_i; // amominu.w
+                5'h1c: M_amoOut = !M_amoLTU ? DMemRData_i : EM_rs2_i; // amomaxu.w
                 default: M_amoOut = 32'b0;
         endcase
 end
 
 /*----------------------STORE---------------------*/
-wire M_isB = (EM_funct3_i[1:0] == 2'b00);
-wire M_isH = (EM_funct3_i[1:0] == 2'b01);
-
 reg [31:0] M_storeData;
 always @(*) begin
         if (M_isAMO) begin
@@ -160,9 +163,6 @@ assign DMemWMask_o = {4{M_storeEnable}} & M_storeMask;
 
 assign M_busy_o = DMemRBusy_i;
 
-wire [15:0] M_memHalf = EM_addr_i[1] ? DMemRData_i[31:16] : DMemRData_i[15:0];
-wire [7:0]  M_memByte = EM_addr_i[0] ? M_memHalf[15:8]  : M_memHalf[7:0];
-
 // Sign expansion
 // Based on funct3[2]: 0->sign expand, 1->unsigned
 wire M_loadSign = !EM_funct3_i[2] & (M_isB ? M_memByte[7] : M_memHalf[15]);
@@ -174,7 +174,6 @@ always @(*) begin
         else if(M_isH)
                 M_Mdata = {{16{M_loadSign}}, M_memHalf};
         else
-                // M_Mdata = EM_Mdata_i;
                 M_Mdata = DMemRData_i;
 end
 
