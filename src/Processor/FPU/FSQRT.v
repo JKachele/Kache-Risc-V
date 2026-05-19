@@ -47,7 +47,7 @@ reg [27:0] test;
 // Cycle counter
 reg  [4:0] counter;
 // Only one cycle is needed to handle special cases
-localparam SPECIAL_CYCLES = 5'b1;
+localparam SPECIAL_CYCLES = 5'd1;
 // Enough cycles to compute full significand with extra bits for rounding and normalizing
 localparam SQRT_CYCLES = 5'd26;
 
@@ -62,7 +62,9 @@ wire [31:0] roundedInfinity = {1'b0, {7{1'b1}}, ~si, {23{si}}};
 // Rounding
 wire        [23:0] sigOut;
 wire signed [9:0]  expOut;
-FRound #(.nInt(50)) round(1'b0, rootIn, expIn, rm_i, sigOut, expOut);
+FRound #(.nInt(50)) round(
+        .sign_i(1'b0), .sig_i(rootIn), .exp_i(expIn),
+        .rm_i(rm_i), .sig_o(sigOut), .exp_o(expOut));
 
 always @(posedge clk_i) begin
         if (!sqrtEnable_i) begin
@@ -133,7 +135,7 @@ always @(posedge clk_i) begin
                         // Overflow
                         else if (expOut > 127) begin
                                 // // Round to infinity or largest normal depending on rounding mode
-                                // si = (rm_i == 3'b001 || 
+                                // si = (rm_i == 3'b001 ||
                                 //         (rm_i == 3'b010 && ~qSign) ||
                                 //         (rm_i == 3'b011 &&  qSign));
                                 // divOut <= {qSign, {7{1'b1}}, ~si, {23{si}}};

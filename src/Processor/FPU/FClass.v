@@ -52,7 +52,7 @@ assign fullClass_o = {
 
 // First bit set = 31 - clz
 wire [4:0] sigClz;
-CLZ #(.W_IN(32))clz({9'b0, reg_i[22:0]}, sigClz);
+CLZ #(.W_IN(32))clz(.in({9'b0, reg_i[22:0]}), .out(sigClz));
 // Shift so leading 1 is at bit 23: shamt = 23 - first_bit_set = 23 - (31 - clz) = clz - 8
 wire [4:0] lshamt = sigClz - 8;
 

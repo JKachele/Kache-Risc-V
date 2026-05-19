@@ -16,7 +16,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "libs/perf.h"
+#include "../libs/perf.h"
 
 /*******************************************************************/
 
@@ -91,7 +91,8 @@ void graphics_set_pixel(int x, int y, float r, float g, float b) {
         if(bench_run) {
                 if(y & 1) {
                         if(x == graphics_width-1) {
-                                printf("%d",y/2);
+                                // printf("%d",y/2);
+                                printf(".");
                         }
                 }
                 return;
@@ -513,10 +514,10 @@ int main() {
         printf("Running without graphic output (for accurate measurement)...\n");
         render(spheres, nb_spheres, lights, nb_lights);
 
-        // bench_run = 0;
-        // graphics_width = 120;
-        // graphics_height = 60;
-        // render(spheres, nb_spheres, lights, nb_lights);
+        bench_run = 0;
+        graphics_width = 60;
+        graphics_height = 30;
+        render(spheres, nb_spheres, lights, nb_lights);
         graphics_terminate();
 
         return 0;

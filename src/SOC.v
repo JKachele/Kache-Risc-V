@@ -74,7 +74,11 @@ IO io(
 );
 
 Clockworks #(
+`ifdef BENCH
+        .SLOW(0)
+`else
         .SLOW(2)        // Slow clock by 2^SLOW
+`endif
 )CW(
         .CLK(CLK),
         .RESET(RESET),

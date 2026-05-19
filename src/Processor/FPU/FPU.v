@@ -186,8 +186,8 @@ always @(*) begin
         case (1'b1)
                 // Move and convert
                 isFSGNJ              : out = {           rs2_i[31], rs1_i[30:0]};
-	        isFSGNJN             : out = {          !rs2_i[31], rs1_i[30:0]};
-	        isFSGNJX             : out = { rs1_i[31]^rs2_i[31], rs1_i[30:0]};
+                isFSGNJN             : out = {          !rs2_i[31], rs1_i[30:0]};
+                isFSGNJX             : out = { rs1_i[31]^rs2_i[31], rs1_i[30:0]};
                 isFMVXW  | isFMVWX   : out = rs1_i;
                 isFCVTSW | isFCVTSWU : out = fcvtOut;
                 isFCVTWS | isFCVTWUS : out = fcvtOut;
@@ -220,7 +220,7 @@ wire isFADD    = (!isFMA && (instr_i[31:27] == 5'b00000));
 wire isFSUB    = (!isFMA && (instr_i[31:27] == 5'b00001));
 wire isFMUL    = (!isFMA && (instr_i[31:27] == 5'b00010));
 wire isFDIV    = (!isFMA && (instr_i[31:27] == 5'b00011));
-wire isFSQRT   = (!isFMA && (instr_i[31:27] == 5'b01011));   
+wire isFSQRT   = (!isFMA && (instr_i[31:27] == 5'b01011));
 
 wire isFSGNJ   = (!isFMA && (instr_i[31:27]==5'b00100)&&(instr_i[13:12]==2'b00));
 wire isFSGNJN  = (!isFMA && (instr_i[31:27]==5'b00100)&&(instr_i[13:12]==2'b01));
@@ -233,7 +233,7 @@ wire isFEQ     = (!isFMA && (instr_i[31:27]==5'b10100) && (instr_i[13:12] == 2'b
 wire isFLT     = (!isFMA && (instr_i[31:27]==5'b10100) && (instr_i[13:12] == 2'b01));
 wire isFLE     = (!isFMA && (instr_i[31:27]==5'b10100) && (instr_i[13:12] == 2'b00));
 
-wire isFCLASS  = (!isFMA && (instr_i[31:27] == 5'b11100) &&  instr_i[12]); 
+wire isFCLASS  = (!isFMA && (instr_i[31:27] == 5'b11100) &&  instr_i[12]);
 
 wire isFCVTWS  = (!isFMA && (instr_i[31:27] == 5'b11000) && !instr_i[20]);
 wire isFCVTWUS = (!isFMA && (instr_i[31:27] == 5'b11000) &&  instr_i[20]);

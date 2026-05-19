@@ -7,33 +7,33 @@
  ************************************************/
 
 module FRound #(
-        parameter nInt = 32,
-        parameter nExp = 8,
-        parameter nSig = 23
+        parameter NINT = 32,
+        parameter NEXP = 8,
+        parameter NSIG = 23
 )(
         input  wire                   sign_i,
-        input  wire        [nInt-1:0] sig_i,       // MSB is implied 1
-        input  wire signed [nExp+1:0] exp_i,
+        input  wire        [NINT-1:0] sig_i,       // MSB is implied 1
+        input  wire signed [NEXP+1:0] exp_i,
         input  wire        [2:0]      rm_i,
 
-        output wire        [nSig:0]   sig_o,
-        output wire signed [nExp+1:0] exp_o
+        output wire        [NSIG:0]   sig_o,
+        output wire signed [NEXP+1:0] exp_o
 );
-localparam nRound = nInt - nSig - 1;
+localparam NROUND = NINT - NSIG - 1;
 
-reg        [nSig:0]   sigOut;
-reg signed [nExp+1:0] expOut;
+reg        [NSIG:0]   sigOut;
+reg signed [NEXP+1:0] expOut;
 assign sig_o = sigOut;
 assign exp_o = expOut;
 
-wire [nRound-1:0] roundBits = sig_i[nRound-1:0];
-wire roundBit = roundBits[nRound-1];
-wire stickyBit = |roundBits[nRound-2:0];
-wire sigOdd = sig_i[nRound];
+wire [NROUND-1:0] roundBits = sig_i[NROUND-1:0];
+wire roundBit = roundBits[NROUND-1];
+wire stickyBit = |roundBits[NROUND-2:0];
+wire sigOdd = sig_i[NROUND];
 
 reg        roundUp; // 1 if rounding up
 
-reg [nSig+1:0] roundedSig;
+reg [NSIG+1:0] roundedSig;
 
 always @(*) begin
         /************************ Nearest Ties to Even ************************/
@@ -99,12 +99,12 @@ always @(*) begin
         end
 
         /************************ Perform Rounding ************************/
-        roundedSig = {1'b0, sig_i[nInt-1:nRound]} + {{nSig+1{1'b0}}, roundUp};
-        if (roundedSig[nSig+1]) begin
-                sigOut = roundedSig[nSig+1:1];
+        roundedSig = {1'b0, sig_i[NINT-1:NROUND]} + {{NSIG+1{1'b0}}, roundUp};
+        if (roundedSig[NSIG+1]) begin
+                sigOut = roundedSig[NSIG+1:1];
                 expOut = exp_i + 1;
         end else begin
-                sigOut = roundedSig[nSig:0];
+                sigOut = roundedSig[NSIG:0];
                 expOut = exp_i;
         end
 end

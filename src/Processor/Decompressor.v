@@ -63,9 +63,9 @@ wire isSWSP         = isC2 & c[15:13] == 3'b110;
 wire isFSWSP        = isC2 & c[15:13] == 3'b111;
 
 /*---------------INSTRUCTION FIELDS---------------*/
-localparam x0 = 5'b00000;
-localparam ra = 5'b00001;
-localparam sp = 5'b00010;
+localparam X0 = 5'b00000;
+localparam RA = 5'b00001;
+localparam SP = 5'b00010;
 
 localparam EBREAK = 32'h00100073;
 
@@ -95,7 +95,7 @@ always @(*) begin
         case(1'b1)
         isUncompressed: dcmp = compressed_i;
 
-        isADDI4SPN: dcmp = {addi4spnImm,   sp,              3'b000, reg2c,        7'b0010011};
+        isADDI4SPN: dcmp = {addi4spnImm,   SP,              3'b000, reg2c,        7'b0010011};
         isFLD:      dcmp = {ldsdImm,       reg1c,           3'b011, reg2c,        7'b0000111};
         isLW:       dcmp = {lwswImm,       reg1c,           3'b010, reg2c,        7'b0000011};
         isFLW:      dcmp = {lwswImm,       reg1c,           3'b010, reg2c,        7'b0000111};
@@ -104,33 +104,35 @@ always @(*) begin
         isFSW:      dcmp = {lwswImm[11:5], reg2c,    reg1c, 3'b010, lwswImm[4:0], 7'b0100111};
 
         isADDI:     dcmp = {addImm,        reg1w,           3'b000, reg1w,        7'b0010011};
-        isJAL:      dcmp = {jmpImm,        ra,                                    7'b1101111};
-        isLI:       dcmp = {addImm,        x0,              3'b000, reg1w,        7'b0010011};
+        isJAL:      dcmp = {jmpImm,        RA,                                    7'b1101111};
+        isLI:       dcmp = {addImm,        X0,              3'b000, reg1w,        7'b0010011};
         isADDI16SP: dcmp = {addi16spImm,   reg1w,           3'b000, reg1w,        7'b0010011};
         isLUI:      dcmp = {luiImm,        reg1w,                                 7'b0110111};
         isSRLI:     dcmp = {7'b0000000,    shiftImm, reg1c, 3'b101, reg1c,        7'b0010011};
-        isSRAI:     dcmp = {7'b0100000,    shiftImm, reg1c, 3'b101, reg1c,        7'b0010011}; 
+        isSRAI:     dcmp = {7'b0100000,    shiftImm, reg1c, 3'b101, reg1c,        7'b0010011};
         isANDI:     dcmp = {addImm,        reg1c,           3'b111, reg1c,        7'b0010011};
         isSUB:      dcmp = {7'b0100000,    reg2c,    reg1c, 3'b000, reg1c,        7'b0110011};
-        isXOR:      dcmp = {7'b0000000,    reg2c,    reg1c, 3'b100, reg1c,        7'b0110011}; 
+        isXOR:      dcmp = {7'b0000000,    reg2c,    reg1c, 3'b100, reg1c,        7'b0110011};
         isOR:       dcmp = {7'b0000000,    reg2c,    reg1c, 3'b110, reg1c,        7'b0110011};
         isAND:      dcmp = {7'b0000000,    reg2c,    reg1c, 3'b111, reg1c,        7'b0110011};
-        isJ:        dcmp = {jmpImm,        x0,                                    7'b1101111};
-        isBEQZ:     dcmp = {branchImm7,    x0,       reg1c, 3'b000, branchImm5,   7'b1100011};
-        isBNEZ:     dcmp = {branchImm7,    x0,       reg1c, 3'b001, branchImm5,   7'b1100011};
+        isJ:        dcmp = {jmpImm,        X0,                                    7'b1101111};
+        isBEQZ:     dcmp = {branchImm7,    X0,       reg1c, 3'b000, branchImm5,   7'b1100011};
+        isBNEZ:     dcmp = {branchImm7,    X0,       reg1c, 3'b001, branchImm5,   7'b1100011};
 
         isSLLI:     dcmp = {7'b0000000,    shiftImm, reg1w, 3'b001, reg1w,        7'b0010011};
-        isFLDSP:    dcmp = {lwspImm,       sp,              3'b011, reg1w,        7'b0000111};
-        isLWSP:     dcmp = {lwspImm,       sp,              3'b010, reg1w,        7'b0000011};
-        isFLWSP:    dcmp = {lwspImm,       sp,              3'b010, reg1w,        7'b0000111};
-        isJR:       dcmp = {12'b0,         reg1w,           3'b000, x0,           7'b1100111};
-        isMV:       dcmp = {7'b0,          reg2w,    x0,    3'b000, reg1w,        7'b0110011};
+        isFLDSP:    dcmp = {ldspImm,       SP,              3'b011, reg1w,        7'b0000111};
+        isLWSP:     dcmp = {lwspImm,       SP,              3'b010, reg1w,        7'b0000011};
+        isFLWSP:    dcmp = {lwspImm,       SP,              3'b010, reg1w,        7'b0000111};
+        isJR:       dcmp = {12'b0,         reg1w,           3'b000, X0,           7'b1100111};
+        isMV:       dcmp = {7'b0,          reg2w,    X0,    3'b000, reg1w,        7'b0110011};
         isEBREAK:   dcmp = EBREAK;
-        isJALR:     dcmp = {12'b0,         reg1w,           3'b000, ra,           7'b1100111};
+        isJALR:     dcmp = {12'b0,         reg1w,           3'b000, RA,           7'b1100111};
         isADD:      dcmp = {7'b0,          reg2w,    reg1w, 3'b000, reg1w,        7'b0110011};
-        isFSDSP:    dcmp = {swspImm[11:5], reg2w,    sp,    3'b011, swspImm[4:0], 7'b0100111};
-        isSWSP:     dcmp = {swspImm[11:5], reg2w,    sp,    3'b010, swspImm[4:0], 7'b0100011};
-        isFSWSP:    dcmp = {swspImm[11:5], reg2w,    sp,    3'b010, swspImm[4:0], 7'b0100111};
+        isFSDSP:    dcmp = {sdspImm[11:5], reg2w,    SP,    3'b011, sdspImm[4:0], 7'b0100111};
+        isSWSP:     dcmp = {swspImm[11:5], reg2w,    SP,    3'b010, swspImm[4:0], 7'b0100011};
+        isFSWSP:    dcmp = {swspImm[11:5], reg2w,    SP,    3'b010, swspImm[4:0], 7'b0100111};
+
+        default:    dcmp = 32'b0;
         endcase
 end
 

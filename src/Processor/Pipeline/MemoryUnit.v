@@ -166,8 +166,8 @@ end
 
 
 /*-----------------------CSR----------------------*/
-assign csrWAddr_o   = EM_isCSR_i ? EM_csrId_i : 12'bZ;
-assign csrWData_o   = EM_isCSR_i ? EM_Eresult_i : 32'bZ;
+assign csrWAddr_o   = EM_isCSR_i ? EM_csrId_i : {12{1'bZ}};
+assign csrWData_o   = EM_isCSR_i ? EM_Eresult_i : {32{1'bZ}};
 assign csrWEnable_o = EM_isCSR_i;
 
 // Step up instruction counter if not a NOP

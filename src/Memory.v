@@ -32,8 +32,13 @@ wire [15:0] IMemdata_2 = INSTMEM[IMemAddr_i[31:1] + 1];
 assign IMemData_o = {IMemdata_2, IMemdata_1};
 
 // Data RAM: All alligned to 32 bits
-assign DMemRData_o = DATAMEM[DMemRAddr_i[31:2]];
-wire [29:0] wordAddr = DMemWAddr_i[31:2];
+// Subtract 0x10000 from address to allow room for Instruction memory addresses
+wire [31:0] DMemRAddr = DMemRAddr_i - 32'h00010000;
+wire [31:0] DMemWAddr = DMemWAddr_i - 32'h00010000;
+
+assign DMemRData_o = DATAMEM[DMemRAddr[31:2]];
+
+wire [29:0] wordAddr = DMemWAddr[31:2];
 always @(posedge clk_i) begin
         if (DMemWMask_i[0]) DATAMEM[wordAddr][ 7:0 ] <= DMemWData_i[ 7:0 ];
         if (DMemWMask_i[1]) DATAMEM[wordAddr][15:8 ] <= DMemWData_i[15:8 ];

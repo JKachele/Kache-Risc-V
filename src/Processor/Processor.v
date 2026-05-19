@@ -310,11 +310,13 @@ wire [31:0] EM_Mdata;
 wire [31:0] EM_CSRdata;
 wire        EM_wbEnable;
 
+/*verilator public_flat_rw_on*/
 wire        E_correctPC;
 wire        E_takeBranch;
 wire        EF_correctPC;
 wire [31:0] EF_PCcorrection;
 wire        aluBusy;
+/*verilator public_off*/
 
 ExecuteUnit execute(
         .clk_i(clk_i),
@@ -454,7 +456,7 @@ MemoryUnit memory(
         .MW_wbEnable_o(MW_wbEnable)
 );
 /******************************************************************************
- -------------------------------WRITE BACK UNIT-------------------------------- 
+ -------------------------------WRITE BACK UNIT--------------------------------
  ******************************************************************************/
 
 WriteBackUnit writeback(

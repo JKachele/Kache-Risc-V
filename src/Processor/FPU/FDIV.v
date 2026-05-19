@@ -47,7 +47,7 @@ reg signed [9:0]  expIn;
 // Cycle counter
 reg  [4:0] counter;
 // Only one cycle is needed to handle special cases
-localparam SPECIAL_CYCLES = 5'b1;
+localparam SPECIAL_CYCLES = 1;
 // Enough cycles to compute full significand with extra bits for rounding and normalizing
 localparam DIVIDE_CYCLES = 5'd27;
 
@@ -62,7 +62,9 @@ wire [31:0] roundedInfinity = {qSign, {7{1'b1}}, ~si, {23{si}}};
 // Rounding
 wire        [23:0] sigOut;
 wire signed [9:0]  expOut;
-FRound #(.nInt(52)) round(qSign, {qSig, aSig}, expIn, rm_i, sigOut, expOut);
+FRound #(.nInt(52)) round(
+        .sign_i(qSign), .sig_i({qSig, aSig}), .exp_i(expIn), .rm_i(rm_i),
+        .sig_o(sigOut), .exp_o(expOut));
 
 always @(posedge clk_i) begin
         if (!divEnable_i) begin
@@ -165,7 +167,7 @@ always @(posedge clk_i) begin
                         // Overflow
                         else if (expOut > 127) begin
                                 // // Round to infinity or largest normal depending on rounding mode
-                                // si = (rm_i == 3'b001 || 
+                                // si = (rm_i == 3'b001 ||
                                 //         (rm_i == 3'b010 && ~qSign) ||
                                 //         (rm_i == 3'b011 &&  qSign));
                                 // divOut <= {qSign, {7{1'b1}}, ~si, {23{si}}};

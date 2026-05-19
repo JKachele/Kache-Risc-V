@@ -21,7 +21,7 @@ LDFLAGS += -L$(RV_LIB_DIR) -lm $(GCC_LIB_DIR)/libgcc.a
 ODFLAGS := -sj .data -dj .text
 
 # Verilog
-VSRC := $(wildcard src/*.v) $(wildcard src/*/*.v) $(wildcard src/*/*/*.v)
+VSRC := $(shell find src/ -type f -name '*.v')
 TOP  := SOC
 XDC  := src/Extern/NexusA7.xdc
 
@@ -35,15 +35,15 @@ BIN_DIR := bin
 BUILD_DIR := build
 
 # Firmware
-SRC := $(wildcard firmware/OS/*.c)
-SRC += $(wildcard firmware/OS/*/*.c) $(wildcard firmware/OS/*/*.S) 
-SRC += $(wildcard firmware/OS/*/*/*.c) $(wildcard firmware/OS/*/*/*.S) 
-OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
-LDSCRIPT = firmware/OS/kernel.ld
-# SRC := firmware/Tests/startPipeline.S firmware/Tests/Test.c firmware/Tests/Test.S
-# SRC += $(wildcard firmware/libs/*.S) $(wildcard firmware/libs/*.c) 
+# SRC := $(wildcard firmware/OS/*.c)
+# SRC += $(wildcard firmware/OS/*/*.c) $(wildcard firmware/OS/*/*.S) 
+# SRC += $(wildcard firmware/OS/*/*/*.c) $(wildcard firmware/OS/*/*/*.S) 
 # OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
-# LDSCRIPT = firmware/Tests/ram.ld
+# LDSCRIPT = firmware/OS/kernel.ld
+SRC := firmware/Tests/startPipeline.S firmware/Tests/raystones.c
+SRC += $(wildcard firmware/libs/*.S) $(wildcard firmware/libs/*.c) 
+OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
+LDSCRIPT = firmware/Tests/ram.ld
 
 ROM := $(BIN_DIR)/ROM.hex
 RAM := $(BIN_DIR)/RAM.hex

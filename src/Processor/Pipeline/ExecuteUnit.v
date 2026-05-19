@@ -136,7 +136,7 @@ wire [31:0] E_aluIn2 =
 // Add Subtract
 wire E_isMinus = DE_funct7_i[5] & DE_isALUR_i;
 wire [31:0] E_aluPlus = E_aluIn1 + E_aluIn2;
-wire [32:0] E_aluMinus = {1'b0, E_aluIn1} + {1'b1, ~E_aluIn2} + 33'b1;
+wire [32:0] E_aluMinus = {1'b0, E_aluIn1} + {1'b1, ~E_aluIn2} + 33'd1;
 
 // Bitwise Ops
 wire [31:0] E_aluAND = E_aluIn1 & E_aluIn2;
@@ -149,7 +149,7 @@ wire E_LTU = E_aluMinus[32];
 wire E_EQ  = (E_aluMinus[31:0] == 0);
 
 // Flip a 32 bit word. Used by the shifter
-function [31:0] flip32;
+function automatic [31:0] flip32;
         input [31:0] x;
         flip32 = {x[ 0], x[ 1], x[ 2], x[ 3], x[ 4], x[ 5], x[ 6], x[ 7],
                 x[ 8], x[ 9], x[10], x[11], x[12], x[13], x[14], x[15],
@@ -159,19 +159,19 @@ endfunction
 
 // Bit Shifts
 wire E_arithShift = DE_funct7_i[5];
-wire [31:0] E_shifterIn = 
+wire [31:0] E_shifterIn =
         (DE_funct3_i == 3'b001) ? flip32(E_aluIn1) : E_aluIn1;
-wire [31:0] E_shifter =
+wire [32:0] E_shifter =
         $signed({E_arithShift & E_aluIn1[31], E_shifterIn}) >>> E_aluIn2[4:0];
-wire [31:0] E_leftShift = flip32(E_shifter);
+wire [31:0] E_leftShift = flip32(E_shifter[31:0]);
 
-wire [31:0] E_aluOutBase = 
+wire [31:0] E_aluOutBase =
         (DE_funct3_is_i[0] ? (E_isMinus ? E_aluMinus[31:0] : E_aluPlus) : 32'b0) |
         (DE_funct3_is_i[1] ? E_leftShift                                : 32'b0) |
         (DE_funct3_is_i[2] ? {31'b0, E_LT}                              : 32'b0) |
         (DE_funct3_is_i[3] ? {31'b0, E_LTU}                             : 32'b0) |
         (DE_funct3_is_i[4] ? E_aluXOR                                   : 32'b0) |
-        (DE_funct3_is_i[5] ? E_shifter                                  : 32'b0) |
+        (DE_funct3_is_i[5] ? E_shifter[31:0]                            : 32'b0) |
         (DE_funct3_is_i[6] ? E_aluOR                                    : 32'b0) |
         (DE_funct3_is_i[7] ? E_aluAND                                   : 32'b0) ;
 
@@ -224,7 +224,7 @@ end
 
 wire [2:0] E_divsel = {DE_isDIV_i, DE_funct3_i[1], EE_divSign};
 
-wire [31:0] E_aluOutM = 
+wire [31:0] E_aluOutM =
         (  DE_funct3_is_i[0]    ?  E_multiply[31:0]  : 32'b0) | // MUL
         ( |DE_funct3_is_i[3:1]  ?  E_multiply[63:32] : 32'b0) | // MULH[[S]U]
         (  E_divsel == 3'b100 ?  EE_quotient       : 32'b0) | // DIV
@@ -233,10 +233,10 @@ wire [31:0] E_aluOutM =
         (  E_divsel == 3'b111 ? -EE_dividend       : 32'b0) ; // REM Negative
 
 /*-----------------------CSR----------------------*/
-assign csrRAddr_o = DE_isCSR_i ? DE_csrId_i : 12'bZ;
+assign csrRAddr_o = DE_isCSR_i ? DE_csrId_i : {12{1'bZ}};
 
 wire [31:0] E_csrClear = E_aluIn1 & ~E_aluIn2;
-wire [31:0] E_csrOut = 
+wire [31:0] E_csrOut =
         (DE_funct3_i[1:0] == 2'b01) ? E_aluIn2   : // CSR Read/Write
         (DE_funct3_i[1:0] == 2'b10) ? E_aluOR    : // CSR Read/Set
                                       E_csrClear ; // CSR Read/Clear
@@ -248,7 +248,7 @@ wire [31:0] E_addr =
         DE_isStore_i ? E_rs1 + DE_Simm_i : E_rs1 + DE_Iimm_i;
 assign DMemRAddr_o = E_addr;
 
-wire [31:0] E_amoOut = 
+wire [31:0] E_amoOut =
         (DE_funct7_i[6:2] == 5'h00 ?                      E_aluPlus : 32'b0) | // amoadd.w
         (DE_funct7_i[6:2] == 5'h01 ?                      E_aluIn2  : 32'b0) | // amoswap.w
         (DE_funct7_i[6:2] == 5'h04 ?                      E_aluXOR  : 32'b0) | // amoxor.w
@@ -277,7 +277,7 @@ FPU fpu(
         .fpuOut_o(E_fpuOut)
 );
 
-wire [31:0] E_aluOut = DE_isRV32M_i ? E_aluOutM : 
+wire [31:0] E_aluOut = DE_isRV32M_i ? E_aluOutM :
                        DE_isCSR_i   ? E_csrOut  :
                        DE_isAMO_i   ? E_amoOut  :
                        DE_isFPU_i   ? E_fpuOut  : E_aluOutBase;
@@ -285,7 +285,7 @@ wire [31:0] E_aluOut = DE_isRV32M_i ? E_aluOutM :
 assign aluBusy_o = EE_divBusy | (DE_isDIV_i & !EE_divFinished) | E_fpuBusy;
 
 /*------------------JUMP/BRANCH-------------------*/
-wire E_takeBranch = 
+wire E_takeBranch =
         (DE_funct3_is_i[0] &  E_EQ ) | // BEQ
         (DE_funct3_is_i[1] & !E_EQ ) | // BNE
         (DE_funct3_is_i[4] &  E_LT ) | // BLT
@@ -305,12 +305,12 @@ assign E_correctPC_o = E_correctPC;
 
 wire [31:0] E_nextPC = DE_PC_i + (DE_isRV32C_i ? 2 : 4);
 
-wire [31:0] E_PCcorrection = 
+wire [31:0] E_PCcorrection =
         DE_isBranch_i ? (DE_predictBranch_i ? E_nextPC : DE_PC_i + DE_Bimm_i) :
         /* JALR */      E_JALRaddr;
 
 /*---------------------Output---------------------*/
-wire [31:0] E_result = 
+wire [31:0] E_result =
         (DE_isJAL_i | DE_isJALR_i) ? E_nextPC            :
         DE_isLUI_i                 ? DE_Uimm_i           :
         DE_isAUIPC_i               ? DE_PC_i + DE_Uimm_i :
