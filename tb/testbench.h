@@ -44,7 +44,7 @@ public:
                 m_core->RESET = 0;
         }
 
-        virtual void tick(void) {
+        virtual void tickUp(void) {
                 m_tickcount++;
 
                 // Settle combinatorial logic before Ccock tick
@@ -57,13 +57,20 @@ public:
                 m_core->CLK = 1;
                 m_core->eval();
                 if (m_trace) m_trace->dump((vluint64_t)(10*m_tickcount));
+        }
 
+        virtual void tickDown(void) {
                 m_core->CLK = 0;
                 m_core->eval();
                 if (m_trace) {
                         m_trace->dump((vluint64_t)(10*m_tickcount+5));
                         m_trace->flush();
                 }
+        }
+
+        virtual void tick(void) {
+                tickUp();
+                tickDown();
         }
 
         virtual bool done(void) {

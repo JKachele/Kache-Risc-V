@@ -8,23 +8,20 @@
 
 #include <stdio.h>
 
-void printMachine() {
-        printf("In Machine Mode\n");
+unsigned int getMem(unsigned addr) {
+        unsigned int data;
+        asm volatile(
+                        "lw %0, 0(%1)\n"
+                        :"=r"(data)
+                        :"r"(addr)
+                    );
+        return data;
 }
 
-void printMTrap() {
-        printf("In Machine Trap\n");
-}
-
-void printSupervisor() {
-        printf("In Supervisor Mode\n");
-}
-
-void printSTrap() {
-        printf("In Supervisor Trap\n");
-}
-
-void printUser() {
-        printf("In User Mode\n");
+int main(void) {
+        printf("Hello, World!\n");
+        for (int i = 0; i < 50; i++) {
+                printf("%08x\n", getMem(0x10000000 + (i * 4)));
+        }
 }
 

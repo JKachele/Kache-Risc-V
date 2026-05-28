@@ -29,7 +29,7 @@ module Memory (
         output wire        txd_o,
         // SPI Flash
         output wire        spiClk_o,
-        output reg         spiCs_o,
+        output wire        spiCs_o,
         output wire        spiMosi_o,
         input  wire        spiMiso_i
         // inout  wire [3:0]  spiData_io
@@ -141,7 +141,7 @@ IO io(
 spiFlash flash(
         .clk_i(clk_i),
         .rstrb_i(((DMemRAddr_i[31:28] == 4'b0001) || M_isSPI_r) & DMemRStrb_i),
-        .raddr_i(24'b0),
+        .raddr_i(DMemRAddr_i[23:0]),
         .rdata_o(SPI_RData),
         .rbusy_o(SPI_RBusy),
         .spiClk_o(spiClk_o),

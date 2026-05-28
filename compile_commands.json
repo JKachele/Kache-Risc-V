@@ -30,12 +30,12 @@
       "-fno-stack-protector",
       "-w",
       "-o",
-      "build/firmware/Tests/raystones.c.o",
-      "firmware/Tests/raystones.c"
+      "build/firmware/Tests/Test.c.o",
+      "firmware/Tests/Test.c"
     ],
     "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V",
-    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/firmware/Tests/raystones.c",
-    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/build/firmware/Tests/raystones.c.o"
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/firmware/Tests/Test.c",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/build/firmware/Tests/Test.c.o"
   },
   {
     "arguments": [

@@ -4,7 +4,7 @@
 #include "VSOC___024root.h"
 #include "testbench.h"
 #include "uartsim.h"
-#include "flashsim.h"
+#include "spiflash.h"
 #include "riscVDis.h"
 
 #define HALT                    SOC__DOT__CPU__DOT__HALT
@@ -22,11 +22,10 @@
 #define CacheHit0               SOC__DOT__icache__DOT__C_hit0
 #define CacheHit1               SOC__DOT__icache__DOT__C_hit1
 
-class SOC_TB : public TESTB<VSOC> {
-        // SPI Flash
-        FLASHSIM *m_flash;
-        int m_flash_last_sck;
+#define Reg_A0                  SOC__DOT__CPU__DOT__registers__DOT__reg_10
+#define Reg_A1                  SOC__DOT__CPU__DOT__registers__DOT__reg_11
 
+class SOC_TB : public TESTB<VSOC> {
         // Statistics counters
         IData nbBranch = 0;
         IData nbBranchHit = 0;
@@ -98,25 +97,24 @@ class SOC_TB : public TESTB<VSOC> {
 public:
         IData prevLEDS;
         CData prevCLK;
+        CData prevSpiCs = 1;
+
+        SPIFlash *m_flash;
 
         FILE *programLog;
 
         SOC_TB(void) {
-                m_flash = new FLASHSIM();
-                m_flash_last_sck = 0;
+                m_flash = new SPIFlash();
         }
 
         virtual void tick(void) {
-                TESTB<VSOC>::tick();
-                CData clk = m_core->rootp->SOC__DOT__clk;
+                TESTB<VSOC>::tickUp();
+                m_core->qspi_miso = (*m_flash)(m_core->qspi_cs, m_core->qspi_sck, m_core->qspi_mosi);
+                TESTB<VSOC>::tickDown();
+                (*m_flash)(m_core->qspi_cs, m_core->qspi_sck, m_core->qspi_mosi);
+
                 prevLEDS = m_core->LEDS;
                 prevCLK = m_core->rootp->SOC__DOT__clk;
-
-                // if (m_flash_last_sck) {
-                //         (*m_flash)(m_core->qspi_cs, 0, m_core->qspi_mosi);
-                // }
-                // m_core->qspi_miso = ((*m_flash)(m_core->qspi_cs, 1, m_core->qspi_mosi)&2)?1:0;
-                // m_flash_last_sck = m_core->qspi_sck;
 
                 updateStats();
         }
@@ -170,6 +168,9 @@ public:
                 printf("FPU:%3.3f\%% | ",               nbFPU*100.0/instret);
                 printf("AMO:%3.3f\%%",                  nbAMO*100.0/instret);
                 printf(")\n");
+
+                // printIReg("A0", rootp->Reg_A0);
+                // printIReg("A0", rootp->Reg_A1);
         }
 
 };
@@ -197,14 +198,12 @@ int main(int argc, char **argv) {
         uart->setup(setup);
         baudclocks = setup & 0xfffffff;
 
-        // FLASHSIM *m_flash = new FLASHSIM;
-        // int m_flash_last_sck = 0;
-        // m_flash->debug(true);
+        tb->m_flash->load("../bin/firmware.bin");
+        // tb->m_flash->print(0, 16);
 
         // tb->opentrace("trace.vcd");
 
         tb->m_core->rvec = 0xF0000000;
-        tb->m_core->qspi_miso = 1;
         tb->reset();
 
         int rxPrev = 1;

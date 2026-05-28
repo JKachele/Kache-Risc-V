@@ -20,18 +20,23 @@ class SPIFlash {
 	} SPIF_STATE;
 
         SPIF_STATE m_state;
-        char *m_mem;
+        unsigned char *m_mem;
         int m_last_sck;
+        unsigned int m_command;
         unsigned int m_address;
         unsigned int m_count;
         unsigned int m_memBytes;
         unsigned int m_memMask;
+        unsigned char m_data;
+        unsigned char m_dataMask;
         bool m_debug;
 public:
+
         SPIFlash(const int len = 24, const bool debug = false);
 	void load(const char *fname) { load(0, fname); }
 	void load(const unsigned addr, const char *fname);
 	void load(const uint32_t offset, const char *data, const uint32_t len);
+        void print(const unsigned addr, const uint32_t len);
 
 	int operator()(const int csn, const int sck, const char dat);
 };

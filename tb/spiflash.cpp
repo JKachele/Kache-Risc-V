@@ -14,11 +14,12 @@
 #include "spiflash.h"
 
 SPIFlash::SPIFlash(const int len, const bool debug) {
-        m_memBytes = 24;
+        m_memBytes = (1<<len);
         m_memMask = (m_memBytes - 1);
-        m_mem = new char[m_memBytes];
+        m_mem = new unsigned char[m_memBytes];
 	m_state = SPIF_IDLE;
         m_last_sck = 1;
+        m_debug = debug;
 	memset(m_mem, 0x0ff, m_memBytes);
 }
 
@@ -61,6 +62,56 @@ void SPIFlash::load(const uint32_t offset, const char *data, const uint32_t len)
         memcpy(&m_mem[moff], data, len);
 }
 
+void SPIFlash::print(const unsigned addr, const uint32_t len) {
+        for (int i = 0; i < len; i++) {
+                printf("%02x ", m_mem[addr+i]);
+                if (i % 8 == 7)
+                        printf("\n");
+        }
+}
+
 int SPIFlash::operator()(const int csn, const int sck, const char dat) {
+        // Chip is not selected
+        if (csn) {
+                m_last_sck = 1;
+                m_count = 0;
+                m_state = SPIF_IDLE;
+                return dat;
+        }
+
+
+        if (sck == 1 && m_last_sck == 0) {      // Rising Edge - Read cmd and address
+                if (m_state == SPIF_IDLE) {
+                        m_state = SPIF_READ_CMD;
+                        m_command = 0;
+                        m_address = 0;
+                }
+                if (m_state == SPIF_READ_CMD) {
+                        m_command <<= 1;
+                        m_command |= dat;
+                        if (m_count == 7)
+                                m_state = SPIF_READ_ADDR;
+                } else if (m_state == SPIF_READ_ADDR) {
+                        m_address <<= 1;
+                        m_address |= dat;
+                        if (m_count == 31)
+                                m_state = SPIF_READ_SEND;
+                }
+                m_count++;
+        } else if (sck == 0 && m_last_sck == 1) {        // Falling Edge - Output data
+                if (m_state == SPIF_READ_SEND) {
+                        if (m_count % 8 == 0) {
+                                m_data = m_mem[m_address];
+                                m_dataMask = 1 << 7;
+                                m_address++;
+                        }
+                        char send = (m_data & m_dataMask) == 0;
+                        m_dataMask >>= 1;
+                        m_last_sck = sck;
+                        return send;
+                }
+        }
+        m_last_sck = sck;
+        return 0;
 }
 
