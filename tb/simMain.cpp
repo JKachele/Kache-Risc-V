@@ -10,13 +10,17 @@
 #define HALT                    SOC__DOT__CPU__DOT__HALT
 #define D_stall                 SOC__DOT__CPU__DOT__D_stall
 #define dataHazard              SOC__DOT__CPU__DOT__dataHazard
+#define DE_pc                   SOC__DOT__CPU__DOT__DE_PC
 #define DE_instr                SOC__DOT__CPU__DOT__DE_instr
 #define E_takeBranch            SOC__DOT__CPU__DOT__E_takeBranch
 #define DE_predictBranch        SOC__DOT__CPU__DOT__DE_predictBranch
 #define DE_predictRA            SOC__DOT__CPU__DOT__DE_predictRA
 #define E_JALRaddr              SOC__DOT__CPU__DOT__execute__DOT__E_JALRaddr
-#define CYCLE                   SOC__DOT__CPU__DOT__csr__DOT__CSR_cycle;
-#define INSTRET                 SOC__DOT__CPU__DOT__csr__DOT__CSR_instret;
+#define CYCLE                   SOC__DOT__CPU__DOT__csr__DOT__CSR_cycle
+#define INSTRET                 SOC__DOT__CPU__DOT__csr__DOT__CSR_instret
+#define F_pc                    SOC__DOT__CPU__DOT__fetch__DOT__PC
+#define CacheHit0               SOC__DOT__icache__DOT__C_hit0
+#define CacheHit1               SOC__DOT__icache__DOT__C_hit1
 
 class SOC_TB : public TESTB<VSOC> {
         // SPI Flash
@@ -36,6 +40,12 @@ class SOC_TB : public TESTB<VSOC> {
         IData nbMULDIV = 0;
         IData nbFPU = 0;
         IData nbAMO = 0;
+        IData nbCache = 0;
+        IData nbCacheHit = 0;
+        IData prevPC = 0;
+
+        // Program Execution
+        IData prevDE_PC = 0;
 
         void updateStats(void) {
                 if (m_core->RESET == 0 && rootp->D_stall == 0) {
@@ -68,11 +78,28 @@ class SOC_TB : public TESTB<VSOC> {
                         nbAMO++;
                 if (rootp->dataHazard == 1)
                         nbLoadHazard++;
+                if (rootp->F_pc != prevPC) {
+                        if (rootp->CacheHit0 || rootp->CacheHit1)
+                                nbCacheHit++;
+                        nbCache++;
+                } 
+                prevPC = rootp->F_pc;
+        }
+
+        void recordExecution(void) {
+                IData pc = rootp->DE_pc;
+                IData instr = rootp->DE_instr;
+                if (pc != prevDE_PC && !riscV_isNOP(instr)) {
+                        fprintf(programLog, "%08x: %08x\n", pc, instr);
+                }
+                prevDE_PC = pc;
         }
 
 public:
         IData prevLEDS;
         CData prevCLK;
+
+        FILE *programLog;
 
         SOC_TB(void) {
                 m_flash = new FLASHSIM();
@@ -125,6 +152,7 @@ public:
                 printf("\n----------------------------\n");
                 printf("Simulated processor's report\n");
                 printf("----------------------------\n");
+                printf("Cache  hit = %3.3f\%%\n", nbCacheHit*100.0/nbCache);
                 printf("Branch hit = %3.3f\%%\n", nbBranchHit*100.0/nbBranch);
                 printf("JALR   hit = %3.3f\%%\n", nbJALRhit*100.0/nbJALR);
                 printf("Load hzrds = %3.3f\%%\n", nbLoadHazard*100.0/nbLoad);
@@ -157,6 +185,8 @@ int main(int argc, char **argv) {
         // Create an instance of our module under test
         SOC_TB *tb = new SOC_TB();
 
+        tb->programLog = fopen("Program.txt", "w");
+
         UARTSIM *uart;
         int port = 0;
         unsigned setup = 868;
@@ -180,12 +210,14 @@ int main(int argc, char **argv) {
         int rxPrev = 1;
         while (!tb->done()) {
                 tb->tick();
+                // recordExecution();
                 tb->m_core->qspi_miso = !tb->m_core->qspi_miso;
                 // tb->m_core->RXD = (*uart)(tb->m_core->TXD);
                 // clocks++;
         }
         tb->printStatusReport();
 
+        fclose(tb->programLog);
         delete tb;
         return 0;
 }

@@ -4,19 +4,226 @@
       "/opt/riscv/bin/riscv64-unknown-elf-gcc",
       "-c",
       "-O2",
-      "-march=rv32imafc",
+      "-march=rv32imaf",
       "-mabi=ilp32f",
       "-Wno-builtin-declaration-mismatch",
       "-fno-pic",
       "-fno-stack-protector",
       "-w",
       "-o",
-      "build/firmware/OS/kernel.c.o",
-      "firmware/OS/kernel.c"
+      "build/firmware/Tests/startPipeline.S.o",
+      "firmware/Tests/startPipeline.S"
     ],
-    "directory": "/home/vagrant/Programming/FPGA/Risc-V-FPGA",
-    "file": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/firmware/OS/kernel.c",
-    "output": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/build/firmware/OS/kernel.c.o"
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/firmware/Tests/startPipeline.S",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/build/firmware/Tests/startPipeline.S.o"
+  },
+  {
+    "arguments": [
+      "/opt/riscv/bin/riscv64-unknown-elf-gcc",
+      "-c",
+      "-O2",
+      "-march=rv32imaf",
+      "-mabi=ilp32f",
+      "-Wno-builtin-declaration-mismatch",
+      "-fno-pic",
+      "-fno-stack-protector",
+      "-w",
+      "-o",
+      "build/firmware/Tests/raystones.c.o",
+      "firmware/Tests/raystones.c"
+    ],
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/firmware/Tests/raystones.c",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/build/firmware/Tests/raystones.c.o"
+  },
+  {
+    "arguments": [
+      "/opt/riscv/bin/riscv64-unknown-elf-gcc",
+      "-c",
+      "-O2",
+      "-march=rv32imaf",
+      "-mabi=ilp32f",
+      "-Wno-builtin-declaration-mismatch",
+      "-fno-pic",
+      "-fno-stack-protector",
+      "-w",
+      "-o",
+      "build/firmware/libs/perf.S.o",
+      "firmware/libs/perf.S"
+    ],
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/firmware/libs/perf.S",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/build/firmware/libs/perf.S.o"
+  },
+  {
+    "arguments": [
+      "/opt/riscv/bin/riscv64-unknown-elf-gcc",
+      "-c",
+      "-O2",
+      "-march=rv32imaf",
+      "-mabi=ilp32f",
+      "-Wno-builtin-declaration-mismatch",
+      "-fno-pic",
+      "-fno-stack-protector",
+      "-w",
+      "-o",
+      "build/firmware/libs/putchar.S.o",
+      "firmware/libs/putchar.S"
+    ],
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/firmware/libs/putchar.S",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/build/firmware/libs/putchar.S.o"
+  },
+  {
+    "arguments": [
+      "/opt/riscv/bin/riscv64-unknown-elf-gcc",
+      "-c",
+      "-O2",
+      "-march=rv32imaf",
+      "-mabi=ilp32f",
+      "-Wno-builtin-declaration-mismatch",
+      "-fno-pic",
+      "-fno-stack-protector",
+      "-w",
+      "-o",
+      "build/firmware/libs/wait.S.o",
+      "firmware/libs/wait.S"
+    ],
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/firmware/libs/wait.S",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/build/firmware/libs/wait.S.o"
+  },
+  {
+    "arguments": [
+      "/opt/riscv/bin/riscv64-unknown-elf-gcc",
+      "-c",
+      "-O2",
+      "-march=rv32imaf",
+      "-mabi=ilp32f",
+      "-Wno-builtin-declaration-mismatch",
+      "-fno-pic",
+      "-fno-stack-protector",
+      "-w",
+      "-o",
+      "build/firmware/libs/errno.c.o",
+      "firmware/libs/errno.c"
+    ],
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/firmware/libs/errno.c",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/build/firmware/libs/errno.c.o"
+  },
+  {
+    "arguments": [
+      "/opt/riscv/bin/riscv64-unknown-elf-gcc",
+      "-c",
+      "-O2",
+      "-march=rv32imaf",
+      "-mabi=ilp32f",
+      "-Wno-builtin-declaration-mismatch",
+      "-fno-pic",
+      "-fno-stack-protector",
+      "-w",
+      "-o",
+      "build/firmware/libs/memcpy.c.o",
+      "firmware/libs/memcpy.c"
+    ],
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/firmware/libs/memcpy.c",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/build/firmware/libs/memcpy.c.o"
+  },
+  {
+    "arguments": [
+      "/opt/riscv/bin/riscv64-unknown-elf-gcc",
+      "-c",
+      "-O2",
+      "-march=rv32imaf",
+      "-mabi=ilp32f",
+      "-Wno-builtin-declaration-mismatch",
+      "-fno-pic",
+      "-fno-stack-protector",
+      "-w",
+      "-o",
+      "build/firmware/libs/printf.c.o",
+      "firmware/libs/printf.c"
+    ],
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/firmware/libs/printf.c",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/build/firmware/libs/printf.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-I.",
+      "-I/usr/local/share/verilator/include",
+      "-I/usr/local/share/verilator/include/vltstd",
+      "-DVERILATOR=1",
+      "-DVM_COVERAGE=0",
+      "-DVM_SC=0",
+      "-DVM_TIMING=0",
+      "-DVM_TRACE=1",
+      "-DVM_TRACE_FST=0",
+      "-DVM_TRACE_VCD=1",
+      "-DVM_TRACE_SAIF=0",
+      "-faligned-new",
+      "-fcf-protection=none",
+      "-Wno-bool-operation",
+      "-Wno-int-in-bool-context",
+      "-Wno-shadow",
+      "-Wno-sign-compare",
+      "-Wno-subobject-linkage",
+      "-Wno-tautological-compare",
+      "-Wno-uninitialized",
+      "-Wno-unused-but-set-parameter",
+      "-Wno-unused-but-set-variable",
+      "-Wno-unused-parameter",
+      "-Wno-unused-variable",
+      "-Os",
+      "-c",
+      "-o",
+      "flashsim.o",
+      "../tb/flashsim.cpp"
+    ],
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/tb/flashsim.cpp",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir/flashsim.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-I.",
+      "-I/usr/local/share/verilator/include",
+      "-I/usr/local/share/verilator/include/vltstd",
+      "-DVERILATOR=1",
+      "-DVM_COVERAGE=0",
+      "-DVM_SC=0",
+      "-DVM_TIMING=0",
+      "-DVM_TRACE=1",
+      "-DVM_TRACE_FST=0",
+      "-DVM_TRACE_VCD=1",
+      "-DVM_TRACE_SAIF=0",
+      "-faligned-new",
+      "-fcf-protection=none",
+      "-Wno-bool-operation",
+      "-Wno-int-in-bool-context",
+      "-Wno-shadow",
+      "-Wno-sign-compare",
+      "-Wno-subobject-linkage",
+      "-Wno-tautological-compare",
+      "-Wno-uninitialized",
+      "-Wno-unused-but-set-parameter",
+      "-Wno-unused-but-set-variable",
+      "-Wno-unused-parameter",
+      "-Wno-unused-variable",
+      "-Os",
+      "-c",
+      "-o",
+      "riscVDis.o",
+      "../tb/riscVDis.cpp"
+    ],
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/tb/riscVDis.cpp",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir/riscVDis.o"
   },
   {
     "arguments": [
@@ -51,9 +258,46 @@
       "simMain.o",
       "../tb/simMain.cpp"
     ],
-    "directory": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/obj_dir",
-    "file": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/tb/simMain.cpp",
-    "output": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/obj_dir/simMain.o"
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/tb/simMain.cpp",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir/simMain.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-I.",
+      "-I/usr/local/share/verilator/include",
+      "-I/usr/local/share/verilator/include/vltstd",
+      "-DVERILATOR=1",
+      "-DVM_COVERAGE=0",
+      "-DVM_SC=0",
+      "-DVM_TIMING=0",
+      "-DVM_TRACE=1",
+      "-DVM_TRACE_FST=0",
+      "-DVM_TRACE_VCD=1",
+      "-DVM_TRACE_SAIF=0",
+      "-faligned-new",
+      "-fcf-protection=none",
+      "-Wno-bool-operation",
+      "-Wno-int-in-bool-context",
+      "-Wno-shadow",
+      "-Wno-sign-compare",
+      "-Wno-subobject-linkage",
+      "-Wno-tautological-compare",
+      "-Wno-uninitialized",
+      "-Wno-unused-but-set-parameter",
+      "-Wno-unused-but-set-variable",
+      "-Wno-unused-parameter",
+      "-Wno-unused-variable",
+      "-Os",
+      "-c",
+      "-o",
+      "spiflash.o",
+      "../tb/spiflash.cpp"
+    ],
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/tb/spiflash.cpp",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir/spiflash.o"
   },
   {
     "arguments": [
@@ -88,9 +332,9 @@
       "uartsim.o",
       "../tb/uartsim.cpp"
     ],
-    "directory": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/obj_dir",
-    "file": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/tb/uartsim.cpp",
-    "output": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/obj_dir/uartsim.o"
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/tb/uartsim.cpp",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir/uartsim.o"
   },
   {
     "arguments": [
@@ -125,9 +369,46 @@
       "verilated.o",
       "/usr/local/share/verilator/include/verilated.cpp"
     ],
-    "directory": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/obj_dir",
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir",
     "file": "/usr/local/share/verilator/include/verilated.cpp",
-    "output": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/obj_dir/verilated.o"
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir/verilated.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-Os",
+      "-I.",
+      "-I/usr/local/share/verilator/include",
+      "-I/usr/local/share/verilator/include/vltstd",
+      "-DVERILATOR=1",
+      "-DVM_COVERAGE=0",
+      "-DVM_SC=0",
+      "-DVM_TIMING=0",
+      "-DVM_TRACE=1",
+      "-DVM_TRACE_FST=0",
+      "-DVM_TRACE_VCD=1",
+      "-DVM_TRACE_SAIF=0",
+      "-faligned-new",
+      "-fcf-protection=none",
+      "-Wno-bool-operation",
+      "-Wno-int-in-bool-context",
+      "-Wno-shadow",
+      "-Wno-sign-compare",
+      "-Wno-subobject-linkage",
+      "-Wno-tautological-compare",
+      "-Wno-uninitialized",
+      "-Wno-unused-but-set-parameter",
+      "-Wno-unused-but-set-variable",
+      "-Wno-unused-parameter",
+      "-Wno-unused-variable",
+      "-c",
+      "-o",
+      "verilated_dpi.o",
+      "/usr/local/share/verilator/include/verilated_dpi.cpp"
+    ],
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir",
+    "file": "/usr/local/share/verilator/include/verilated_dpi.cpp",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir/verilated_dpi.o"
   },
   {
     "arguments": [
@@ -162,9 +443,9 @@
       "verilated_vcd_c.o",
       "/usr/local/share/verilator/include/verilated_vcd_c.cpp"
     ],
-    "directory": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/obj_dir",
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir",
     "file": "/usr/local/share/verilator/include/verilated_vcd_c.cpp",
-    "output": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/obj_dir/verilated_vcd_c.o"
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir/verilated_vcd_c.o"
   },
   {
     "arguments": [
@@ -199,9 +480,9 @@
       "verilated_threads.o",
       "/usr/local/share/verilator/include/verilated_threads.cpp"
     ],
-    "directory": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/obj_dir",
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir",
     "file": "/usr/local/share/verilator/include/verilated_threads.cpp",
-    "output": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/obj_dir/verilated_threads.o"
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir/verilated_threads.o"
   },
   {
     "arguments": [
@@ -236,8 +517,8 @@
       "VSOC__ALL.o",
       "VSOC__ALL.cpp"
     ],
-    "directory": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/obj_dir",
-    "file": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/obj_dir/VSOC__ALL.cpp",
-    "output": "/home/vagrant/Programming/FPGA/Risc-V-FPGA/obj_dir/VSOC__ALL.o"
+    "directory": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir",
+    "file": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir/VSOC__ALL.cpp",
+    "output": "/home/vagrant/Programming/FPGA/Kache-Risc-V/obj_dir/VSOC__ALL.o"
   }
 ]

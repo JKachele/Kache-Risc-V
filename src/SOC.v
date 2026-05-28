@@ -28,10 +28,18 @@ wire clk;
 wire reset;
 /*verilator public_off*/
 
+// Cache-Memory Interface
+wire        IC_mRden;
+wire [31:0] IC_mAddr;
+wire [63:0] IC_mData;
+wire        IC_mValid;
+
 //Memory
-wire [31:0] IMemAddr;
-wire [31:0] IMemData;
-wire        IMemStrb;
+wire        ICacheStrb;
+wire        ICacheCancel;
+wire [31:0] ICacheAddr;
+wire [31:0] ICacheData;
+wire        ICacheValid;
 wire        DMemRStrb;
 wire [31:0] DMemRAddr;
 wire [31:0] DMemRData;
@@ -47,14 +55,17 @@ wire [31:0] IO_memRData;
 wire [31:0] IO_memWAddr;
 wire [31:0] IO_memWData;
 wire        IO_memWr;
+/*verilator public_off*/
 
 Processor CPU(
         .clk_i(clk),
         .reset_i(reset),
         .rvec_i(rvec),
-        .IMemAddr_o(IMemAddr),
-        .IMemData_i(IMemData),
-        .IMemStrb_o(IMemStrb),
+        .ICacheStrb_o(ICacheStrb),
+        .ICacheCancel_o(ICacheCancel),
+        .ICacheAddr_o(ICacheAddr),
+        .ICacheData_i(ICacheData),
+        .ICacheValid_i(ICacheValid),
         .DMemRStrb_o(DMemRStrb),
         .DMemRAddr_o(DMemRAddr),
         .DMemRData_i(DMemRData),
@@ -65,13 +76,32 @@ Processor CPU(
         .DMemWBusy_i(DMemWBusy)
 );
 
+ICache icache(
+        .clk_i(clk),
+        .reset_i(reset),
+        .addr_i(ICacheAddr),
+        .rden_i(ICacheStrb),
+        .cancel_i(ICacheCancel),
+        .valid_o(ICacheValid),
+        .data_o(ICacheData),
+        .mAddr_o(IC_mAddr),
+        .mRden_o(IC_mRden),
+        .mData_i(IC_mData),
+        .mValid_i(IC_mValid)
+);
+
 Memory mem(
         .clk_i(clk),
         .reset_i(reset),
         .rvec_i(rvec),
-        .IMemAddr_i(IMemAddr),
-        .IMemData_o(IMemData),
-        .IMemStrb_i(IMemStrb),
+        .IMemStrb_i(IC_mRden),
+        .IMemAddr_i(IC_mAddr),
+        .IMemData_o(IC_mData),
+        .IMemValid_o(IC_mValid),
+        // .IMemStrb_i(ICacheStrb),
+        // .IMemAddr_i(ICacheAddr),
+        // .IMemData_o(ICacheData),
+        // .IMemValid_o(ICacheValid),
         .DMemRStrb_i(DMemRStrb),
         .DMemRAddr_i(DMemRAddr),
         .DMemRData_o(DMemRData),

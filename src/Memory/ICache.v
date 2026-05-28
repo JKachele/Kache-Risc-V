@@ -17,28 +17,33 @@ module ICache #(
 
         input  wire [31:0] addr_i,
         input  wire        rden_i,
-        output wire        hitMiss_o,
-        output wire [63:0] data_o,
+        input  wire        cancel_i,
+        output wire        valid_o,
+        output wire [31:0] data_o,
 
         output wire [31:0] mAddr_o,
         output wire        mRden_o,
         input  wire [63:0] mData_i,
-        input  wire        mBusy_i
+        input  wire        mValid_i
 );
 /*****************************************************************
  * 2-Way Set Associative Read-Only Cache
  * LRU Replacement Policy
  * 16KB: 64-bit line size, 2 Ways, 1024 Sets
  * Address Mapping:
- * 31       13 12 11 10 09 08 07 06 05 04 03 02 01 00
- * *---------* *---------------------------* *------*
- *     Tag               Index                Offset
+ * 31       12 11 10 09 08 07 06 05 04 03 02 01 00
+ * *---------* *--------------------------*  *---*
+ *     Tag            Index                  Offset
  *
  *****************************************************************/
 localparam int NSETS        = 1024;
 localparam int TAG_WIDTH    = 19;
 localparam int INDEX_WIDTH  = 10;
 localparam int OFFSET_WIDTH = 3;
+
+wire [18:0] tag    = addr_i[`TAG];
+wire [9:0]  index  = addr_i[`INDEX];
+wire [2:0]  offset = addr_i[`OFFSET];
 
 // Way 0 cache data
 reg [63:0]          mem0   [0:NSETS-1];
@@ -52,57 +57,91 @@ reg [TAG_WIDTH-1:0] tag1   [0:NSETS-1];
 reg                 valid1 [0:NSETS-1];
 reg                 lru1   [0:NSETS-1];
 
-reg        C_hitMiss_r = 1'b0;
-reg [63:0] C_data0     = 64'b0;
-reg [63:0] C_data1     = 64'b0;
-wire       C_hit0 = (valid0[addr_i[`INDEX]] && (tag0[addr_i[`INDEX]] == addr_i[`TAG]));
-wire       C_hit1 = (valid1[addr_i[`INDEX]] && (tag1[addr_i[`INDEX]] == addr_i[`TAG]));
+// reg        C_hitMiss_r = 1'b0;
+reg         C_dataWay;
+reg  [63:0] C_data0;
+reg  [63:0] C_data1;
+wire        C_hit0 = (valid0[index] && (tag0[index] == tag));
+wire        C_hit1 = (valid1[index] && (tag1[index] == tag));
 
-assign hitMiss_o = C_hitMiss;
-assign data_o    = C_hit0 ? C_data0 : C_data1;
-assign mAddr_o   = addr_i;
-assign mRden_o   = ~(C_hit0 || C_hit1);
+wire [31:0] C_offsetData0 = offset[2] ? C_data0[31:0] : C_data0[63:32];
+wire [31:0] C_offsetData1 = offset[2] ? C_data1[31:0] : C_data1[63:32];
+
+assign valid_o   = cancel_i | (C_curState == IDLE & (C_hit0 | C_hit1));
+assign data_o    = C_dataWay ? C_offsetData1 : C_offsetData0;
+assign mAddr_o   = {tag, index, 3'b0};
+assign mRden_o   = ~(C_hit0 | C_hit1);
 
 /*-------------------------------- State Machine --------------------------------*/
 localparam IDLE = 1'b0;
 localparam MISS = 1'b1;
 
 reg C_curState = IDLE;
+reg [2:0] delay;
 
 always @(posedge clk_i) begin
         case (C_curState)
                 IDLE: begin
-                        // Do nothing
-                        if (~rden_i) begin
-                                C_hitMiss <= 1'b1;
+                        if (~rden_i | cancel_i) begin
+                                // C_hitMiss <= 1'b1;
+                                // Do nothing
                         end
                         // Check Way 0
                         else if (C_hit0) begin
-                                C_data0 <= mem0[addr_i[`INDEX]];
-                                lru0[addr_i[`INDEX]] <= 1'b0;
-                                lru1[addr_i[`INDEX]] <= 1'b1;
-                                C_hitMiss <= 1'b1;
+                                C_data0 <= mem0[index];
+                                C_dataWay <= 1'b0;
+                                lru0[index] <= 1'b0;
+                                lru1[index] <= 1'b1;
+                                // C_hitMiss <= 1'b1;
                         end
                         // Check Way 1
                         else if (C_hit1) begin
-                                C_data1 <= mem1[addr_i[`INDEX]];
-                                lru0[addr_i[`INDEX]] <= 1'b1;
-                                lru1[addr_i[`INDEX]] <= 1'b0;
-                                C_hitMiss <= 1'b1;
+                                C_data1 <= mem1[index];
+                                C_dataWay <= 1'b1;
+                                lru0[index] <= 1'b1;
+                                lru1[index] <= 1'b0;
+                                // C_hitMiss <= 1'b1;
                         end
                         // Cache Miss
                         else begin
                                 C_curState <= MISS;
-                                C_hitMiss <= 1'b0;
+                                delay <= 3'b111;
+                                // C_hitMiss <= 1'b0;
                         end
                 end
 
                 MISS: begin
-                        // Check for invalid ways
-                        if (~valid0[addr_i[`INDEX]]) begin
+                        if (delay == 3'b000) begin
+                                // Check for invalid ways
+                                if (~valid0[index]) begin
+                                        mem0[index] <= mData_i;
+                                        // C_data0 <= mData_i;
+                                        tag0[index] <= tag;
+                                        valid0[index] <= 1'b1;
+                                end
+                                else if (~valid0[index]) begin
+                                        mem1[index] <= mData_i;
+                                        // C_data1 <= mData_i;
+                                        tag1[index] <= tag;
+                                        valid1[index] <= 1'b1;
+                                end
+                                // Way 0 is Least Recently Used
+                                else if (lru0[index] == 1'b1) begin
+                                        mem0[index] <= mData_i;
+                                        // C_data0 <= mData_i;
+                                        tag0[index] <= tag;
+                                        valid0[index] <= 1'b1;
+                                end
+                                // Way 1 is Least Recently Used
+                                else if (lru1[index] == 1'b1) begin
+                                        mem1[index] <= mData_i;
+                                        // C_data1 <= mData_i;
+                                        tag1[index] <= tag;
+                                        valid1[index] <= 1'b1;
+                                end
+                                C_curState <= IDLE;
                         end
-                        else if (~valid0[addr_i[`INDEX]]) begin
-                        end
+                        delay <= delay - 1'b1;
                 end
 
                 default: C_curState = IDLE;

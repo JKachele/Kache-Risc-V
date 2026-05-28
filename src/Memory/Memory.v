@@ -11,9 +11,10 @@ module Memory (
         input  wire        clk_i,
         input  wire        reset_i,
         input  wire [31:0] rvec_i,
-        input  wire [31:0] IMemAddr_i,
-        output wire [31:0] IMemData_o,
         input  wire        IMemStrb_i,
+        input  wire [31:0] IMemAddr_i,
+        output wire [63:0] IMemData_o,
+        output wire        IMemValid_o,
         input  wire        DMemRStrb_i,
         input  wire [31:0] DMemRAddr_i,
         output wire [31:0] DMemRData_o,
@@ -39,12 +40,12 @@ reg  [31:0] IMemAddr;
 
 wire [31:0] SDRamRData = 32'b0;
 wire        SDRamRBusy;
-wire [31:0] SDRamInstr = 32'b0;
+wire [63:0] SDRamInstr = 64'b0;
 wire [4:0]  SDRamWMask;
 wire [31:0] SPI_RData;
 wire        SPI_RBusy;
 reg  [31:0] BRamRData;
-reg  [31:0] BRamInstr;
+reg  [63:0] BRamInstr;
 wire [4:0]  BRamWMask;
 wire [31:0] IO_RData;
 wire        IO_Wr;
@@ -70,7 +71,8 @@ assign DMemRData_o = M_isSDRAM_r ? SDRamRData :
                     (M_isSPI_r   ? SPI_RData  :
                     (M_isBRAM_r  ? BRamRData  : IO_RData));
 
-assign IMemData_o  = M_isSDRAM_i ? SDRamInstr : BRamInstr;
+// assign IMemData_o  = M_isSDRAM_i ? SDRamInstr : BRamInstr;
+assign IMemData_o  = BRamInstr;
 
 // Writes
 assign SDRamWMask = {4{M_isSDRAM_w}} & DMemWMask_i;
@@ -114,9 +116,11 @@ always @(posedge clk_i) begin
         end
         if (IMemStrb_i) begin
                 IMemAddr  <= IMemAddr_i;
-                BRamInstr <= IMemAddr_i[1] ? BRamInstr_w[47:16] : BRamInstr_w[31:0];
+                // BRamInstr <= IMemAddr_i[1] ? BRamInstr_w[47:16] : BRamInstr_w[31:0];
+                BRamInstr <= BRamInstr_w;
         end
 end
+assign IMemValid_o = 1'b1;
 
 
 /*-------------------------------- IO --------------------------------*/

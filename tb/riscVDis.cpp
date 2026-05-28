@@ -95,3 +95,7 @@ bool riscV_isAMO(u32 instruction) {
         u32 opcode = opCode(instruction);
         return opcode == 0b0101111;
 }
+
+bool riscV_isNOP(u32 instruction) {
+        return instruction == 0x00000033;
+}
