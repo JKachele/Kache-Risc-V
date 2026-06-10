@@ -27,7 +27,7 @@ XDC  := src/Extern/NexusA7.xdc
 
 # Simulation
 TB := verilator
-TBFLAGS := -DBENCH -Wno-fatal
+TBFLAGS := -DBENCH -Wno-fatal --pins-inout-enables
 TBFLAGS += --top-module $(TOP) --trace -cc -exe #--build
 TBSRC := $(wildcard tb/*.cpp)
 
@@ -54,7 +54,8 @@ BRAM := $(BIN_DIR)/BRAM.hex
 hex: $(BRAM)
 
 $(BRAM): $(BIN)
-	hexdump -ve '"%08x\n"' $< > $@
+	# hexdump -ve '"%08x\n"' $< > $@
+	hexdump -ve '1/8 "%016x\n"' $< > $@
 
 $(BIN): $(FIRMWARE)
 	$(OBJCOPY) $< -O binary $@

@@ -19,8 +19,8 @@
 #define CYCLE                   SOC__DOT__CPU__DOT__csr__DOT__CSR_cycle
 #define INSTRET                 SOC__DOT__CPU__DOT__csr__DOT__CSR_instret
 #define F_pc                    SOC__DOT__CPU__DOT__fetch__DOT__PC
-#define CacheHit0               SOC__DOT__icache__DOT__C_hit0
-#define CacheHit1               SOC__DOT__icache__DOT__C_hit1
+#define ICacheHit               SOC__DOT__icache__DOT__C_hit
+// #define DCacheHit               SOC__DOT__dcache__DOT__C_hit
 
 #define Reg_A0                  SOC__DOT__CPU__DOT__registers__DOT__reg_10
 #define Reg_A1                  SOC__DOT__CPU__DOT__registers__DOT__reg_11
@@ -39,8 +39,10 @@ class SOC_TB : public TESTB<VSOC> {
         IData nbMULDIV = 0;
         IData nbFPU = 0;
         IData nbAMO = 0;
-        IData nbCache = 0;
-        IData nbCacheHit = 0;
+        IData nbICache = 0;
+        IData nbICacheHit = 0;
+        IData nbDCache = 0;
+        IData nbDCacheHit = 0;
         IData prevPC = 0;
 
         // Program Execution
@@ -78,20 +80,11 @@ class SOC_TB : public TESTB<VSOC> {
                 if (rootp->dataHazard == 1)
                         nbLoadHazard++;
                 if (rootp->F_pc != prevPC) {
-                        if (rootp->CacheHit0 || rootp->CacheHit1)
-                                nbCacheHit++;
-                        nbCache++;
+                        if (rootp->ICacheHit)
+                                nbICacheHit++;
+                        nbICache++;
                 } 
                 prevPC = rootp->F_pc;
-        }
-
-        void recordExecution(void) {
-                IData pc = rootp->DE_pc;
-                IData instr = rootp->DE_instr;
-                if (pc != prevDE_PC && !riscV_isNOP(instr)) {
-                        fprintf(programLog, "%08x: %08x\n", pc, instr);
-                }
-                prevDE_PC = pc;
         }
 
 public:
@@ -109,14 +102,32 @@ public:
 
         virtual void tick(void) {
                 TESTB<VSOC>::tickUp();
-                m_core->qspi_miso = (*m_flash)(m_core->qspi_cs, m_core->qspi_sck, m_core->qspi_mosi);
+                unsigned int qspi_miso = (*m_flash)(m_core->qspi_cs, m_core->qspi_sck, m_core->qspi_mosi__out);
+                m_core->qspi_miso = (char)(qspi_miso & 0xff);
+                m_core->qspi_mosi = (char)((qspi_miso >> 8) & 0xff);
+                // m_core->qspi_miso = (*m_flash)(m_core->qspi_cs, m_core->qspi_sck, m_core->qspi_mosi);
                 TESTB<VSOC>::tickDown();
-                (*m_flash)(m_core->qspi_cs, m_core->qspi_sck, m_core->qspi_mosi);
+                (*m_flash)(m_core->qspi_cs, m_core->qspi_sck, m_core->qspi_mosi__out);
 
                 prevLEDS = m_core->LEDS;
                 prevCLK = m_core->rootp->SOC__DOT__clk;
 
+                if (m_core->rootp->SOC__DOT__DMemWMask != 0 &&
+                                m_core->rootp->SOC__DOT__DMemRStrb != 0) {
+                        printf("Read-write collision detected: ");
+                        printf("DE_pc = %x\n", m_core->rootp->SOC__DOT__CPU__DOT__DE_PC);
+                }
+
                 updateStats();
+        }
+
+        void recordExecution(void) {
+                IData pc = rootp->DE_pc;
+                IData instr = rootp->DE_instr;
+                if (pc != prevDE_PC && !riscV_isNOP(instr)) {
+                        fprintf(programLog, "%08x: %08x\n", pc, instr);
+                }
+                prevDE_PC = pc;
         }
 
         void printFReg(const char *name, IData reg) {
@@ -150,7 +161,7 @@ public:
                 printf("\n----------------------------\n");
                 printf("Simulated processor's report\n");
                 printf("----------------------------\n");
-                printf("Cache  hit = %3.3f\%%\n", nbCacheHit*100.0/nbCache);
+                printf("ICache hit = %3.3f\%%\n", nbICacheHit*100.0/nbICache);
                 printf("Branch hit = %3.3f\%%\n", nbBranchHit*100.0/nbBranch);
                 printf("JALR   hit = %3.3f\%%\n", nbJALRhit*100.0/nbJALR);
                 printf("Load hzrds = %3.3f\%%\n", nbLoadHazard*100.0/nbLoad);
@@ -188,6 +199,10 @@ int main(int argc, char **argv) {
 
         tb->programLog = fopen("Program.txt", "w");
 
+        tb->m_flash->load("../bin/firmware.bin");
+        // tb->m_flash->print(0, 16);
+
+
         UARTSIM *uart;
         int port = 0;
         unsigned setup = 868;
@@ -198,9 +213,6 @@ int main(int argc, char **argv) {
         uart->setup(setup);
         baudclocks = setup & 0xfffffff;
 
-        tb->m_flash->load("../bin/firmware.bin");
-        // tb->m_flash->print(0, 16);
-
         // tb->opentrace("trace.vcd");
 
         tb->m_core->rvec = 0xF0000000;
@@ -209,8 +221,7 @@ int main(int argc, char **argv) {
         int rxPrev = 1;
         while (!tb->done()) {
                 tb->tick();
-                // recordExecution();
-                tb->m_core->qspi_miso = !tb->m_core->qspi_miso;
+                // tb->recordExecution();
                 // tb->m_core->RXD = (*uart)(tb->m_core->TXD);
                 // clocks++;
         }

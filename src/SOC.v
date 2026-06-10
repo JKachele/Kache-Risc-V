@@ -18,7 +18,7 @@ module SOC (
 
         output wire qspi_sck,
         output wire qspi_cs,
-        output wire qspi_mosi,
+        inout  wire qspi_mosi,
         input  wire qspi_miso
         // inout  wire [3:0] qspi_dq
 );
@@ -34,12 +34,20 @@ wire [31:0] IC_mAddr;
 wire [63:0] IC_mData;
 wire        IC_mValid;
 
-//Memory
+// Instruction Cache
 wire        ICacheStrb;
 wire        ICacheCancel;
 wire [31:0] ICacheAddr;
 wire [31:0] ICacheData;
 wire        ICacheValid;
+
+// Data Cache
+// wire        DCacheStrb;
+// wire [31:0] DCacheAddr;
+// wire [31:0] DCacheData;
+// wire        DCacheValid;
+
+//Memory
 wire        DMemRStrb;
 wire [31:0] DMemRAddr;
 wire [31:0] DMemRData;
@@ -48,13 +56,6 @@ wire [31:0] DMemWAddr;
 wire [31:0] DMemWData;
 wire [3:0]  DMemWMask;
 wire        DMemWBusy;
-
-// IO
-wire [31:0] IO_memRAddr;
-wire [31:0] IO_memRData;
-wire [31:0] IO_memWAddr;
-wire [31:0] IO_memWData;
-wire        IO_memWr;
 /*verilator public_off*/
 
 Processor CPU(
@@ -114,7 +115,7 @@ Memory mem(
         .txd_o(TXD),
         .spiClk_o(qspi_sck),
         .spiCs_o(qspi_cs),
-        .spiMosi_o(qspi_mosi),
+        .spiMosi_io(qspi_mosi),
         .spiMiso_i(qspi_miso)
 );
 

@@ -19,13 +19,13 @@ module FetchUnit (
         input  wire        E_correctPC_i,
         input  wire [31:0] E_PCcorrection_i,
         // Cache Interface
-        output reg         ICacheStrb_o,
+        output wire        ICacheStrb_o,
         output wire        ICacheCancel_o,
         output wire [31:0] ICacheAddr_o,
         input  wire [31:0] ICacheData_i,
         input  wire        ICacheValid_i,
         // Decode Unit Interface
-        output wire [31:0] FD_PC_o,
+        output reg  [31:0] FD_PC_o,
         output wire [31:0] FD_instr_o,
         output wire        FD_isRV32C_o,
         output reg         FD_nop_o
