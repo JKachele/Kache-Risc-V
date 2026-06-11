@@ -3,8 +3,8 @@
 # @file        : Makefile
 # @created     : Friday Oct 17, 2025 14:39:28 UTC
 ######################################################################
-RVARCH := rv32imafdc
-RVABI := ilp32d
+RVARCH  = rv32imaf
+RVABI = ilp32f
 RVTOOL_PREFIX := riscv64-unknown-elf
 RVTOOL_DIR := /opt/riscv
 RV_LIB_DIR := $(RVTOOL_DIR)/$(RVTOOL_PREFIX)/lib/$(RVARCH)/$(RVABI)
@@ -27,7 +27,7 @@ XDC  := src/Extern/NexusA7.xdc
 
 # Simulation
 TB := verilator
-TBFLAGS := -DBENCH -Wno-fatal
+TBFLAGS := -DBENCH -Wno-fatal --pins-inout-enables
 TBFLAGS += --top-module $(TOP) --trace -cc -exe #--build
 TBSRC := $(wildcard tb/*.cpp)
 
@@ -45,17 +45,20 @@ SRC += $(wildcard firmware/libs/*.S) $(wildcard firmware/libs/*.c)
 OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
 LDSCRIPT = firmware/Tests/ram.ld
 
-BRAM := $(BIN_DIR)/BRAM.hex
 FIRMWARE := $(BIN_DIR)/firmware.elf
+BIN := $(BIN_DIR)/firmware.bin
+BRAM := $(BIN_DIR)/BRAM.hex
 
-.PHONY: hex sim lint build dirs clean
+.PHONY: hex sim lint build dirs clean 
 
 hex: $(BRAM)
 
-$(BRAM): $(FIRMWARE)
-	$(OBJCOPY) $< -O binary $@.bin
-	hexdump -ve '1/8 "%016x\n"' $@.bin > $@
-	rm $@.bin
+$(BRAM): $(BIN)
+	# hexdump -ve '"%08x\n"' $< > $@
+	hexdump -ve '1/8 "%016x\n"' $< > $@
+
+$(BIN): $(FIRMWARE)
+	$(OBJCOPY) $< -O binary $@
 
 $(FIRMWARE): $(OBJ) $(LDSCRIPT) Makefile
 	@mkdir -p $(dir $@)

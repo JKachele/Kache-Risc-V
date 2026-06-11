@@ -8,6 +8,7 @@
 
 module ControlUnit (
         input  wire HALT_i,
+        input  wire F_busy_i,
         input  wire dataHazard_i,
         input  wire D_isPrivileged_i,
         input  wire EM_isCSRWrite_i,
@@ -24,12 +25,12 @@ module ControlUnit (
 
 wire csrHazard = D_isPrivileged_i & EM_isCSRWrite_i;
 
-assign F_stall_o = M_busy_i | aluBusy_i | csrHazard | dataHazard_i | HALT_i;
-assign D_stall_o = M_busy_i | aluBusy_i | csrHazard | dataHazard_i | HALT_i;
+assign F_stall_o = M_busy_i | aluBusy_i | csrHazard | dataHazard_i | HALT_i; // | F_busy_i;
+assign D_stall_o = M_busy_i | aluBusy_i | csrHazard | dataHazard_i | HALT_i | F_busy_i;
 assign E_stall_o = M_busy_i | aluBusy_i;
 
 assign D_flush_o = E_correctPC_i;
-assign E_flush_o = (E_correctPC_i | csrHazard | dataHazard_i) & ~M_busy_i;
+assign E_flush_o = (E_correctPC_i | csrHazard | dataHazard_i | F_busy_i) & ~M_busy_i & ~aluBusy_i;
 assign M_flush_o = aluBusy_i;
 
 endmodule

@@ -11,9 +11,11 @@ module Processor(
         input  wire        reset_i,
         input  wire [31:0] rvec_i,
         // Memory
-        output wire [31:0] IMemAddr_o,
-        input  wire [31:0] IMemData_i,
-        output wire        IMemStrb_o,
+        output wire        ICacheStrb_o,
+        output wire        ICacheCancel_o,
+        output wire [31:0] ICacheAddr_o,
+        input  wire [31:0] ICacheData_i,
+        input  wire        ICacheValid_i,
         output wire        DMemRStrb_o,
         output wire [31:0] DMemRAddr_o,
         input  wire [63:0] DMemRData_i,
@@ -113,6 +115,7 @@ wire E_stall;
 wire D_flush;
 wire E_flush;
 wire M_flush;
+wire F_busy;
 wire dataHazard;
 wire D_isPrivileged;
 wire D_predictPC;
@@ -121,6 +124,7 @@ wire [31:0] D_PCprediction;
 
 ControlUnit control(
         .HALT_i(HALT),
+        .F_busy_i(F_busy),
         .dataHazard_i(dataHazard),
         .D_isPrivileged_i(D_isPrivileged),
         .EM_isCSRWrite_i(EM_isCSRWrite),
@@ -146,15 +150,18 @@ FetchUnit fetch(
         .clk_i(clk_i),
         .reset_i(reset_i),
         .rvec_i(rvec_i),
+        .F_busy_o(F_busy),
         .F_stall_i(F_stall),
         .D_flush_i(D_flush),
         .D_predictPC_i(D_predictPC),
         .D_PCprediction_i(D_PCprediction),
-        .EM_correctPC_i(EF_correctPC),
-        .EM_PCcorrection_i(EF_PCcorrection),
-        .IMemAddr_o(IMemAddr_o),
-        .IMemData_i(IMemData_i),
-        .IMemStrb_o(IMemStrb_o),
+        .E_correctPC_i(E_correctPC),
+        .E_PCcorrection_i(E_PCcorrection),
+        .ICacheStrb_o(ICacheStrb_o),
+        .ICacheCancel_o(ICacheCancel_o),
+        .ICacheAddr_o(ICacheAddr_o),
+        .ICacheData_i(ICacheData_i),
+        .ICacheValid_i(ICacheValid_i),
         .FD_PC_o(FD_PC),
         .FD_instr_o(FD_instr),
         .FD_isRV32C_o(FD_isRV32C),
@@ -312,6 +319,7 @@ wire        EM_wbEnable;
 
 /*verilator public_flat_rw_on*/
 wire        E_correctPC;
+wire [31:0] E_PCcorrection;
 wire        E_takeBranch;
 wire        EF_correctPC;
 wire [31:0] EF_PCcorrection;
@@ -327,6 +335,7 @@ ExecuteUnit execute(
         .HALT_o(HALT),
         .E_takeBranch_o(E_takeBranch),
         .E_correctPC_o(E_correctPC),
+        .E_PCcorrection_o(E_PCcorrection),
         .EF_correctPC_o(EF_correctPC),
         .EF_PCcorrection_o(EF_PCcorrection),
         .aluBusy_o(aluBusy),

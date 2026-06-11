@@ -4,25 +4,28 @@
 #include "VSOC___024root.h"
 #include "testbench.h"
 #include "uartsim.h"
-#include "flashsim.h"
+#include "spiflash.h"
 #include "riscVDis.h"
 
 #define HALT                    SOC__DOT__CPU__DOT__HALT
 #define D_stall                 SOC__DOT__CPU__DOT__D_stall
 #define dataHazard              SOC__DOT__CPU__DOT__dataHazard
+#define DE_pc                   SOC__DOT__CPU__DOT__DE_PC
 #define DE_instr                SOC__DOT__CPU__DOT__DE_instr
 #define E_takeBranch            SOC__DOT__CPU__DOT__E_takeBranch
 #define DE_predictBranch        SOC__DOT__CPU__DOT__DE_predictBranch
 #define DE_predictRA            SOC__DOT__CPU__DOT__DE_predictRA
 #define E_JALRaddr              SOC__DOT__CPU__DOT__execute__DOT__E_JALRaddr
-#define CYCLE                   SOC__DOT__CPU__DOT__csr__DOT__CSR_cycle;
-#define INSTRET                 SOC__DOT__CPU__DOT__csr__DOT__CSR_instret;
+#define CYCLE                   SOC__DOT__CPU__DOT__csr__DOT__CSR_cycle
+#define INSTRET                 SOC__DOT__CPU__DOT__csr__DOT__CSR_instret
+#define F_pc                    SOC__DOT__CPU__DOT__fetch__DOT__PC
+#define ICacheHit               SOC__DOT__icache__DOT__C_hit
+// #define DCacheHit               SOC__DOT__dcache__DOT__C_hit
+
+#define Reg_A0                  SOC__DOT__CPU__DOT__registers__DOT__reg_10
+#define Reg_A1                  SOC__DOT__CPU__DOT__registers__DOT__reg_11
 
 class SOC_TB : public TESTB<VSOC> {
-        // SPI Flash
-        FLASHSIM *m_flash;
-        int m_flash_last_sck;
-
         // Statistics counters
         IData nbBranch = 0;
         IData nbBranchHit = 0;
@@ -36,6 +39,14 @@ class SOC_TB : public TESTB<VSOC> {
         IData nbMULDIV = 0;
         IData nbFPU = 0;
         IData nbAMO = 0;
+        IData nbICache = 0;
+        IData nbICacheHit = 0;
+        IData nbDCache = 0;
+        IData nbDCacheHit = 0;
+        IData prevPC = 0;
+
+        // Program Execution
+        IData prevDE_PC = 0;
 
         void updateStats(void) {
                 if (m_core->RESET == 0 && rootp->D_stall == 0) {
@@ -68,30 +79,64 @@ class SOC_TB : public TESTB<VSOC> {
                         nbAMO++;
                 if (rootp->dataHazard == 1)
                         nbLoadHazard++;
+                if (rootp->F_pc != prevPC) {
+                        if (rootp->ICacheHit)
+                                nbICacheHit++;
+                        nbICache++;
+                } 
+                prevPC = rootp->F_pc;
         }
 
 public:
         IData prevLEDS;
         CData prevCLK;
+        CData prevSpiCs = 1;
+
+        SPIFlash *m_flash;
+
+        FILE *programLog;
 
         SOC_TB(void) {
-                m_flash = new FLASHSIM();
-                m_flash_last_sck = 0;
+                m_flash = new SPIFlash();
         }
 
         virtual void tick(void) {
-                TESTB<VSOC>::tick();
-                CData clk = m_core->rootp->SOC__DOT__clk;
+                TESTB<VSOC>::tickUp();
+                unsigned int qspi_miso = (*m_flash)(m_core->qspi_cs, m_core->qspi_sck, m_core->qspi_mosi__out);
+                m_core->qspi_miso = (char)(qspi_miso & 0xff);
+                m_core->qspi_mosi = (char)((qspi_miso >> 8) & 0xff);
+                // m_core->qspi_miso = (*m_flash)(m_core->qspi_cs, m_core->qspi_sck, m_core->qspi_mosi);
+                TESTB<VSOC>::tickDown();
+                (*m_flash)(m_core->qspi_cs, m_core->qspi_sck, m_core->qspi_mosi__out);
+
                 prevLEDS = m_core->LEDS;
                 prevCLK = m_core->rootp->SOC__DOT__clk;
 
-                // if (m_flash_last_sck) {
-                //         (*m_flash)(m_core->qspi_cs, 0, m_core->qspi_mosi);
-                // }
-                // m_core->qspi_miso = ((*m_flash)(m_core->qspi_cs, 1, m_core->qspi_mosi)&2)?1:0;
-                // m_flash_last_sck = m_core->qspi_sck;
+                if (m_core->rootp->SOC__DOT__DMemWMask != 0 &&
+                                m_core->rootp->SOC__DOT__DMemRStrb != 0) {
+                        printf("Read-write collision detected: ");
+                        printf("DE_pc = %x\n", m_core->rootp->SOC__DOT__CPU__DOT__DE_PC);
+                }
 
                 updateStats();
+        }
+
+        void recordExecution(void) {
+                IData pc = rootp->DE_pc;
+                IData instr = rootp->DE_instr;
+                if (pc != prevDE_PC && !riscV_isNOP(instr)) {
+                        fprintf(programLog, "%08x: %08x\n", pc, instr);
+                }
+                prevDE_PC = pc;
+        }
+
+        void printFReg(const char *name, IData reg) {
+                float  f = *(float*)&reg;
+                printf("%s: %x (%f)\n", name, reg, f);
+        }
+
+        void printIReg(const char *name, IData reg) {
+                printf("%s: %x (%d)\n", name, reg, reg);
         }
 
         virtual bool done(void) {
@@ -107,54 +152,6 @@ public:
                 return TESTB<VSOC>::done();
         }
 
-        void printFReg(const char *name, QData reg) {
-                double d = *(double*)&reg;
-                float  f = *(float*)&reg;
-                printf("%s: %lx (%0.16f) (%f)\n", name, reg, d, f);
-        }
-
-        void printIReg(const char *name, IData reg) {
-                printf("%s: %x (%d)\n", name, reg, reg);
-        }
-
-        void printFRegisters(void) {
-                printFReg("ft0",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F0);
-                printFReg("ft1",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F1);
-                printFReg("ft2",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F2);
-                printFReg("ft3",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F3);
-                printFReg("ft4",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F4);
-                printFReg("ft5",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F5);
-                printFReg("ft6",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F6);
-                printFReg("ft7",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F7);
-                // printFReg("fs0",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F8);
-                // printFReg("fs1",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F9);
-                // printFReg("fa0",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F10);
-                // printFReg("fa1",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F11);
-                // printFReg("fa2",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F12);
-                // printFReg("fa3",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F13);
-                // printFReg("fa4",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F14);
-                // printFReg("fa5",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F15);
-                // printFReg("fa6",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F16);
-                // printFReg("fa7",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F17);
-                // printFReg("fs2",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F18);
-                // printFReg("fs3",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F19);
-                // printFReg("fs4",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F20);
-                // printFReg("fs5",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F21);
-                // printFReg("fs6",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F22);
-                // printFReg("fs7",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F23);
-                // printFReg("fs8",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F24);
-                // printFReg("fs9",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F25);
-                // printFReg("fs10", m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F26);
-                // printFReg("fs11", m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F27);
-                // printFReg("ft8",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F28);
-                // printFReg("ft9",  m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F29);
-                // printFReg("ft10", m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F30);
-                // printFReg("ft11", m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_F31);
-
-                printIReg("x6" , m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_6);
-                printIReg("x7" , m_core->rootp->SOC__DOT__CPU__DOT__registers__DOT__reg_7);
-        }
-
         void printStatusReport(void) {
                 u64 cycle = rootp->CYCLE;
                 u64 instret = rootp->INSTRET;
@@ -164,6 +161,7 @@ public:
                 printf("\n----------------------------\n");
                 printf("Simulated processor's report\n");
                 printf("----------------------------\n");
+                printf("ICache hit = %3.3f\%%\n", nbICacheHit*100.0/nbICache);
                 printf("Branch hit = %3.3f\%%\n", nbBranchHit*100.0/nbBranch);
                 printf("JALR   hit = %3.3f\%%\n", nbJALRhit*100.0/nbJALR);
                 printf("Load hzrds = %3.3f\%%\n", nbLoadHazard*100.0/nbLoad);
@@ -181,6 +179,9 @@ public:
                 printf("FPU:%3.3f\%% | ",               nbFPU*100.0/instret);
                 printf("AMO:%3.3f\%%",                  nbAMO*100.0/instret);
                 printf(")\n");
+
+                // printIReg("A0", rootp->Reg_A0);
+                // printIReg("A0", rootp->Reg_A1);
         }
 
 };
@@ -196,6 +197,12 @@ int main(int argc, char **argv) {
         // Create an instance of our module under test
         SOC_TB *tb = new SOC_TB();
 
+        tb->programLog = fopen("Program.txt", "w");
+
+        tb->m_flash->load("../bin/firmware.bin");
+        // tb->m_flash->print(0, 16);
+
+
         UARTSIM *uart;
         int port = 0;
         unsigned setup = 868;
@@ -206,25 +213,21 @@ int main(int argc, char **argv) {
         uart->setup(setup);
         baudclocks = setup & 0xfffffff;
 
-        // FLASHSIM *m_flash = new FLASHSIM;
-        // int m_flash_last_sck = 0;
-        // m_flash->debug(true);
-
         // tb->opentrace("trace.vcd");
 
         tb->m_core->rvec = 0xF0000000;
-        tb->m_core->qspi_miso = 1;
         tb->reset();
 
         int rxPrev = 1;
         while (!tb->done()) {
                 tb->tick();
-                tb->m_core->qspi_miso = !tb->m_core->qspi_miso;
+                // tb->recordExecution();
                 // tb->m_core->RXD = (*uart)(tb->m_core->TXD);
                 // clocks++;
         }
         tb->printStatusReport();
 
+        fclose(tb->programLog);
         delete tb;
         return 0;
 }

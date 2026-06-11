@@ -16,6 +16,7 @@ module ExecuteUnit (
         output wire        HALT_o,
         output wire        E_takeBranch_o,
         output wire        E_correctPC_o,
+        output wire [31:0] E_PCcorrection_o,
         output reg         EF_correctPC_o,
         output reg  [31:0] EF_PCcorrection_o,
         output wire        aluBusy_o,
@@ -287,13 +288,15 @@ wire E_correctPC = (
         (DE_isJALR_i    && (DE_predictRA_i != E_JALRaddr)   ) ||
         (DE_isBranch_i  && (E_takeBranch_o^DE_predictBranch_i))
 );
-assign E_correctPC_o = E_correctPC;
 
 wire [31:0] E_nextPC = DE_PC_i + (DE_isRV32C_i ? 2 : 4);
 
 wire [31:0] E_PCcorrection =
         DE_isBranch_i ? (DE_predictBranch_i ? E_nextPC : DE_PC_i + DE_Bimm_i) :
         /* JALR */      E_JALRaddr;
+
+assign E_correctPC_o = E_correctPC;
+assign E_PCcorrection_o = E_PCcorrection;
 
 /*---------------------Output---------------------*/
 wire [63:0] E_result =

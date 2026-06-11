@@ -29,6 +29,7 @@ bool riscV_isMul(u32 instruction);
 bool riscV_isDiv(u32 instruction);
 bool riscV_isFPU(u32 instruction);
 bool riscV_isAMO(u32 instruction);
+bool riscV_isNOP(u32 instruction);
 
 #endif
 
