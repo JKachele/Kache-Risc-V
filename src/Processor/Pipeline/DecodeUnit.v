@@ -113,9 +113,10 @@ localparam NOP = 32'b0000000_00000_00000_000_00000_0110011;
 
 /*------------Instruction Allignment and Decompression-----------*/
 // wire [31:0] D_rawInstr = FD_nop_i ? NOP : FD_instr_i;
-// wire [31:0] D_rawInstr = FD_instr_i;
-wire [31:0] D_instr = FD_instr_i; // = FD_nop_i ? NOP : FD_instr_i;
-// Decompressor decomp(.compressed_i(D_rawInstr), .decompressed_o(D_instr));
+wire [31:0] D_rawInstr = FD_instr_i;
+wire [31:0] D_instr; // = FD_instr_i; // = FD_nop_i ? NOP : FD_instr_i;
+// wire        D_isRV32C = ~&D_rawInstr[1:0];
+Decompressor decomp(.compressed_i(D_rawInstr), .decompressed_o(D_instr));
 
 /*--------------INSTRUCTION DECODING--------------*/
 // 11 RV32I OpCodes

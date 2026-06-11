@@ -40,6 +40,7 @@ wire        ICacheCancel;
 wire [31:0] ICacheAddr;
 wire [31:0] ICacheData;
 wire        ICacheValid;
+wire        ICacheCmp;
 
 // Data Cache
 // wire        DCacheStrb;
@@ -67,6 +68,7 @@ Processor CPU(
         .ICacheAddr_o(ICacheAddr),
         .ICacheData_i(ICacheData),
         .ICacheValid_i(ICacheValid),
+        .ICacheCmp_i(ICacheCmp),
         .DMemRStrb_o(DMemRStrb),
         .DMemRAddr_o(DMemRAddr),
         .DMemRData_i(DMemRData),
@@ -83,8 +85,9 @@ ICache icache(
         .addr_i(ICacheAddr),
         .rden_i(ICacheStrb),
         .cancel_i(ICacheCancel),
-        .valid_o(ICacheValid),
         .data_o(ICacheData),
+        .valid_o(ICacheValid),
+        .cmp_o(ICacheCmp),
         .mAddr_o(IC_mAddr),
         .mRden_o(IC_mRden),
         .mData_i(IC_mData),

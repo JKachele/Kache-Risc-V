@@ -16,6 +16,8 @@ module Processor(
         output wire [31:0] ICacheAddr_o,
         input  wire [31:0] ICacheData_i,
         input  wire        ICacheValid_i,
+        input  wire        ICacheCmp_i,
+
         output wire        DMemRStrb_o,
         output wire [31:0] DMemRAddr_o,
         input  wire [63:0] DMemRData_i,
@@ -162,6 +164,7 @@ FetchUnit fetch(
         .ICacheAddr_o(ICacheAddr_o),
         .ICacheData_i(ICacheData_i),
         .ICacheValid_i(ICacheValid_i),
+        .ICacheCmp_i(ICacheCmp_i),
         .FD_PC_o(FD_PC),
         .FD_instr_o(FD_instr),
         .FD_isRV32C_o(FD_isRV32C),

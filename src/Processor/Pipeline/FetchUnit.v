@@ -24,60 +24,61 @@ module FetchUnit (
         output wire [31:0] ICacheAddr_o,
         input  wire [31:0] ICacheData_i,
         input  wire        ICacheValid_i,
+        input  wire        ICacheCmp_i,
         // Decode Unit Interface
         output reg  [31:0] FD_PC_o,
         output wire [31:0] FD_instr_o,
-        output wire        FD_isRV32C_o,
+        output reg         FD_isRV32C_o,
         output reg         FD_nop_o
 );
 
 reg [31:0] PC;
 
 wire [31:0] PC_Next =
-        E_correctPC_i ? E_PCcorrection_i :
-        D_predictPC_i  ? D_PCprediction_i  :
-                             PC + 4;
+        E_correctPC_i   ? E_PCcorrection_i :
+        D_predictPC_i   ? D_PCprediction_i :
+        F_isSplitInstr  ? PC + 2           :
+        ICacheCmp_i     ? PC + 2           : PC + 4;
 
-assign F_busy_o = ~ICacheValid_i;
 assign ICacheAddr_o = PC;
-assign FD_instr_o = ICacheData_i;
 assign ICacheCancel_o = D_flush_i;
 assign ICacheStrb_o = ~F_stall_i & ~reset_i;
 
-// The 2 LSBs of uncompressed instructions are always 2'b11
-// wire F_isCompressed = F_PC[1] ? ~(&IMemData_i[17:16]) : ~(&IMemData_i[1:0]);
-// assign FD_isRV32C_o = PC[1] ? ~(&FD_instr_o[17:16]) : ~(&FD_instr_o[1:0]);
-assign FD_isRV32C_o = ~(&FD_instr_o[1:0]);
+// Must perform 2 fetches if instruction isn't compressed and straddles 2 cache lines
+wire       ICache_isSplitInstr = !D_flush_i && !ICacheCmp_i && PC[2:1] == 2'b11;
+reg        F_isSplitInstr;
+reg        FD_isSplitInstr;
+reg [15:0] FD_instrPart;
+reg [31:0] FD_instrHold; // Hold previous instruction while fetching 2nd half
+always @(posedge clk_i) begin
+        if (!F_stall_i && ICacheValid_i) begin
+                F_isSplitInstr <= ICache_isSplitInstr;
+                FD_isSplitInstr <= F_isSplitInstr;
+                if (ICache_isSplitInstr) begin
+                        PC <= PC + 2;
+                        FD_instrHold <= ICacheData_i;
+                end
+                if (F_isSplitInstr)
+                        FD_instrPart <= ICacheData_i[15:0];
+        end
+end
+
+assign F_busy_o = ~ICacheValid_i | ICache_isSplitInstr;
+assign FD_instr_o = F_isSplitInstr  ? FD_instrHold :
+                    FD_isSplitInstr ? {ICacheData_i[15:0], FD_instrPart} : ICacheData_i;
 
 always @(posedge clk_i) begin
         if (reset_i) begin
                 PC <= rvec_i;
-                // ICacheStrb_o <= 1'b1;
                 FD_PC_o <= rvec_i;
                 FD_nop_o <= 1'b1;
-        end else if (!F_stall_i) begin
-                // ICacheStrb_o <= 1'b1;
-                if (ICacheValid_i) begin
-                        FD_PC_o <= PC;
-                        FD_nop_o <= D_predictPC_i | D_flush_i;
-                        PC <= PC_Next;
-                end
-        // end else begin
-        //         ICacheStrb_o <= 1'b0;
+                FD_isRV32C_o <= 1'b0;
+        end else if (!F_stall_i && !F_busy_o) begin
+                FD_PC_o <= F_isSplitInstr ? PC - 2 : PC;
+                FD_nop_o <= D_predictPC_i | D_flush_i;
+                FD_isRV32C_o <= F_isSplitInstr ? 1'b0 : ICacheCmp_i;
+                PC <= PC_Next;
         end
-
-        // if (!F_stall_i) begin
-        //         // FD_instr_o <= IMemData_i;
-        //         FD_PC_o <= PC_Next;
-        //         // FD_isRV32C_o <= F_isCompressed;
-        //         // Add 2 for compressed instructions and 4 for uncompressed
-        //         PC <= PC_Next; // + (F_isCompressed ? 2 : 4);
-        // end
-        // FD_nop_o <= D_flush_i | reset_i;
-        // if (reset_i) begin
-        //         PC <= rvec_i - 32'h4;
-        // end
-
 end
 
 endmodule

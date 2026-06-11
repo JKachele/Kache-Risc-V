@@ -84,8 +84,8 @@ assign DMemRData_o = M_isSDRAM_r ? SDRamRData :
                     (M_isBRAM_r  ? BRamRData  : IO_RData));
 
 // assign IMemData_o  = M_isSDRAM_i ? SDRamInstr : BRamInstr;
-assign IMemData_o  = BRamInstr;
-// assign IMemData_o  = SPI_Instr;
+// assign IMemData_o  = BRamInstr;
+assign IMemData_o  = SPI_Instr;
 
 // Writes
 assign SDRamWMask = {8{M_isSDRAM_w}} & DMemWMask_i;
@@ -161,35 +161,35 @@ assign SPI_RData = {SPI_RawData[7:0],   SPI_RawData[15:8],  SPI_RawData[23:16], 
 assign SPI_Instr = {SPI_RawData[7:0],   SPI_RawData[15:8],  SPI_RawData[23:16], SPI_RawData[31:24],
                     SPI_RawData[39:32], SPI_RawData[47:40], SPI_RawData[55:48], SPI_RawData[63:56]};
 
-// dspiFlash flash(
-//         .clk_i(clk_i),
-//         .reset_i(reset_i),
-//         .rstrb_i(IMemStrb_i),
-//         .raddr_i(IMemAddr_i[23:0]),
-//         .numBytes_i(8),
-//         .rdata_o(SPI_RawData),
-//         .rbusy_o(SPI_Busy),
-//         .spiClk_o(spiClk_o),
-//         .spiCs_o(spiCs_o),
-//         .spiMosi_io(spiMosi_io),
-//         .spiMiso_i(spiMiso_i)
-//         // .spiData_io(spiData_io)
-// );
-
 dspiFlash flash(
         .clk_i(clk_i),
         .reset_i(reset_i),
-        .rstrb_i(((DMemRAddr_i[31:28] == 4'b0001) || M_isSPI_r) & DMemRStrb_i),
-        .raddr_i(DMemRAddr_i[23:0]),
+        .rstrb_i(IMemStrb_i),
+        .raddr_i(IMemAddr_i[23:0]),
         .numBytes_i(8),
         .rdata_o(SPI_RawData),
-        .rbusy_o(SPI_RBusy),
+        .rbusy_o(SPI_Busy),
         .spiClk_o(spiClk_o),
         .spiCs_o(spiCs_o),
         .spiMosi_io(spiMosi_io),
         .spiMiso_i(spiMiso_i)
         // .spiData_io(spiData_io)
 );
+
+// dspiFlash flash(
+//         .clk_i(clk_i),
+//         .reset_i(reset_i),
+//         .rstrb_i(((DMemRAddr_i[31:28] == 4'b0001) || M_isSPI_r) & DMemRStrb_i),
+//         .raddr_i(DMemRAddr_i[23:0]),
+//         .numBytes_i(8),
+//         .rdata_o(SPI_RawData),
+//         .rbusy_o(SPI_RBusy),
+//         .spiClk_o(spiClk_o),
+//         .spiCs_o(spiCs_o),
+//         .spiMosi_io(spiMosi_io),
+//         .spiMiso_i(spiMiso_i)
+//         // .spiData_io(spiData_io)
+// );
 
 
 
