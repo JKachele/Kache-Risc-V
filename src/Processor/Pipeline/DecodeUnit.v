@@ -18,6 +18,7 @@ module DecodeUnit #(
         input  wire        D_flush_i,
         input  wire        E_flush_i,
         input  wire        E_stall_i,
+        input  wire        M_busy_i,
         input  wire        E_takeBranch_i,
         output wire        D_predictPC_o,
         output wire [31:0] D_PCprediction_o,
@@ -427,7 +428,7 @@ always @(posedge clk_i) begin
                 DE_predictRA_o <= RAS_0;
         end
 
-        if (E_flush_i || FD_nop_i) begin
+        if ((E_flush_i || FD_nop_i) && !M_busy_i) begin
                 DE_instr_o    <= NOP;
                 DE_nop_o      <= 1'b1;
                 DE_isLUI_o    <= 1'b0;

@@ -29,10 +29,16 @@ wire reset;
 /*verilator public_off*/
 
 // Cache-Memory Interface
-wire        IC_mRden;
-wire [31:0] IC_mAddr;
-wire [63:0] IC_mData;
-wire        IC_mValid;
+wire         IC_mRden;
+wire [31:0]  IC_mAddr;
+wire [255:0] IC_mData;
+wire         IC_mValid;
+wire [31:0]  DC_mAddr;
+wire         DC_mRden;
+wire [63:0]  DC_mWData;
+wire [7:0]   DC_mWren;
+wire [63:0]  DC_mRData;
+wire         DC_mValidReady;
 
 // Instruction Cache
 wire        ICacheStrb;
@@ -43,20 +49,20 @@ wire        ICacheValid;
 wire        ICacheCmp;
 
 // Data Cache
-// wire        DCacheStrb;
-// wire [31:0] DCacheAddr;
-// wire [31:0] DCacheData;
-// wire        DCacheValid;
+wire [31:0] DCacheAddr;
+wire        DCacheRden;
+wire [63:0] DCacheWData;
+wire [7:0]  DCacheWren;
+wire [63:0] DCacheRData;
+wire        DCacheValidReady;
 
 //Memory
+wire [31:0] DMemAddr;
 wire        DMemRStrb;
-wire [31:0] DMemRAddr;
 wire [63:0] DMemRData;
-wire        DMemRBusy;
-wire [31:0] DMemWAddr;
 wire [63:0] DMemWData;
 wire [7:0]  DMemWMask;
-wire        DMemWBusy;
+wire        DMemValidReady;
 /*verilator public_off*/
 
 Processor CPU(
@@ -69,14 +75,12 @@ Processor CPU(
         .ICacheData_i(ICacheData),
         .ICacheValid_i(ICacheValid),
         .ICacheCmp_i(ICacheCmp),
-        .DMemRStrb_o(DMemRStrb),
-        .DMemRAddr_o(DMemRAddr),
-        .DMemRData_i(DMemRData),
-        .DMemRBusy_i(DMemRBusy),
-        .DMemWAddr_o(DMemWAddr),
-        .DMemWData_o(DMemWData),
-        .DMemWMask_o(DMemWMask),
-        .DMemWBusy_i(DMemWBusy)
+        .DMemAddr_o(DCacheAddr),
+        .DMemRStrb_o(DCacheRden),
+        .DMemWData_o(DCacheWData),
+        .DMemWMask_o(DCacheWren),
+        .DMemRData_i(DCacheRData),
+        .DMemValidReady_i(DCacheValidReady)
 );
 
 ICache icache(
@@ -94,6 +98,23 @@ ICache icache(
         .mValid_i(IC_mValid)
 );
 
+DCache dcache(
+        .clk_i(clk),
+        .reset_i(reset),
+        .addr_i(DCacheAddr),
+        .rden_i(DCacheRden),
+        .wdata_i(DCacheWData),
+        .wren_i(DCacheWren),
+        .rdata_o(DCacheRData),
+        .validReady_o(DCacheValidReady),
+        .mAddr_o(DC_mAddr),
+        .mWData_o(DC_mWData),
+        .mRden_o(DC_mRden),
+        .mWren_o(DC_mWren),
+        .mRData_i(DC_mRData),
+        .mValidReady_i(DC_mValidReady)
+);
+
 Memory mem(
         .clk_i(clk),
         .reset_i(reset),
@@ -102,18 +123,12 @@ Memory mem(
         .IMemAddr_i(IC_mAddr),
         .IMemData_o(IC_mData),
         .IMemValid_o(IC_mValid),
-        // .IMemStrb_i(ICacheStrb),
-        // .IMemAddr_i(ICacheAddr),
-        // .IMemData_o(ICacheData),
-        // .IMemValid_o(ICacheValid),
-        .DMemRStrb_i(DMemRStrb),
-        .DMemRAddr_i(DMemRAddr),
-        .DMemRData_o(DMemRData),
-        .DMemRBusy_o(DMemRBusy),
-        .DMemWAddr_i(DMemWAddr),
-        .DMemWData_i(DMemWData),
-        .DMemWMask_i(DMemWMask),
-        .DMemWBusy_o(DMemWBusy),
+        .DMemAddr_i(DC_mAddr),
+        .DMemRStrb_i(DC_mRden),
+        .DMemWData_i(DC_mWData),
+        .DMemWMask_i(DC_mWren),
+        .DMemRData_o(DC_mRData),
+        .DMemValidReady_o(DC_mValidReady),
         .leds_o(LEDS),
         .txd_o(TXD),
         .spiClk_o(qspi_sck),

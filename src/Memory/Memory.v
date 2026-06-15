@@ -12,19 +12,17 @@ module Memory (
         input  wire        reset_i,
         input  wire [31:0] rvec_i,
 
-        input  wire        IMemStrb_i,
-        input  wire [31:0] IMemAddr_i,
-        output wire [63:0] IMemData_o,
-        output wire        IMemValid_o,
+        input  wire         IMemStrb_i,
+        input  wire [31:0]  IMemAddr_i,
+        output wire [255:0] IMemData_o,
+        output wire         IMemValid_o,
 
-        input  wire        DMemRStrb_i,
-        input  wire [31:0] DMemRAddr_i,
-        output wire [63:0] DMemRData_o,
-        output wire        DMemRBusy_o,
-        input  wire [31:0] DMemWAddr_i,
-        input  wire [63:0] DMemWData_i,
-        input  wire [7:0]  DMemWMask_i,
-        output wire        DMemWBusy_o,
+        input  wire [31:0]  DMemAddr_i,
+        input  wire         DMemRStrb_i,
+        input  wire [63:0]  DMemWData_i,
+        input  wire [7:0]   DMemWMask_i,
+        output wire [63:0]  DMemRData_o,
+        output wire         DMemValidReady_o,
 
         // IO
         output wire [3:0]  leds_o,
@@ -37,7 +35,7 @@ module Memory (
         // inout  wire [3:0]  spiData_io
 );
 
-reg  [31:0] DMemRAddr;
+reg  [31:0] DMemAddr;
 reg  [31:0] IMemAddr;
 
 wire [63:0] SDRamRData = 64'b0;
@@ -48,7 +46,7 @@ wire        SDRamIBusy;
 
 wire [63:0] SPI_RData;
 wire        SPI_RBusy;
-wire [63:0] SPI_Instr;
+wire [255:0] SPI_Instr;
 wire        SPI_IBusy;
 
 reg  [63:0] BRamRData;
@@ -57,25 +55,25 @@ wire [7:0]  BRamWMask;
 wire [31:0] IO_RData;
 wire        IO_Wr;
 
-assign DMemRBusy_o = (M_isSPI_r & SPI_RBusy) | (M_isSDRAM_r & SDRamRBusy);
+assign DMemValidReady_o = ~((M_isSPI_r & SPI_RBusy) | (M_isSDRAM_r & SDRamRBusy));
 
 reg [6:0] testCount;
-wire testBusy = |testCount;
-assign IMemValid_o = ~((M_isSPI_i & SPI_IBusy) | (M_isSDRAM_i & SDRamIBusy) | SPI_Busy | testBusy);
+wire testIBusy = |testCount;
+assign IMemValid_o = ~((M_isSPI_i & SPI_IBusy) | (M_isSDRAM_i & SDRamIBusy) | SPI_Busy | testIBusy);
 
 /*-------------------------------- Memory Map --------------------------------*/
 // Use memory map to determine destination
-wire M_isSDRAM_r = (DMemRAddr[31:28] == 4'b0000);
+wire M_isSDRAM_r = (DMemAddr[31:28] == 4'b0000);
 wire M_isSDRAM_i = (IMemAddr[31:28]  == 4'b0000);
-wire M_isSDRAM_w = (DMemWAddr_i[31:28] == 4'b0000);
-wire M_isSPI_r   = (DMemRAddr[31:28] == 4'b0001);
-wire M_isSPI_w   = (DMemWAddr_i[31:28] == 4'b0001);
+wire M_isSDRAM_w = (DMemAddr_i[31:28] == 4'b0000);
+wire M_isSPI_r   = (DMemAddr[31:28] == 4'b0001);
+wire M_isSPI_w   = (DMemAddr_i[31:28] == 4'b0001);
 wire M_isSPI_i   = (IMemAddr[31:28] == 4'b0001);
-wire M_isBRAM_r  = (DMemRAddr[31:28] == 4'b1111);
-wire M_isBRAM_i  = (IMemAddr[31:28]  == 4'b1111);
-wire M_isBRAM_w  = (DMemWAddr_i[31:28] == 4'b1111);
-wire M_isIO_r    = (!M_isBRAM_r && DMemRAddr[31]);
-wire M_isIO_w    = (!M_isBRAM_w && DMemWAddr_i[31]);
+wire M_isBRAM_r  = (DMemAddr[31:28] == 4'b0111);
+wire M_isBRAM_i  = (IMemAddr[31:28]  == 4'b0111);
+wire M_isBRAM_w  = (DMemAddr_i[31:28] == 4'b0111);
+wire M_isIO_r    = (DMemAddr[31]);
+wire M_isIO_w    = (DMemAddr_i[31]);
 
 // Use memory map to determine destination
 // Reads
@@ -94,18 +92,18 @@ assign IO_Wr = (M_isIO_w) & (|DMemWMask_i);
 
 always @(posedge clk_i) begin
         if (reset_i) begin
-                DMemRAddr <= rvec_i;
+                DMemAddr <= rvec_i;
                 IMemAddr  <= rvec_i;
         end
         if (DMemRStrb_i)
-                DMemRAddr <= DMemRAddr_i;
+                DMemAddr <= DMemAddr_i;
         if (IMemStrb_i)
                 IMemAddr  <= IMemAddr_i;
 end
 
 
 /*-------------------------------- Block Ram --------------------------------*/
-reg [63:0] BRAM [0:65535];
+reg [63:0] BRAM [0:16383];
 
 initial begin
         $readmemh("../bin/BRAM.hex",BRAM);
@@ -118,9 +116,9 @@ end
 wire [63:0] BRamInstr_w = BRAM[IMemAddr_i[18:3]];
 
 // Data RAM: All alligned to 64 bits
-wire [63:0] BRamRData_w = BRAM[DMemRAddr_i[18:3]];
+wire [63:0] BRamRData_w = BRAM[DMemAddr_i[18:3]];
 
-wire [15:0] wordAddr = DMemWAddr_i[18:3];
+wire [15:0] wordAddr = DMemAddr_i[18:3];
 always @(posedge clk_i) begin
         if (BRamWMask[0]) BRAM[wordAddr][ 7:0 ] <= DMemWData_i[ 7:0 ];
         if (BRamWMask[1]) BRAM[wordAddr][15:8 ] <= DMemWData_i[15:8 ];
@@ -153,21 +151,21 @@ end
 
 
 /*-------------------------------- SPI Flash --------------------------------*/
-wire [255:0] SPI_RawData;
+wire [255:0] SPI_Data;
 wire         SPI_Busy;
 
-assign SPI_RData = {SPI_RawData[7:0],   SPI_RawData[15:8],  SPI_RawData[23:16], SPI_RawData[31:24],
-                    SPI_RawData[39:32], SPI_RawData[47:40], SPI_RawData[55:48], SPI_RawData[63:56]};
-assign SPI_Instr = {SPI_RawData[7:0],   SPI_RawData[15:8],  SPI_RawData[23:16], SPI_RawData[31:24],
-                    SPI_RawData[39:32], SPI_RawData[47:40], SPI_RawData[55:48], SPI_RawData[63:56]};
+assign SPI_RData = {SPI_Data[7:0],   SPI_Data[15:8],  SPI_Data[23:16], SPI_Data[31:24],
+                    SPI_Data[39:32], SPI_Data[47:40], SPI_Data[55:48], SPI_Data[63:56]};
+// assign SPI_Instr = SPI_Data[255:192];
+assign SPI_Instr = SPI_Data;
 
 dspiFlash flash(
         .clk_i(clk_i),
         .reset_i(reset_i),
         .rstrb_i(IMemStrb_i),
         .raddr_i(IMemAddr_i[23:0]),
-        .numBytes_i(8),
-        .rdata_o(SPI_RawData),
+        .numBytes_i(32),
+        .rdata_o(SPI_Data),
         .rbusy_o(SPI_Busy),
         .spiClk_o(spiClk_o),
         .spiCs_o(spiCs_o),
@@ -197,9 +195,9 @@ dspiFlash flash(
 IO io(
         .clk_i(clk_i),
         .reset_i(reset_i),
-        .IO_memRAddr_i(DMemRAddr_i),
+        .IO_memRAddr_i(DMemAddr_i),
         .IO_memRData_o(IO_RData),
-        .IO_memWAddr_i(DMemWAddr_i),
+        .IO_memWAddr_i(DMemAddr_i),
         .IO_memWData_i(DMemWData_i[31:0]),
         .IO_memWr_i(IO_Wr),
         .leds_o(leds_o),

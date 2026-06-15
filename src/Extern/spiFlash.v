@@ -105,8 +105,10 @@ assign MOSI_in = spiMosi_io;
 
 reg [5:0]  snd_count;
 reg [31:0] snd_data;
-reg [8:0]  rcv_count;
-reg [255:0] rcv_data;
+reg [5:0]  rcv_count;
+reg [1:0]  rcv_byteCount;
+// reg [255:0] rcv_data;
+reg [7:0] rcv_data [0:31];
 
 wire sending   = (snd_count != 0);
 wire receiving = (rcv_count != 0);
@@ -119,32 +121,45 @@ assign MOSI_out = sending && snd_data[31];
 initial spiCs_o = 1'b1;
 assign spiClk_o = !spiCs_o && !clk_i;
 
-assign rdata_o = rcv_data;
-wire [63:0] dataShort = rcv_data[63:0];
-// assign rdata_o = {rcv_data[7:0], rcv_data[15:8], rcv_data[23:16], rcv_data[31:24]};
-                  // rcv_data[39:32], rcv_data[47:40], rcv_data[55:48], rcv_data[63:56]};
+// assign rdata_o = rcv_data;
+// wire [63:0] dataShort = rcv_data[63:0];
+assign rdata_o = {rcv_data[0],  rcv_data[1],  rcv_data[2],  rcv_data[3],
+                  rcv_data[4],  rcv_data[5],  rcv_data[6],  rcv_data[7],
+                  rcv_data[8],  rcv_data[9],  rcv_data[10], rcv_data[11],
+                  rcv_data[12], rcv_data[13], rcv_data[14], rcv_data[15],
+                  rcv_data[16], rcv_data[17], rcv_data[18], rcv_data[19],
+                  rcv_data[20], rcv_data[21], rcv_data[22], rcv_data[23],
+                  rcv_data[24], rcv_data[25], rcv_data[26], rcv_data[27],
+                  rcv_data[28], rcv_data[29], rcv_data[30], rcv_data[31]};
+// assign rdata_o = {rcv_data[7:0],    rcv_data[15:8],   rcv_data[23:16],  rcv_data[31:24],
+//                   rcv_data[39:32],  rcv_data[47:40],  rcv_data[55:48],  rcv_data[63:56]};
 
 always @(posedge clk_i) begin
         if (reset_i) begin
                 spiCs_o <= 1'b1;
                 snd_data = 32'b0;
                 snd_count <= 6'b0;
-                rcv_count <= 9'b0;
+                rcv_count <= 6'b0;
         end else if (rstrb_i) begin
                 spiCs_o <= 1'b0;
                 snd_data = {8'h3B, raddr_i}; // Read Dual-out, 3-byte address
                 snd_count <= 6'd32; // 8-bit command, 24-bit address
         end else begin
                 if (sending) begin
-                        if (snd_count == 1)
-                                rcv_count <= numBytes_i * 4;
+                        if (snd_count == 1) begin
+                                rcv_count <= numBytes_i;
+                                rcv_byteCount <= 2'b11;
+                        end
                         snd_count <= snd_count - 1;
                         snd_data <= {snd_data[30:0], 1'b1};
                 end
                 if (receiving) begin
-                        rcv_count <= rcv_count - 1;
-                        // rcv_data <= {rcv_data[61:0], spiData_io[1:0]};
-                        rcv_data <= {rcv_data[253:0], spiMiso_i, MOSI_in};
+                        rcv_byteCount <= rcv_byteCount - 1;
+                        if (rcv_byteCount == 2'b00) begin
+                                rcv_byteCount <= 2'b11;
+                                rcv_count <= rcv_count - 1;
+                        end
+                        rcv_data[rcv_count-1] <= {rcv_data[rcv_count-1][5:0], spiMiso_i, MOSI_in};
                 end
                 if (!busy) begin
                         spiCs_o <= 1'b1;

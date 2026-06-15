@@ -13,11 +13,10 @@ module MemoryUnit (
         output wire        M_busy_o,
         // Memory/IO Interface
         input  wire [63:0] DMemRData_i,
-        input  wire        DMemRBusy_i,
         output wire [31:0] DMemWAddr_o,
         output wire [63:0] DMemWData_o,
         output wire [7:0]  DMemWMask_o,
-        input  wire        DMemWBusy_i,
+        input  wire        DMemValidReady_i,
         // CSR Interface
         output wire [11:0] csrWAddr_o,
         output wire [31:0] csrWData_o,
@@ -177,7 +176,7 @@ assign DMemWMask_o = {8{M_storeEnable}} & M_storeMask;
 
 /*----------------------LOAD----------------------*/
 
-assign M_busy_o = DMemRBusy_i;
+assign M_busy_o = ~DMemValidReady_i;
 
 // Sign expansion
 // Based on funct3[2]: 0->sign expand, 1->unsigned

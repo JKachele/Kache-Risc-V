@@ -18,15 +18,17 @@ module Processor(
         input  wire        ICacheValid_i,
         input  wire        ICacheCmp_i,
 
+        output wire [31:0] DMemAddr_o,
         output wire        DMemRStrb_o,
-        output wire [31:0] DMemRAddr_o,
-        input  wire [63:0] DMemRData_i,
-        input  wire        DMemRBusy_i,
-        output wire [31:0] DMemWAddr_o,
         output wire [63:0] DMemWData_o,
         output wire [7:0]  DMemWMask_o,
-        input  wire        DMemWBusy_i
+        input  wire [63:0] DMemRData_i,
+        input  wire        DMemValidReady_i
 );
+
+wire [31:0] DMemRAddr;
+wire [31:0] DMemWAddr;
+assign DMemAddr_o = DMemRStrb_o ? DMemRAddr : DMemWAddr;
 
 /******************************************************************************
  ----------------------------------Registers-----------------------------------
@@ -234,6 +236,7 @@ DecodeUnit #(
         .D_flush_i(D_flush),
         .E_flush_i(E_flush),
         .E_stall_i(E_stall),
+        .M_busy_i(M_busy),
         .E_takeBranch_i(E_takeBranch),
         .D_predictPC_o(D_predictPC),
         .D_PCprediction_o(D_PCprediction),
@@ -353,7 +356,7 @@ ExecuteUnit execute(
         .csrFFlagsSet_o(csrFFlagsSet),
         .csrFRM_i(csrFRM),
         .DMemRStrb_o(DMemRStrb_o),
-        .DMemRAddr_o(DMemRAddr_o),
+        .DMemRAddr_o(DMemRAddr),
         .MW_wbEnable_i(MW_wbEnable),
         .MW_rdId_i(MW_rdId),
         .MW_wbData_i(MW_wbData),
@@ -427,11 +430,10 @@ MemoryUnit memory(
         .reset_i(reset_i),
         .M_busy_o(M_busy),
         .DMemRData_i(DMemRData_i),
-        .DMemRBusy_i(DMemRBusy_i),
-        .DMemWAddr_o(DMemWAddr_o),
+        .DMemWAddr_o(DMemWAddr),
         .DMemWData_o(DMemWData_o),
         .DMemWMask_o(DMemWMask_o),
-        .DMemWBusy_i(DMemWBusy_i),
+        .DMemValidReady_i(DMemValidReady_i),
         .csrWAddr_o(csrWAddr),
         .csrWData_o(csrWData),
         .csrWEnable_o(csrWEnable),

@@ -1,5 +1,5 @@
 SECTIONS {
-        . = 0xF0000000;
+        . = 0x70000000;
 
         .text : {
                 . = ALIGN(2);
@@ -21,5 +21,9 @@ SECTIONS {
                 *(.eh_frame_hdr)
                 *(.init_array*)         
                 *(.gcc_except_table*)
+
+                . = ALIGN(8);
+                . += 64 * 1024; /* 128KB */
+                __stack_top = .;
         }
 }

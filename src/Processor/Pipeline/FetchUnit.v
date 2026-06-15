@@ -45,16 +45,18 @@ assign ICacheCancel_o = D_flush_i;
 assign ICacheStrb_o = ~F_stall_i & ~reset_i;
 
 // Must perform 2 fetches if instruction isn't compressed and straddles 2 cache lines
-wire       ICache_isSplitInstr = !D_flush_i && !ICacheCmp_i && PC[2:1] == 2'b11;
+/*verilator public_flat_rw_on*/
+wire       ICacheSplit = !D_flush_i && !ICacheCmp_i && PC[4:1] == 4'b1111;
 reg        F_isSplitInstr;
 reg        FD_isSplitInstr;
 reg [15:0] FD_instrPart;
 reg [31:0] FD_instrHold; // Hold previous instruction while fetching 2nd half
+/*verilator public_off*/
 always @(posedge clk_i) begin
         if (!F_stall_i && ICacheValid_i) begin
-                F_isSplitInstr <= ICache_isSplitInstr;
+                F_isSplitInstr <= ICacheSplit;
                 FD_isSplitInstr <= F_isSplitInstr;
-                if (ICache_isSplitInstr) begin
+                if (ICacheSplit) begin
                         PC <= PC + 2;
                         FD_instrHold <= ICacheData_i;
                 end
@@ -63,7 +65,7 @@ always @(posedge clk_i) begin
         end
 end
 
-assign F_busy_o = ~ICacheValid_i | ICache_isSplitInstr;
+assign F_busy_o = ~ICacheValid_i | ICacheSplit;
 assign FD_instr_o = F_isSplitInstr  ? FD_instrHold :
                     FD_isSplitInstr ? {ICacheData_i[15:0], FD_instrPart} : ICacheData_i;
 

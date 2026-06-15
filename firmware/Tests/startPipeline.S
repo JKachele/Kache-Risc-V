@@ -1,4 +1,3 @@
-.equ STACK_BASE, 0xF0030000
 .equ IO_BASE, 0x80000000
 .equ IO_LEDS, 0x04
 
@@ -6,6 +5,6 @@
 .section .text
 _start:
         li gp, IO_BASE
-        li sp, STACK_BASE
+        la sp, __stack_top
         call main
         ebreak

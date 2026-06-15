@@ -20,7 +20,9 @@
 #define INSTRET                 SOC__DOT__CPU__DOT__csr__DOT__CSR_instret
 #define F_pc                    SOC__DOT__CPU__DOT__fetch__DOT__PC
 #define ICacheHit               SOC__DOT__icache__DOT__C_hit
-// #define DCacheHit               SOC__DOT__dcache__DOT__C_hit
+#define ICacheSplit             SOC__DOT__CPU__DOT__fetch__DOT__ICacheSplit
+#define DCacheHit               SOC__DOT__dcache__DOT__C_hit
+#define DCacheState             SOC__DOT__dcache__DOT__C_curState
 
 #define Reg_A0                  SOC__DOT__CPU__DOT__registers__DOT__reg_10
 #define Reg_A1                  SOC__DOT__CPU__DOT__registers__DOT__reg_11
@@ -41,9 +43,10 @@ class SOC_TB : public TESTB<VSOC> {
         IData nbAMO = 0;
         IData nbICache = 0;
         IData nbICacheHit = 0;
-        IData nbDCache = 0;
-        IData nbDCacheHit = 0;
+        IData nbICacheSplit = 0;
+        IData nbDCacheMiss = 0;
         IData prevPC = 0;
+        CData prevDCacheState = 0;
 
         // Program Execution
         IData prevDE_PC = 0;
@@ -82,8 +85,14 @@ class SOC_TB : public TESTB<VSOC> {
                 if (rootp->F_pc != prevPC) {
                         if (rootp->ICacheHit)
                                 nbICacheHit++;
+                        if (rootp->ICacheSplit)
+                                nbICacheSplit++;
                         nbICache++;
                 } 
+                if (rootp->DCacheState != 0 && prevDCacheState == 0) {
+                        nbDCacheMiss++;
+                }
+                prevDCacheState = rootp->DCacheState;
                 prevPC = rootp->F_pc;
         }
 
@@ -158,16 +167,23 @@ public:
                 float cpi = (cycle*1.0)/(instret*1.0);
                 float ipc = (instret*1.0)/(cycle*1.0);
 
+                int nbDCache = nbLoad + nbStore;
+                int nbDCacheHit = nbDCache - nbDCacheMiss;
+
                 printf("\n----------------------------\n");
                 printf("Simulated processor's report\n");
                 printf("----------------------------\n");
-                printf("ICache hit = %3.3f\%%\n", nbICacheHit*100.0/nbICache);
-                printf("Branch hit = %3.3f\%%\n", nbBranchHit*100.0/nbBranch);
-                printf("JALR   hit = %3.3f\%%\n", nbJALRhit*100.0/nbJALR);
-                printf("Load hzrds = %3.3f\%%\n", nbLoadHazard*100.0/nbLoad);
-                printf("Cycles     = %ld\n", cycle);
-                printf("Instret    = %ld\n", instret);
-                printf("CPI/IPC    = %3.3f/%3.3f\n",cpi, ipc);
+                printf("ICache hit   = %3.3f\%%  ", nbICacheHit*100.0/nbICache);
+                printf("(%d Misses)\n",             nbICache - nbICacheHit);
+                printf("DCache hit   = %3.3f\%%  ", nbDCacheHit*100.0/nbDCache);
+                printf("(%d Misses)\n",             nbDCacheMiss);
+                printf("ICache Split = %3.3f\%%\n", nbICacheSplit*100.0/nbICache);
+                printf("Branch hit   = %3.3f\%%\n", nbBranchHit*100.0/nbBranch);
+                printf("JALR   hit   = %3.3f\%%\n", nbJALRhit*100.0/nbJALR);
+                printf("Load hzrds   = %3.3f\%%\n", nbLoadHazard*100.0/nbLoad);
+                printf("Cycles       = %ld\n", cycle);
+                printf("Instret      = %ld\n", instret);
+                printf("CPI/IPC      = %3.3f/%3.3f\n",cpi, ipc);
 
                 printf("Instr. mix = (");
                 printf("Branch:%3.3f\%% | ",            nbBranch*100.0/instret);
@@ -215,7 +231,7 @@ int main(int argc, char **argv) {
 
         // tb->opentrace("trace.vcd");
 
-        tb->m_core->rvec = 0xF0000000;
+        tb->m_core->rvec = 0x70000000;
         tb->reset();
 
         int rxPrev = 1;
