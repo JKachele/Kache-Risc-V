@@ -21,11 +21,17 @@
 #define F_pc                    SOC__DOT__CPU__DOT__fetch__DOT__PC
 #define ICacheHit               SOC__DOT__icache__DOT__C_hit
 #define ICacheSplit             SOC__DOT__CPU__DOT__fetch__DOT__ICacheSplit
-#define DCacheHit               SOC__DOT__dcache__DOT__C_hit
 #define DCacheState             SOC__DOT__dcache__DOT__C_curState
 
 #define Reg_A0                  SOC__DOT__CPU__DOT__registers__DOT__reg_10
 #define Reg_A1                  SOC__DOT__CPU__DOT__registers__DOT__reg_11
+#define Reg_FA0                 SOC__DOT__CPU__DOT__registers__DOT__reg_F10
+#define Reg_FA1                 SOC__DOT__CPU__DOT__registers__DOT__reg_F11
+#define Reg_FA2                 SOC__DOT__CPU__DOT__registers__DOT__reg_F12
+#define Reg_FA3                 SOC__DOT__CPU__DOT__registers__DOT__reg_F13
+#define Reg_FA4                 SOC__DOT__CPU__DOT__registers__DOT__reg_F14
+#define Reg_FA5                 SOC__DOT__CPU__DOT__registers__DOT__reg_F15
+#define Reg_FS0                 SOC__DOT__CPU__DOT__registers__DOT__reg_F8
 
 class SOC_TB : public TESTB<VSOC> {
         // Statistics counters
@@ -135,6 +141,14 @@ public:
                 IData instr = rootp->DE_instr;
                 if (pc != prevDE_PC && !riscV_isNOP(instr)) {
                         fprintf(programLog, "%08x: %08x\n", pc, instr);
+                        // fprintf(programLog, "A0: %08x ", rootp->Reg_A0);
+                        // fprintf(programLog, "FA0: %08lx ", rootp->Reg_FA0 & 0x00000000FFFFFFFF);
+                        // fprintf(programLog, "FA1: %08lx ", rootp->Reg_FA1 & 0x00000000FFFFFFFF);
+                        // fprintf(programLog, "FA2: %08lx ", rootp->Reg_FA2 & 0x00000000FFFFFFFF);
+                        // fprintf(programLog, "FA3: %08lx ", rootp->Reg_FA3 & 0x00000000FFFFFFFF);
+                        // fprintf(programLog, "FA4: %08lx ", rootp->Reg_FA4 & 0x00000000FFFFFFFF);
+                        // fprintf(programLog, "FA5: %08lx ", rootp->Reg_FA5 & 0x00000000FFFFFFFF);
+                        // fprintf(programLog, "FS0: %08lx\n", rootp->Reg_FS0 & 0x00000000FFFFFFFF);
                 }
                 prevDE_PC = pc;
         }
@@ -173,10 +187,10 @@ public:
                 printf("\n----------------------------\n");
                 printf("Simulated processor's report\n");
                 printf("----------------------------\n");
-                printf("ICache hit   = %3.3f\%%  ", nbICacheHit*100.0/nbICache);
-                printf("(%d Misses)\n",             nbICache - nbICacheHit);
-                printf("DCache hit   = %3.3f\%%  ", nbDCacheHit*100.0/nbDCache);
-                printf("(%d Misses)\n",             nbDCacheMiss);
+                printf("ICache hit   = %3.3f\%%\n", nbICacheHit*100.0/nbICache);
+                // printf("(%d Misses)\n",             nbICache - nbICacheHit);
+                printf("DCache hit   = %3.3f\%%\n", nbDCacheHit*100.0/nbDCache);
+                // printf("(%d Misses)\n",             nbDCacheMiss);
                 printf("ICache Split = %3.3f\%%\n", nbICacheSplit*100.0/nbICache);
                 printf("Branch hit   = %3.3f\%%\n", nbBranchHit*100.0/nbBranch);
                 printf("JALR   hit   = %3.3f\%%\n", nbJALRhit*100.0/nbJALR);

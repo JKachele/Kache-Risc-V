@@ -55,7 +55,9 @@ hex: $(BRAM)
 
 $(BRAM): $(BIN)
 	# hexdump -ve '"%08x\n"' $< > $@
-	hexdump -ve '1/8 "%016x\n"' $< > $@
+	# hexdump -ve '1/8 "%016x\n"' $< > $@
+	hexdump -ve '32/1 "%02x" "\n"' $< | \
+		awk '{for(i=length($$0);i>0;i-=2)printf "%s",substr($$0,i-1,2);print""}' > $@
 
 $(BIN): $(FIRMWARE)
 	$(OBJCOPY) $< -O binary $@

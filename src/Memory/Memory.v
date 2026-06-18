@@ -19,9 +19,9 @@ module Memory (
 
         input  wire [31:0]  DMemAddr_i,
         input  wire         DMemRStrb_i,
-        input  wire [63:0]  DMemWData_i,
+        input  wire [255:0] DMemWData_i,
         input  wire [7:0]   DMemWMask_i,
-        output wire [63:0]  DMemRData_o,
+        output wire [255:0] DMemRData_o,
         output wire         DMemValidReady_o,
 
         // IO
@@ -35,31 +35,29 @@ module Memory (
         // inout  wire [3:0]  spiData_io
 );
 
-reg  [31:0] DMemAddr;
-reg  [31:0] IMemAddr;
+reg  [31:0]  DMemAddr;
+reg  [31:0]  IMemAddr;
 
-wire [63:0] SDRamRData = 64'b0;
-wire        SDRamRBusy;
-wire [7:0]  SDRamWMask;
-wire [63:0] SDRamInstr = 64'b0;
-wire        SDRamIBusy;
+wire [255:0] SDRamRData = 256'b0;
+wire         SDRamRBusy;
+wire [7:0]   SDRamWMask;
+wire [63:0]  SDRamInstr = 64'b0;
+wire         SDRamIBusy;
 
-wire [63:0] SPI_RData;
-wire        SPI_RBusy;
+wire [255:0] SPI_RData;
+wire         SPI_RBusy;
 wire [255:0] SPI_Instr;
-wire        SPI_IBusy;
+wire         SPI_IBusy;
 
-reg  [63:0] BRamRData;
-reg  [63:0] BRamInstr;
-wire [7:0]  BRamWMask;
-wire [31:0] IO_RData;
-wire        IO_Wr;
+reg  [255:0] BRamRData;
+reg  [255:0] BRamInstr;
+wire [7:0]   BRamWMask;
+wire [31:0]  IO_RData;
+wire         IO_Wr;
 
 assign DMemValidReady_o = ~((M_isSPI_r & SPI_RBusy) | (M_isSDRAM_r & SDRamRBusy));
 
-reg [6:0] testCount;
-wire testIBusy = |testCount;
-assign IMemValid_o = ~((M_isSPI_i & SPI_IBusy) | (M_isSDRAM_i & SDRamIBusy) | SPI_Busy | testIBusy);
+assign IMemValid_o = ~((M_isSPI_i & SPI_IBusy) | (M_isSDRAM_i & SDRamIBusy) | SPI_Busy);
 
 /*-------------------------------- Memory Map --------------------------------*/
 // Use memory map to determine destination
@@ -79,7 +77,8 @@ wire M_isIO_w    = (DMemAddr_i[31]);
 // Reads
 assign DMemRData_o = M_isSDRAM_r ? SDRamRData :
                     (M_isSPI_r   ? SPI_RData  :
-                    (M_isBRAM_r  ? BRamRData  : IO_RData));
+                    (M_isBRAM_r  ? BRamRData  : {4{IO_RData}}));
+// assign DMemRData_o = BRamRData;
 
 // assign IMemData_o  = M_isSDRAM_i ? SDRamInstr : BRamInstr;
 // assign IMemData_o  = BRamInstr;
@@ -103,31 +102,29 @@ end
 
 
 /*-------------------------------- Block Ram --------------------------------*/
-reg [63:0] BRAM [0:16383];
+reg [255:0] BRAM [0:8192];
 
 initial begin
         $readmemh("../bin/BRAM.hex",BRAM);
 end
 
 // Instruction ROM: Can be alligned to 16 bits or 32 bits
-// wire [31:0] BRamInstr_1 = BRAM[IMemAddr_i[18:2]];
-// wire [31:0] BRamInstr_2 = BRAM[IMemAddr_i[18:2] + 1];
-// wire [63:0] BRamInstr_w = {BRamInstr_2, BRamInstr_1};
-wire [63:0] BRamInstr_w = BRAM[IMemAddr_i[18:3]];
+// wire [63:0] BRamInstr_w = BRAM[IMemAddr_i[18:3]];
 
 // Data RAM: All alligned to 64 bits
-wire [63:0] BRamRData_w = BRAM[DMemAddr_i[18:3]];
+// wire [255:0] BRamRData_w = BRAM[DMemAddr_i[18:5]];
 
-wire [15:0] wordAddr = DMemAddr_i[18:3];
+// wire [15:0] wordAddr = DMrmAddr_i[20:5];
 always @(posedge clk_i) begin
-        if (BRamWMask[0]) BRAM[wordAddr][ 7:0 ] <= DMemWData_i[ 7:0 ];
-        if (BRamWMask[1]) BRAM[wordAddr][15:8 ] <= DMemWData_i[15:8 ];
-        if (BRamWMask[2]) BRAM[wordAddr][23:16] <= DMemWData_i[23:16];
-        if (BRamWMask[3]) BRAM[wordAddr][31:24] <= DMemWData_i[31:24];
-        if (BRamWMask[4]) BRAM[wordAddr][39:32] <= DMemWData_i[39:32];
-        if (BRamWMask[5]) BRAM[wordAddr][47:40] <= DMemWData_i[47:40];
-        if (BRamWMask[6]) BRAM[wordAddr][55:48] <= DMemWData_i[55:48];
-        if (BRamWMask[7]) BRAM[wordAddr][63:56] <= DMemWData_i[63:56];
+        BRAM[DMemAddr_i[18:5]] <= DMemWData_i;
+        // if (BRamWMask[0]) BRAM[wordAddr][ 7:0 ] <= DMemWData_i[ 7:0 ];
+        // if (BRamWMask[1]) BRAM[wordAddr][15:8 ] <= DMemWData_i[15:8 ];
+        // if (BRamWMask[2]) BRAM[wordAddr][23:16] <= DMemWData_i[23:16];
+        // if (BRamWMask[3]) BRAM[wordAddr][31:24] <= DMemWData_i[31:24];
+        // if (BRamWMask[4]) BRAM[wordAddr][39:32] <= DMemWData_i[39:32];
+        // if (BRamWMask[5]) BRAM[wordAddr][47:40] <= DMemWData_i[47:40];
+        // if (BRamWMask[6]) BRAM[wordAddr][55:48] <= DMemWData_i[55:48];
+        // if (BRamWMask[7]) BRAM[wordAddr][63:56] <= DMemWData_i[63:56];
 end
 
 always @(posedge clk_i) begin
@@ -136,17 +133,11 @@ always @(posedge clk_i) begin
                 BRamInstr <= 64'b0;
         end
         if (DMemRStrb_i) begin
-                BRamRData <= BRamRData_w;
+                BRamRData <= BRAM[DMemAddr_i[18:5]];
         end
-        if (IMemStrb_i) begin
-        //         testCount <= 7'd65;
-        // end else if (testCount > 1) begin
-        //         testCount <= testCount - 1;
-        // end else begin
-                testCount <= 7'b0;
-                // BRamInstr <= IMemAddr_i[1] ? BRamInstr_w[47:16] : BRamInstr_w[31:0];
-                BRamInstr <= BRamInstr_w;
-        end
+        // if (IMemStrb_i) begin
+        //         BRamInstr <= BRamInstr_w;
+        // end
 end
 
 

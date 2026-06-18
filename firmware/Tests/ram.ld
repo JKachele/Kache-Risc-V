@@ -8,7 +8,7 @@ SECTIONS {
         }
 
         .data : {
-                . = ALIGN(8);
+                . = ALIGN(32);
                 *(.data*)
                 *(.sdata*)
                 *(.rodata*)
@@ -22,7 +22,7 @@ SECTIONS {
                 *(.init_array*)         
                 *(.gcc_except_table*)
 
-                . = ALIGN(8);
+                . = ALIGN(32);
                 . += 64 * 1024; /* 128KB */
                 __stack_top = .;
         }
