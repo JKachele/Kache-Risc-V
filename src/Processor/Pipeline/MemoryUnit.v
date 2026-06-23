@@ -129,7 +129,7 @@ end
 reg [7:0] M_storeMask;
 always @(*) begin
         if (M_isB) begin
-                unique case (EM_addr_i[2:0])
+                case (EM_addr_i[2:0])
                         3'b000: M_storeMask = 8'b00000001;
                         3'b001: M_storeMask = 8'b00000010;
                         3'b010: M_storeMask = 8'b00000100;
@@ -140,7 +140,7 @@ always @(*) begin
                         3'b111: M_storeMask = 8'b10000000;
                 endcase
         end else if (M_isH) begin
-                unique case (EM_addr_i[2:1])
+                case (EM_addr_i[2:1])
                         2'b00: M_storeMask = 8'b00000011;
                         2'b01: M_storeMask = 8'b00001100;
                         2'b10: M_storeMask = 8'b00110000;

@@ -33,10 +33,10 @@ module ICache #(
  *     Tag              Index                Offset
  *
  *****************************************************************/
-localparam int NSETS        = 512;
-localparam int TAG_WIDTH    = 18;
-localparam int INDEX_WIDTH  = 9;
-localparam int OFFSET_WIDTH = 5;
+localparam NSETS        = 512;
+localparam TAG_WIDTH    = 18;
+localparam INDEX_WIDTH  = 9;
+localparam OFFSET_WIDTH = 5;
 
 `define IC_TAG 31:14
 `define IC_INDEX 13:5
@@ -71,7 +71,7 @@ wire         C_hit  = (C_hit0 | C_hit1);
 
 reg [31:0] C_offsetData;
 always @(*) begin
-        unique case (C_offset[4:1])
+        case (C_offset[4:1])
                 4'b0000: C_offsetData = C_data[31:0];
                 4'b0001: C_offsetData = C_data[47:16];
                 4'b0010: C_offsetData = C_data[63:32];

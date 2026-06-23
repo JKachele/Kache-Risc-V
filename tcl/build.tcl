@@ -25,6 +25,7 @@ report_timing_summary    -file reports/post_synth_timing_summary.rpt
 report_power             -file reports/post_synth_power.rpt
 report_clock_interaction -delay_type min_max -file reports/post_synth_clock_interaction.rpt
 report_high_fanout_nets  -fanout_greater_than 200 -max_nets 50 -file reports/post_synth_high_fanout_nets.rpt
+report_utilization       -hierarchical -file reports/post_synth_util.rpt
 
 # Place the design and write the placement report
 opt_design
@@ -39,7 +40,7 @@ write_checkpoint         -force reports/post_route
 report_timing_summary    -file reports/post_route_timing_summary.rpt
 report_timing            -sort_by group -max_paths 100 -path_type summary -file reports/post_route_timing.rpt
 report_clock_utilization -file reports/clock_util.rpt
-report_utilization       -file reports/post_route_util.rpt
+report_utilization       -hierarchical -file reports/post_route_util.rpt
 report_power             -file reports/post_route_power.rpt
 report_drc               -file reports/post_imp_drc.rpt
 

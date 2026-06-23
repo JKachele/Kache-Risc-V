@@ -36,10 +36,10 @@ module DCache #(
  *     Tag             Index              Offset
  *
  *****************************************************************/
-localparam int NSETS        = 256;
-localparam int TAG_WIDTH    = 19;
-localparam int INDEX_WIDTH  = 8;
-localparam int OFFSET_WIDTH = 5;
+localparam NSETS        = 256;
+localparam TAG_WIDTH    = 19;
+localparam INDEX_WIDTH  = 8;
+localparam OFFSET_WIDTH = 5;
 
 `define DC_TAG 31:13
 `define DC_INDEX 12:5
