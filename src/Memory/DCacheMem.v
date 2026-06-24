@@ -25,47 +25,51 @@ module DCacheMem #(
 
 reg [255:0] mem [0:NSETS-1];
 
+// Synchronous Reads
 always @(posedge clk_i) begin
         if (rden_i)
                 rdata_o <= mem[index_i];
+end
+
+// Synchronous Write Byte-Enable
+reg         we;
+reg [31:0]  be;
+reg [255:0] wdata;
+
+always @(*) begin
+        // Default values
+        we    = 1'b0;
+        be    = 32'b0;
+        wdata = 256'b0;
+
+        // Full cache line write for cache misses
         if (wrall_i) begin
-                mem[index_i] <= wdata_i;
-        end else if (offset_i[4:3] == 2'b00) begin
-                if (wren_i[0]) mem[index_i][  7:0  ]   <= wdata_i[ 7:0 ];
-                if (wren_i[1]) mem[index_i][ 15:8  ]   <= wdata_i[15:8 ];
-                if (wren_i[2]) mem[index_i][ 23:16 ]   <= wdata_i[23:16];
-                if (wren_i[3]) mem[index_i][ 31:24 ]   <= wdata_i[31:24];
-                if (wren_i[4]) mem[index_i][ 39:32 ]   <= wdata_i[39:32];
-                if (wren_i[5]) mem[index_i][ 47:40 ]   <= wdata_i[47:40];
-                if (wren_i[6]) mem[index_i][ 55:48 ]   <= wdata_i[55:48];
-                if (wren_i[7]) mem[index_i][ 63:56 ]   <= wdata_i[63:56];
-        end else if (offset_i[4:3] == 2'b01) begin
-                if (wren_i[0]) mem[index_i][ 71:64 ]   <= wdata_i[ 7:0 ];
-                if (wren_i[1]) mem[index_i][ 79:72 ]   <= wdata_i[15:8 ];
-                if (wren_i[2]) mem[index_i][ 87:80 ]   <= wdata_i[23:16];
-                if (wren_i[3]) mem[index_i][ 95:88 ]   <= wdata_i[31:24];
-                if (wren_i[4]) mem[index_i][103:96 ]   <= wdata_i[39:32];
-                if (wren_i[5]) mem[index_i][111:104]   <= wdata_i[47:40];
-                if (wren_i[6]) mem[index_i][119:112]   <= wdata_i[55:48];
-                if (wren_i[7]) mem[index_i][127:120]   <= wdata_i[63:56];
-        end else if (offset_i[4:3] == 2'b10) begin
-                if (wren_i[0]) mem[index_i][135:128]   <= wdata_i[ 7:0 ];
-                if (wren_i[1]) mem[index_i][143:136]   <= wdata_i[15:8 ];
-                if (wren_i[2]) mem[index_i][151:144]   <= wdata_i[23:16];
-                if (wren_i[3]) mem[index_i][159:152]   <= wdata_i[31:24];
-                if (wren_i[4]) mem[index_i][167:160]   <= wdata_i[39:32];
-                if (wren_i[5]) mem[index_i][175:168]   <= wdata_i[47:40];
-                if (wren_i[6]) mem[index_i][183:176]   <= wdata_i[55:48];
-                if (wren_i[7]) mem[index_i][191:184]   <= wdata_i[63:56];
-        end else if (offset_i[4:3] == 2'b11) begin
-                if (wren_i[0]) mem[index_i][199:192]   <= wdata_i[ 7:0 ];
-                if (wren_i[1]) mem[index_i][207:200]   <= wdata_i[15:8 ];
-                if (wren_i[2]) mem[index_i][215:208]   <= wdata_i[23:16];
-                if (wren_i[3]) mem[index_i][223:216]   <= wdata_i[31:24];
-                if (wren_i[4]) mem[index_i][231:224]   <= wdata_i[39:32];
-                if (wren_i[5]) mem[index_i][239:232]   <= wdata_i[47:40];
-                if (wren_i[6]) mem[index_i][247:240]   <= wdata_i[55:48];
-                if (wren_i[7]) mem[index_i][255:248]   <= wdata_i[63:56];
+                we    = 1'b1;
+                be    = 32'hFFFFFFFF;
+                wdata = wdata_i;
+        end
+        // Byte-wise Write
+        else if (|wren_i) begin
+                if (offset_i[4:3] == 2'b00)
+                        be[7:0] = wren_i;
+                else if (offset_i[4:3] == 2'b01)
+                        be[15:8] = wren_i;
+                else if (offset_i[4:3] == 2'b10)
+                        be[23:16] = wren_i;
+                else if (offset_i[4:3] == 2'b11)
+                        be[31:24] = wren_i;
+                we = 1'b1;
+                wdata = {4{wdata_i[63:0]}};
+        end
+end
+
+integer i;
+always @(posedge clk_i) begin
+        if (we) begin
+                for (i = 0; i < 32; i = i+1) begin
+                        if (be[i])
+                                mem[index_i][i * 8 +: 8] <= wdata[i * 8 +: 8];
+                end
         end
 end
 

@@ -102,7 +102,7 @@ end
 
 
 /*-------------------------------- Block Ram --------------------------------*/
-reg [255:0] BRAM [0:8192];
+reg [255:0] BRAM [0:4095];
 
 initial begin
         $readmemh("../bin/BRAM.hex",BRAM);

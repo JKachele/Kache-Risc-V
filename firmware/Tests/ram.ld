@@ -23,7 +23,7 @@ SECTIONS {
                 *(.gcc_except_table*)
 
                 . = ALIGN(32);
-                . += 64 * 1024; /* 128KB */
+                . += 16 * 1024; /* 16KB */
                 __stack_top = .;
         }
 }

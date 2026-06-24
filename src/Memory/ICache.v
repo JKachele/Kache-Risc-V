@@ -111,64 +111,64 @@ reg C_curState = IDLE;
 
 always @(posedge clk_i) begin
         case (C_curState)
-                IDLE: begin
-                        if (~rden_i | cancel_i) begin
-                                // Do nothing
-                        end
-                        // Check Way 0
-                        else if (C_hit0) begin
-                                C_data0 <= mem0[index];
-                                C_dataWay <= 1'b0;
-                                C_offset <= offset;
-                                lru[index] <= 1'b1;
-                        end
-                        // Check Way 1
-                        else if (C_hit1) begin
-                                C_data1 <= mem1[index];
-                                C_dataWay <= 1'b1;
-                                C_offset <= offset;
-                                lru[index] <= 1'b0;
-                        end
-                        // Cache Miss
-                        else begin
-                                C_curState <= MISS;
-                        end
+        IDLE: begin
+                if (~rden_i | cancel_i) begin
+                        // Do nothing
                 end
-
-                MISS: begin
-                        if (mValid_i) begin
-                                // Check for invalid ways
-                                if (~valid0[index]) begin
-                                        mem0[index] <= mData_i;
-                                        cmp0[index] <= mCmp;
-                                        tag0[index] <= tag;
-                                        valid0[index] <= 1'b1;
-                                end
-                                else if (~valid1[index]) begin
-                                        mem1[index] <= mData_i;
-                                        cmp1[index] <= mCmp;
-                                        tag1[index] <= tag;
-                                        valid1[index] <= 1'b1;
-                                end
-                                // Way 0 is Least Recently Used
-                                else if (lru[index] == 1'b0) begin
-                                        mem0[index] <= mData_i;
-                                        cmp0[index] <= mCmp;
-                                        tag0[index] <= tag;
-                                        valid0[index] <= 1'b1;
-                                end
-                                // Way 1 is Least Recently Used
-                                else if (lru[index] == 1'b1) begin
-                                        mem1[index] <= mData_i;
-                                        cmp1[index] <= mCmp;
-                                        tag1[index] <= tag;
-                                        valid1[index] <= 1'b1;
-                                end
-                                C_curState <= IDLE;
-                        end
+                // Check Way 0
+                else if (C_hit0) begin
+                        C_data0 <= mem0[index];
+                        C_dataWay <= 1'b0;
+                        C_offset <= offset;
+                        lru[index] <= 1'b1;
                 end
+                // Check Way 1
+                else if (C_hit1) begin
+                        C_data1 <= mem1[index];
+                        C_dataWay <= 1'b1;
+                        C_offset <= offset;
+                        lru[index] <= 1'b0;
+                end
+                // Cache Miss
+                else begin
+                        C_curState <= MISS;
+                end
+        end
 
-                default: C_curState = IDLE;
+        MISS: begin
+                if (mValid_i) begin
+                        // Check for invalid ways
+                        if (~valid0[index]) begin
+                                mem0[index] <= mData_i;
+                                cmp0[index] <= mCmp;
+                                tag0[index] <= tag;
+                                valid0[index] <= 1'b1;
+                        end
+                        else if (~valid1[index]) begin
+                                mem1[index] <= mData_i;
+                                cmp1[index] <= mCmp;
+                                tag1[index] <= tag;
+                                valid1[index] <= 1'b1;
+                        end
+                        // Way 0 is Least Recently Used
+                        else if (lru[index] == 1'b0) begin
+                                mem0[index] <= mData_i;
+                                cmp0[index] <= mCmp;
+                                tag0[index] <= tag;
+                                valid0[index] <= 1'b1;
+                        end
+                        // Way 1 is Least Recently Used
+                        else if (lru[index] == 1'b1) begin
+                                mem1[index] <= mData_i;
+                                cmp1[index] <= mCmp;
+                                tag1[index] <= tag;
+                                valid1[index] <= 1'b1;
+                        end
+                        C_curState <= IDLE;
+                end
+        end
+
+        default: C_curState = IDLE;
         endcase
 end
 
