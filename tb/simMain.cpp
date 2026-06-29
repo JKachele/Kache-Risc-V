@@ -245,7 +245,7 @@ int main(int argc, char **argv) {
 
         // tb->opentrace("trace.vcd");
 
-        tb->m_core->rvec = 0x70000000;
+        // tb->m_core->rvec = 0x70000000;
         tb->reset();
 
         int rxPrev = 1;

@@ -246,8 +246,13 @@ reg [1:0] BHT[BHT_SIZE-1:0]; // Branch History Table
 
 reg [BH_BITS-1:0] branchHist;
 
+integer i;
 always @(posedge clk_i) begin
-        if (!E_stall_i && DE_isBranch_o) begin
+        if (reset_i) begin
+                for (i = 0; i < BHT_SIZE; i = i+1)
+                        BHT[i] <= 0;
+                branchHist <= 0;
+        end else if (!E_stall_i && DE_isBranch_o) begin
                 branchHist <= {E_takeBranch_i, branchHist[BH_BITS-1:1]};
                 BHT[DE_bhtIndex_o] <=
                         {E_takeBranch_i, BHT[DE_bhtIndex_o]} == 3'b000 ? 2'b00 :
@@ -428,7 +433,7 @@ always @(posedge clk_i) begin
                 DE_predictRA_o <= RAS_0;
         end
 
-        if ((E_flush_i || FD_nop_i) && !M_busy_i) begin
+        if (reset_i || ((E_flush_i || FD_nop_i) && !M_busy_i)) begin
                 DE_instr_o    <= NOP;
                 DE_nop_o      <= 1'b1;
                 DE_isLUI_o    <= 1'b0;

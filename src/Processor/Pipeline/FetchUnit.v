@@ -63,6 +63,8 @@ always @(posedge clk_i) begin
                 FD_PC_o <= rvec_i;
                 FD_nop_o <= 1'b1;
                 FD_isRV32C_o <= 1'b0;
+                F_isSplitInstr <= 1'b0;
+                FD_isSplitInstr <= 1'b0;
         end else if (!F_stall_i && ICacheValid_i) begin
                 F_isSplitInstr <= ICacheSplit;
                 FD_isSplitInstr <= F_isSplitInstr;

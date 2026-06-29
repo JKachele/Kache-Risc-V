@@ -10,7 +10,6 @@
 module SOC (
         input  wire CLK,
         input  wire RESET,
-        input  wire [31:0] rvec,
 
         output wire [3:0] LEDS,
         input  wire RXD,
@@ -45,6 +44,8 @@ wire clk;
 wire reset;
 wire clk0;
 wire clk1;
+
+wire [31:0] rvec = 32'h7000_0000;
 
 // Cache-Memory Interface
 wire         IC_mRden;
@@ -271,9 +272,11 @@ Clockworks #(
 `else
 ClockworksA7 cw (
         .clkref_i(CLK),
+        .RESET(RESET),
         .clk0_o(clk0),
         .clk1_o(clk1),
-        .clk2_o(clk)
+        .clk2_o(clk),
+        .resetn(reset)
 );
 `endif
 

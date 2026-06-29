@@ -57,7 +57,8 @@ wire         IO_Wr;
 
 assign DMemValidReady_o = ~((M_isSPI_r & SPI_RBusy) | (M_isSDRAM_r & SDRamRBusy));
 
-assign IMemValid_o = ~((M_isSPI_i & SPI_IBusy) | (M_isSDRAM_i & SDRamIBusy) | SPI_Busy);
+// assign IMemValid_o = ~((M_isSPI_i & SPI_IBusy) | (M_isSDRAM_i & SDRamIBusy) | SPI_Busy);
+assign IMemValid_o = 1'b1;
 
 /*-------------------------------- Memory Map --------------------------------*/
 // Use memory map to determine destination
@@ -81,8 +82,8 @@ assign DMemRData_o = M_isSDRAM_r ? SDRamRData :
 // assign DMemRData_o = BRamRData;
 
 // assign IMemData_o  = M_isSDRAM_i ? SDRamInstr : BRamInstr;
-// assign IMemData_o  = BRamInstr;
-assign IMemData_o  = SPI_Instr;
+assign IMemData_o  = BRamInstr;
+// assign IMemData_o  = SPI_Instr;
 
 // Writes
 assign SDRamWMask = {8{M_isSDRAM_w}} & DMemWMask_i;
@@ -116,7 +117,8 @@ end
 
 // wire [15:0] wordAddr = DMrmAddr_i[20:5];
 always @(posedge clk_i) begin
-        BRAM[DMemAddr_i[18:5]] <= DMemWData_i;
+        if (|BRamWMask)
+                BRAM[DMemAddr_i[18:5]] <= DMemWData_i;
         // if (BRamWMask[0]) BRAM[wordAddr][ 7:0 ] <= DMemWData_i[ 7:0 ];
         // if (BRamWMask[1]) BRAM[wordAddr][15:8 ] <= DMemWData_i[15:8 ];
         // if (BRamWMask[2]) BRAM[wordAddr][23:16] <= DMemWData_i[23:16];
@@ -135,9 +137,9 @@ always @(posedge clk_i) begin
         if (DMemRStrb_i) begin
                 BRamRData <= BRAM[DMemAddr_i[18:5]];
         end
-        // if (IMemStrb_i) begin
-        //         BRamInstr <= BRamInstr_w;
-        // end
+        if (IMemStrb_i) begin
+                BRamInstr <= BRAM[IMemAddr_i[18:5]];
+        end
 end
 
 
@@ -150,20 +152,20 @@ assign SPI_RData = {SPI_Data[7:0],   SPI_Data[15:8],  SPI_Data[23:16], SPI_Data[
 // assign SPI_Instr = SPI_Data[255:192];
 assign SPI_Instr = SPI_Data;
 
-dspiFlash flash(
-        .clk_i(clk_i),
-        .reset_i(reset_i),
-        .rstrb_i(IMemStrb_i),
-        .raddr_i(IMemAddr_i[23:0]),
-        .numBytes_i(32),
-        .rdata_o(SPI_Data),
-        .rbusy_o(SPI_Busy),
-        .spiClk_o(spiClk_o),
-        .spiCs_o(spiCs_o),
-        .spiMosi_io(spiMosi_io),
-        .spiMiso_i(spiMiso_i)
-        // .spiData_io(spiData_io)
-);
+// dspiFlash flash(
+//         .clk_i(clk_i),
+//         .reset_i(reset_i),
+//         .rstrb_i(IMemStrb_i),
+//         .raddr_i(IMemAddr_i[23:0]),
+//         .numBytes_i(32),
+//         .rdata_o(SPI_Data),
+//         .rbusy_o(SPI_Busy),
+//         .spiClk_o(spiClk_o),
+//         .spiCs_o(spiCs_o),
+//         .spiMosi_io(spiMosi_io),
+//         .spiMiso_i(spiMiso_i)
+//         // .spiData_io(spiData_io)
+// );
 
 // dspiFlash flash(
 //         .clk_i(clk_i),

@@ -40,10 +40,13 @@ endmodule
 
 module ClockworksA7 (
         input  wire clkref_i,
+        input  wire RESET,
         output wire clk0_o,
         output wire clk1_o,
-        output wire clk2_o
+        output wire clk2_o,
+        output wire resetn
 );
+
 
 wire clkref_buffered_w;
 wire clkfbout_w;
@@ -54,6 +57,7 @@ wire pll_clkout1_w;
 wire pll_clkout1_buffered_w;
 wire pll_clkout2_w;
 wire pll_clkout2_buffered_w;
+wire locked;
 
 // Input buffering
 BUFG BUFG_IN (
@@ -94,7 +98,7 @@ PLLE2_BASE #(
         .CLKOUT3(),
         .CLKOUT4(),
         .CLKOUT5(),
-        .LOCKED(),
+        .LOCKED(locked),
         .PWRDWN(1'b0),
         .RST(1'b0),
         .CLKIN1(clkref_buffered_w),
@@ -105,6 +109,13 @@ BUFH u_clkfb_buf (
         .I(clkfbout_w),
         .O(clkfbout_buffered_w)
 );
+
+
+//-----------------------------------------------------------------
+// Reset
+//-----------------------------------------------------------------
+assign resetn = ~RESET | ~locked;
+
 
 //-----------------------------------------------------------------
 // CLK_OUT0
