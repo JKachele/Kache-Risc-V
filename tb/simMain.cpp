@@ -21,7 +21,8 @@
 #define F_pc                    SOC__DOT__CPU__DOT__fetch__DOT__PC
 #define ICacheHit               SOC__DOT__icache__DOT__C_hit
 #define ICacheSplit             SOC__DOT__CPU__DOT__fetch__DOT__ICacheSplit
-#define DCacheState             SOC__DOT__dcache__DOT__C_curState
+// #define DCacheState             SOC__DOT__dcache__DOT__C_curState
+#define DCacheState             SOC__DOT__datamem__DOT__dcache__DOT__C_curState
 
 #define Reg_A0                  SOC__DOT__CPU__DOT__registers__DOT__reg_10
 #define Reg_A1                  SOC__DOT__CPU__DOT__registers__DOT__reg_11

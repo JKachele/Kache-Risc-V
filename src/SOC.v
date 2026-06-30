@@ -144,7 +144,7 @@ ICache icache(
         .mValid_i(IC_mValid)
 );
 
-DCache dcache(
+DataMem datamem(
         .clk_i(clk),
         .reset_i(reset),
         .addr_i(DCacheAddr),
@@ -158,7 +158,9 @@ DCache dcache(
         .mRden_o(DC_mRden),
         .mWren_o(DC_mWren),
         .mRData_i(DC_mRData),
-        .mValidReady_i(DC_mValidReady)
+        .mValidReady_i(DC_mValidReady),
+        .leds_o(LEDS),
+        .txd_o(TXD)
 );
 
 Memory mem(
@@ -200,8 +202,8 @@ Memory mem(
         // .m_axi_rid_i(axi_rid),
         // .m_axi_rvalid_i(axi_rvalid),
         // .m_axi_rready_o(axi_rready),
-        .leds_o(LEDS),
-        .txd_o(TXD),
+        // .leds_o(LEDS),
+        // .txd_o(TXD),
         .spiClk_o(qspi_sck),
         .spiCs_o(qspi_cs),
         .spiMosi_io(qspi_mosi),

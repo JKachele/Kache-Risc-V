@@ -39,9 +39,11 @@ public:
         }
 
         virtual void reset(void) {
+                this->tick();
                 m_core->RESET = 1;
                 this->tick();
                 m_core->RESET = 0;
+                this->tick();
         }
 
         virtual void tickUp(void) {

@@ -186,6 +186,7 @@ always @(posedge clk_i) begin
                         valid2[i] <= 0;
                         valid3[i] <= 0;
                 end
+                C_curState <= IDLE;
         end else begin
                 case (C_curState)
                         IDLE: begin

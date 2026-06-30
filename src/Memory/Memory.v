@@ -25,8 +25,8 @@ module Memory (
         output wire         DMemValidReady_o,
 
         // IO
-        output wire [3:0]  leds_o,
-        output wire        txd_o,
+        // output wire [3:0]  leds_o,
+        // output wire        txd_o,
         // SPI Flash
         output wire        spiClk_o,
         output wire        spiCs_o,
@@ -185,17 +185,17 @@ assign SPI_Instr = SPI_Data;
 
 
 /*-------------------------------- IO --------------------------------*/
-IO io(
-        .clk_i(clk_i),
-        .reset_i(reset_i),
-        .IO_memRAddr_i(DMemAddr_i),
-        .IO_memRData_o(IO_RData),
-        .IO_memWAddr_i(DMemAddr_i),
-        .IO_memWData_i(DMemWData_i[31:0]),
-        .IO_memWr_i(IO_Wr),
-        .leds_o(leds_o),
-        .txd_o(txd_o)
-);
+// IO io(
+//         .clk_i(clk_i),
+//         .reset_i(reset_i),
+//         .IO_memRAddr_i(DMemAddr_i),
+//         .IO_memRData_o(IO_RData),
+//         .IO_memWAddr_i(DMemAddr_i),
+//         .IO_memWData_i(DMemWData_i[31:0]),
+//         .IO_memWr_i(IO_Wr),
+//         .leds_o(leds_o),
+//         .txd_o(txd_o)
+// );
 
 endmodule
 /* verilator lint_on WIDTH */

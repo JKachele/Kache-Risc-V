@@ -331,14 +331,15 @@ always @(posedge clk_i) begin
                 EF_PCcorrection_o <= E_PCcorrection;
         end
 
-        if (M_flush_i) begin
-                EM_nop_o       <= 1'b1;
-                EM_isLoad_o    <= 1'b0;
-                EM_isStore_o   <= 1'b0;
-                EM_isCSR_o     <= 1'b0;
-                EM_isAMO_o     <= 1'b0;
-                EF_correctPC_o <= 1'b0;
-                EM_wbEnable_o  <= 1'b0;
+        if (reset_i | M_flush_i) begin
+                EM_nop_o        <= 1'b1;
+                EM_isLoad_o     <= 1'b0;
+                EM_isStore_o    <= 1'b0;
+                EM_isCSR_o      <= 1'b0;
+                EM_isAMO_o      <= 1'b0;
+                EF_correctPC_o  <= 1'b0;
+                EM_wbEnable_o   <= 1'b0;
+                EM_isCSRWrite_o <= 1'b0;
         end
 end
 
