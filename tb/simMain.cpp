@@ -21,7 +21,6 @@
 #define F_pc                    SOC__DOT__CPU__DOT__fetch__DOT__PC
 #define ICacheHit               SOC__DOT__icache__DOT__C_hit
 #define ICacheSplit             SOC__DOT__CPU__DOT__fetch__DOT__ICacheSplit
-// #define DCacheState             SOC__DOT__dcache__DOT__C_curState
 #define DCacheState             SOC__DOT__datamem__DOT__dcache__DOT__C_curState
 
 #define Reg_A0                  SOC__DOT__CPU__DOT__registers__DOT__reg_10
@@ -142,14 +141,6 @@ public:
                 IData instr = rootp->DE_instr;
                 if (pc != prevDE_PC && !riscV_isNOP(instr)) {
                         fprintf(programLog, "%08x: %08x\n", pc, instr);
-                        // fprintf(programLog, "A0: %08x ", rootp->Reg_A0);
-                        // fprintf(programLog, "FA0: %08lx ", rootp->Reg_FA0 & 0x00000000FFFFFFFF);
-                        // fprintf(programLog, "FA1: %08lx ", rootp->Reg_FA1 & 0x00000000FFFFFFFF);
-                        // fprintf(programLog, "FA2: %08lx ", rootp->Reg_FA2 & 0x00000000FFFFFFFF);
-                        // fprintf(programLog, "FA3: %08lx ", rootp->Reg_FA3 & 0x00000000FFFFFFFF);
-                        // fprintf(programLog, "FA4: %08lx ", rootp->Reg_FA4 & 0x00000000FFFFFFFF);
-                        // fprintf(programLog, "FA5: %08lx ", rootp->Reg_FA5 & 0x00000000FFFFFFFF);
-                        // fprintf(programLog, "FS0: %08lx\n", rootp->Reg_FS0 & 0x00000000FFFFFFFF);
                 }
                 prevDE_PC = pc;
         }
@@ -231,7 +222,6 @@ int main(int argc, char **argv) {
         tb->programLog = fopen("Program.txt", "w");
 
         tb->m_flash->load("../bin/firmware.bin");
-        // tb->m_flash->print(0, 16);
 
 
         UARTSIM *uart;
@@ -246,7 +236,6 @@ int main(int argc, char **argv) {
 
         // tb->opentrace("trace.vcd");
 
-        // tb->m_core->rvec = 0x70000000;
         tb->reset();
 
         int rxPrev = 1;

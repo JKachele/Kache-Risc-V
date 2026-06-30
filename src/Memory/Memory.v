@@ -24,9 +24,6 @@ module Memory (
         output wire [255:0] DMemRData_o,
         output wire         DMemValidReady_o,
 
-        // IO
-        // output wire [3:0]  leds_o,
-        // output wire        txd_o,
         // SPI Flash
         output wire        spiClk_o,
         output wire        spiCs_o,
@@ -52,8 +49,6 @@ wire         SPI_IBusy;
 reg  [255:0] BRamRData;
 reg  [255:0] BRamInstr;
 wire [7:0]   BRamWMask;
-wire [31:0]  IO_RData;
-wire         IO_Wr;
 
 assign DMemValidReady_o = ~((M_isSPI_r & SPI_RBusy) | (M_isSDRAM_r & SDRamRBusy));
 
@@ -71,14 +66,11 @@ wire M_isSPI_i   = (IMemAddr[31:28] == 4'b0001);
 wire M_isBRAM_r  = (DMemAddr[31:28] == 4'b0111);
 wire M_isBRAM_i  = (IMemAddr[31:28]  == 4'b0111);
 wire M_isBRAM_w  = (DMemAddr_i[31:28] == 4'b0111);
-wire M_isIO_r    = (DMemAddr[31]);
-wire M_isIO_w    = (DMemAddr_i[31]);
 
 // Use memory map to determine destination
 // Reads
 assign DMemRData_o = M_isSDRAM_r ? SDRamRData :
-                    (M_isSPI_r   ? SPI_RData  :
-                    (M_isBRAM_r  ? BRamRData  : {4{IO_RData}}));
+                    (M_isSPI_r   ? SPI_RData  : BRamRData);
 // assign DMemRData_o = BRamRData;
 
 // assign IMemData_o  = M_isSDRAM_i ? SDRamInstr : BRamInstr;
@@ -88,7 +80,6 @@ assign IMemData_o  = BRamInstr;
 // Writes
 assign SDRamWMask = {8{M_isSDRAM_w}} & DMemWMask_i;
 assign BRamWMask  = {8{M_isBRAM_w}} & DMemWMask_i;
-assign IO_Wr = (M_isIO_w) & (|DMemWMask_i);
 
 always @(posedge clk_i) begin
         if (reset_i) begin
@@ -109,24 +100,9 @@ initial begin
         $readmemh("../bin/BRAM.hex",BRAM);
 end
 
-// Instruction ROM: Can be alligned to 16 bits or 32 bits
-// wire [63:0] BRamInstr_w = BRAM[IMemAddr_i[18:3]];
-
-// Data RAM: All alligned to 64 bits
-// wire [255:0] BRamRData_w = BRAM[DMemAddr_i[18:5]];
-
-// wire [15:0] wordAddr = DMrmAddr_i[20:5];
 always @(posedge clk_i) begin
         if (|BRamWMask)
                 BRAM[DMemAddr_i[18:5]] <= DMemWData_i;
-        // if (BRamWMask[0]) BRAM[wordAddr][ 7:0 ] <= DMemWData_i[ 7:0 ];
-        // if (BRamWMask[1]) BRAM[wordAddr][15:8 ] <= DMemWData_i[15:8 ];
-        // if (BRamWMask[2]) BRAM[wordAddr][23:16] <= DMemWData_i[23:16];
-        // if (BRamWMask[3]) BRAM[wordAddr][31:24] <= DMemWData_i[31:24];
-        // if (BRamWMask[4]) BRAM[wordAddr][39:32] <= DMemWData_i[39:32];
-        // if (BRamWMask[5]) BRAM[wordAddr][47:40] <= DMemWData_i[47:40];
-        // if (BRamWMask[6]) BRAM[wordAddr][55:48] <= DMemWData_i[55:48];
-        // if (BRamWMask[7]) BRAM[wordAddr][63:56] <= DMemWData_i[63:56];
 end
 
 always @(posedge clk_i) begin
@@ -180,21 +156,6 @@ assign SPI_Instr = SPI_Data;
 //         .spiMosi_io(spiMosi_io),
 //         .spiMiso_i(spiMiso_i)
 //         // .spiData_io(spiData_io)
-// );
-
-
-
-/*-------------------------------- IO --------------------------------*/
-// IO io(
-//         .clk_i(clk_i),
-//         .reset_i(reset_i),
-//         .IO_memRAddr_i(DMemAddr_i),
-//         .IO_memRData_o(IO_RData),
-//         .IO_memWAddr_i(DMemAddr_i),
-//         .IO_memWData_i(DMemWData_i[31:0]),
-//         .IO_memWr_i(IO_Wr),
-//         .leds_o(leds_o),
-//         .txd_o(txd_o)
 // );
 
 endmodule

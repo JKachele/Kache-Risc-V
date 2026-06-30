@@ -6,8 +6,7 @@
  *Created-------Monday Jun 01, 2026 16:33:03 UTC
  ************************************************/
 
-module DCache #(
-)(
+module DCache (
         input  wire         clk_i,
         input  wire         reset_i,
 
@@ -83,33 +82,26 @@ wire         C_hit0 = (valid0[index] && (tag0[index] == tag));
 wire         C_hit1 = (valid1[index] && (tag1[index] == tag));
 wire         C_hit2 = (valid2[index] && (tag2[index] == tag));
 wire         C_hit3 = (valid3[index] && (tag3[index] == tag));
-wire         C_hit  = (C_hit0 | C_hit1 | C_hit2 | C_hit3) & ~uncacheable;
-reg          C_uncacheable;
-reg  [255:0] C_uncacheableData;
+wire         C_hit  = (C_hit0 | C_hit1 | C_hit2 | C_hit3);
 reg  [1:0]   C_dataWay;
 reg  [4:0]   C_offset;
-wire [255:0] C_data = C_uncacheable ? C_uncacheableData : (C_dataWay[1] ?
+wire [255:0] C_data = C_dataWay[1] ?
                       (C_dataWay[0] ? m3_rdata : m2_rdata):
-                      (C_dataWay[0] ? m1_rdata : m0_rdata));
+                      (C_dataWay[0] ? m1_rdata : m0_rdata);
 wire [63:0]  C_dataOffset = C_offset[4] ?
                       (C_offset[3] ? C_data[255:192] : C_data[191:128]):
                       (C_offset[3] ? C_data[127:64]  : C_data[63:0]   );
 /*verilator public_off*/
 
-assign validReady_o = (C_curState == IDLE & (C_hit || C_mmioReady)) | (~rden_i & ~|wren_i);
+assign validReady_o = (C_curState == IDLE & (C_hit)) | (~rden_i & ~|wren_i);
 assign rdata_o      = C_dataOffset;
 assign mRden_o      = C_mRden;
 assign mWren_o      = C_mWren;
 assign mAddr_o      = C_mAddr;
 assign mWData_o     = C_data;
 
-// Handle memory-mapped I/O by marking address range uncacheable (8000_0000-FFFF_FFFF)
-wire        uncacheable = addr_i[31]; // && addr_i[30:28] != 3'b111;
-reg         C_mmioReady = 1'b0;
-reg [255:0] C_mmioData;
-
 /*-------------------------------- Cache Memory Control --------------------------------*/
-wire         C_missRead = (C_curState == MISS_READ) & ~C_mRden & mValidReady_i & ~uncacheable;
+wire         C_missRead = (C_curState == MISS_READ) & ~C_mRden & mValidReady_i;
 
 reg          m0_rden;
 reg   [7:0]  m0_wren;
@@ -142,7 +134,7 @@ always @(*) begin
         m3_rden  = 1'b0;
         m3_wren  = 8'b0;
         if (C_curState == IDLE) begin
-                if ((~rden_i & ~|wren_i) | uncacheable) begin
+                if (~rden_i & ~|wren_i) begin
                         // Do nothing
                 end else if (C_hit0) begin
                         if (rden_i)  m0_rden = 1'b1;
@@ -193,31 +185,10 @@ always @(posedge clk_i) begin
                                 // Reset memory read/write enable
                                 C_mRden <= 1'b0;
                                 C_mWren <= 8'b0;
-                                C_uncacheable <= 1'b0;
 
                                 if (~rden_i & ~|wren_i) begin
                                         // Do nothing
                                         C_curState <= IDLE;
-                                end
-                                // Pass uncacheable to memory
-                                else if (uncacheable) begin
-                                        if (C_mmioReady) begin
-                                                C_uncacheableData <= C_mmioData;
-                                                C_uncacheable <= 1'b1;
-                                                C_mmioReady <= 1'b0;
-                                        end
-                                        else if (rden_i) begin
-                                                C_curState <= MISS_READ;
-                                                C_uncacheable <= 1'b1;
-                                                C_mAddr <= addr_i;
-                                                C_mRden <= 1'b1;
-                                        end else if (|wren_i) begin
-                                                C_curState <= MISS_WRITE;
-                                                C_uncacheable <= 1'b1;
-                                                C_mWren <= wren_i;
-                                                C_mAddr <= addr_i;
-                                                C_uncacheableData <= {4{wdata_i}};
-                                        end
                                 end
                                 // Check Way 0
                                 else if (C_hit0) begin
@@ -365,14 +336,9 @@ always @(posedge clk_i) begin
                                         // Turn off for 1-cycle strobe
                                         C_mWren <= 8'b0;
                                 end else if (mValidReady_i) begin
-                                        if (uncacheable) begin
-                                                C_curState <= IDLE;
-                                                C_mmioReady <= 1'b1;
-                                        end else begin
-                                                C_curState <= MISS_READ;
-                                                C_mAddr <= {tag, index, 5'b0};
-                                                C_mRden <= 1'b1;
-                                        end
+                                        C_curState <= MISS_READ;
+                                        C_mAddr <= {tag, index, 5'b0};
+                                        C_mRden <= 1'b1;
                                 end
                         end
 
@@ -381,10 +347,6 @@ always @(posedge clk_i) begin
                                         // Turn off for 1-cycle strobe
                                         C_mRden <= 1'b0;
                                 end else if (mValidReady_i) begin
-                                        if (uncacheable) begin
-                                                C_mmioReady <= 1'b1;
-                                                C_mmioData <= mRData_i;
-                                        end
                                         C_curState <= IDLE;
                                 end
                         end

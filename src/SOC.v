@@ -202,8 +202,6 @@ Memory mem(
         // .m_axi_rid_i(axi_rid),
         // .m_axi_rvalid_i(axi_rvalid),
         // .m_axi_rready_o(axi_rready),
-        // .leds_o(LEDS),
-        // .txd_o(TXD),
         .spiClk_o(qspi_sck),
         .spiCs_o(qspi_cs),
         .spiMosi_io(qspi_mosi),

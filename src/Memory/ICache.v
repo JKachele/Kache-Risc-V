@@ -6,8 +6,7 @@
  *Created-------Wednesday May 13, 2026 20:44:47 UTC
  ************************************************/
 
-module ICache #(
-)(
+module ICache (
         input  wire         clk_i,
         input  wire         reset_i,
 

@@ -55,16 +55,11 @@ localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h0000D9};
                 .o_busy(uartBusy)
         );
 `else
-        // reg [15:0] count;
-        // initial count = 16'b0;
         assign uartBusy = 1'b0;
         always @(posedge clk_i) begin
                 if(uartValid) begin
                         $write("%c", IO_memWData_i[7:0]);
                         $fflush(32'h8000_0001);
-                //         count <= 16'hFFFF;
-                // end else if (count != 0) begin
-                //         count <= count - 1;
                 end
         end
 `endif

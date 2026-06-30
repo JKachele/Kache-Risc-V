@@ -81,12 +81,6 @@ static inline void graphics_terminate() {
 
 // Replace with your own code.
 void graphics_set_pixel(int x, int y, float r, float g, float b) {
-        r = max(0.0f, min(1.0f, r));
-        g = max(0.0f, min(1.0f, g));
-        b = max(0.0f, min(1.0f, b));
-        uint8_t R = (uint8_t)(255.0f * r);
-        uint8_t G = (uint8_t)(255.0f * g);
-        uint8_t B = (uint8_t)(255.0f * b);
         // graphics output deactivated for bench run
         if(bench_run) {
                 if(y & 1) {
@@ -97,6 +91,12 @@ void graphics_set_pixel(int x, int y, float r, float g, float b) {
                 }
                 return;
         } 
+        r = max(0.0f, min(1.0f, r));
+        g = max(0.0f, min(1.0f, g));
+        b = max(0.0f, min(1.0f, b));
+        uint8_t R = (uint8_t)(255.0f * r);
+        uint8_t G = (uint8_t)(255.0f * g);
+        uint8_t B = (uint8_t)(255.0f * b);
 #ifdef graphics_double_lines
         static uint8_t prev_R=0;
         static uint8_t prev_G=0;
@@ -163,6 +163,7 @@ static uint64_t cycles_start;
 // Begins statistics collection for current frame.
 // Leave emtpy if not needed.
 static inline void stats_begin_frame() {
+        graphics_init();
         instret_start = rdinstret();
         cycles_start  = rdcycle();
 }
@@ -171,12 +172,12 @@ static inline void stats_begin_frame() {
 // and displays result.
 // Leave emtpy if not needed.
 static inline void stats_end_frame() {
-        graphics_terminate();
         uint64_t instret = rdinstret() - instret_start;
         uint64_t cycles = rdcycle()    - cycles_start ;
         uint64_t kCPI       = cycles*1000/instret;
         uint64_t pixels     = graphics_width * graphics_height;
         uint64_t kRAYSTONES = (pixels*1000000000)/cycles;
+        graphics_terminate();
         printf(
                         "\n%dx%d      %s     ",
                         graphics_width,graphics_height,
@@ -507,7 +508,6 @@ void init_scene() {
 int main() {
         init_scene();
 
-        graphics_init();
         bench_run = 1;
         graphics_width  = 40;
         graphics_height = 20;
@@ -518,7 +518,6 @@ int main() {
         graphics_width = 60;
         graphics_height = 30;
         render(spheres, nb_spheres, lights, nb_lights);
-        graphics_terminate();
 
         return 0;
 }
