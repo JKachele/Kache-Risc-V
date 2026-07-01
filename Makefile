@@ -84,10 +84,10 @@ sim: $(BRAM)
 $(BIN_DIR):
 	mkdir -p $@
 
-lint: $(BIN_DIR) $(ROM) $(RAM) 
+lint: $(BRAM)
 	cd tcl; vivado -mode batch -nolog -nojournal -source lint.tcl -tclargs $(VSRC)
 
-build: $(BIN_DIR) $(ROM) $(RAM) 
+build: $(BRAM)
 	cd tcl; vivado -mode batch -nolog -nojournal -source build.tcl -tclargs $(VSRC)
 
 upload:

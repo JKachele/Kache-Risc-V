@@ -59,8 +59,8 @@ reg                 valid1 [0:NSETS-1];
 
 reg                 lru    [0:NSETS-1];
 
-reg  [4:0]   C_offset;
-reg          C_dataWay;
+reg  [4:0]   C_offset  = 5'b0;
+reg          C_dataWay = 1'b0;
 reg  [255:0] C_data0;
 reg  [255:0] C_data1;
 wire [255:0] C_data = C_dataWay ? C_data1 : C_data0;
@@ -177,6 +177,14 @@ always @(posedge clk_i) begin
 
                         default: C_curState = IDLE;
                 endcase
+        end
+end
+
+initial begin
+        C_curState = IDLE;
+        for (i = 0; i < NSETS; i = i+1) begin
+                valid0[i] = 0;
+                valid1[i] = 0;
         end
 end
 

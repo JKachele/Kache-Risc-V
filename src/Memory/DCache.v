@@ -74,17 +74,17 @@ reg lru0   [0:NSETS-1]; // Ways 0 and 1
 reg lru1   [0:NSETS-1]; // Ways 2 and 3
 
 /*verilator public_flat_rw_on*/
-reg         C_mRden  = 1'b0;
-reg  [7:0]  C_mWren  = 8'b0;
-reg  [31:0] C_mAddr;
+reg         C_mRden = 1'b0;
+reg  [7:0]  C_mWren = 8'b0;
+reg  [31:0] C_mAddr = 32'b0;
 
 wire         C_hit0 = (valid0[index] && (tag0[index] == tag));
 wire         C_hit1 = (valid1[index] && (tag1[index] == tag));
 wire         C_hit2 = (valid2[index] && (tag2[index] == tag));
 wire         C_hit3 = (valid3[index] && (tag3[index] == tag));
 wire         C_hit  = (C_hit0 | C_hit1 | C_hit2 | C_hit3);
-reg  [1:0]   C_dataWay;
-reg  [4:0]   C_offset;
+reg  [1:0]   C_dataWay = 2'b0;
+reg  [4:0]   C_offset  = 5'b0;
 wire [255:0] C_data = C_dataWay[1] ?
                       (C_dataWay[0] ? m3_rdata : m2_rdata):
                       (C_dataWay[0] ? m1_rdata : m0_rdata);
@@ -353,6 +353,16 @@ always @(posedge clk_i) begin
 
                         default: C_curState = IDLE;
                 endcase
+        end
+end
+
+initial begin
+        C_curState = IDLE;
+        for (i = 0; i < NSETS; i = i+1) begin
+                valid0[i] = 0;
+                valid1[i] = 0;
+                valid2[i] = 0;
+                valid3[i] = 0;
         end
 end
 

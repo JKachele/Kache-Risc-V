@@ -515,8 +515,8 @@ int main() {
         render(spheres, nb_spheres, lights, nb_lights);
 
         bench_run = 0;
-        graphics_width = 60;
-        graphics_height = 30;
+        graphics_width = 120;
+        graphics_height = 60;
         render(spheres, nb_spheres, lights, nb_lights);
 
         return 0;

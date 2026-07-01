@@ -244,7 +244,7 @@ wire [5:0] D_rs3Id = {1'b1     , D_raw_rs3Id};
 /*----------------BRANCH PREDICTION---------------*/
 reg [1:0] BHT[BHT_SIZE-1:0]; // Branch History Table
 
-reg [BH_BITS-1:0] branchHist;
+reg [BH_BITS-1:0] branchHist = 0;
 
 integer i;
 always @(posedge clk_i) begin
@@ -456,6 +456,32 @@ always @(posedge clk_i) begin
                 DE_isDIV_o    <= 1'b0;
                 DE_wbEnable_o <= 1'b0;
         end
+end
+
+initial begin
+        for (i = 0; i < BHT_SIZE; i = i+1)
+                BHT[i] = 0;
+        DE_instr_o    = NOP;
+        DE_nop_o      = 1'b1;
+        DE_isLUI_o    = 1'b0;
+        DE_isAUIPC_o  = 1'b0;
+        DE_isJAL_o    = 1'b0;
+        DE_isJALR_o   = 1'b0;
+        DE_isBranch_o = 1'b0;
+        DE_isLoad_o   = 1'b0;
+        DE_isStore_o  = 1'b0;
+        DE_isALUI_o   = 1'b0;
+        DE_isALUR_o   = 1'b0;
+        DE_isFENCE_o  = 1'b0;
+        DE_isSYS_o    = 1'b0;
+        DE_isEBREAK_o = 1'b0;
+        DE_isCSR_o    = 1'b0;
+        DE_isAMO_o    = 1'b0;
+        DE_isFPU_o    = 1'b0;
+        DE_isRV32M_o  = 1'b0;
+        DE_isMUL_o    = 1'b0;
+        DE_isDIV_o    = 1'b0;
+        DE_wbEnable_o = 1'b0;
 end
 
 endmodule

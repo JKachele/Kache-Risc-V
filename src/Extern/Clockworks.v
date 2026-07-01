@@ -89,7 +89,7 @@ PLLE2_BASE #(
 
         .DIVCLK_DIVIDE(1),            // Master division value (1-56)
         .REF_JITTER1(0.0),            // Ref. input jitter in UI (0.000-0.999)
-        .STARTUP_WAIT("TRUE")         // Delay DONE until PLL Locks ("TRUE"/"FALSE")
+        .STARTUP_WAIT("FALSE")         // Delay DONE until PLL Locks ("TRUE"/"FALSE")
 ) u_pll (
         .CLKFBOUT(clkfbout_w),
         .CLKOUT0(pll_clkout0_w),
