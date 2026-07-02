@@ -176,7 +176,8 @@ assign DMemWMask_o = {8{M_storeEnable}} & M_storeMask;
 
 /*----------------------LOAD----------------------*/
 
-assign M_busy_o = ~DMemValidReady_i;
+// Only stall memory unit if cache miss while writing.
+assign M_busy_o = ~DMemValidReady_i & ~EM_isLoad_i;
 
 // Sign expansion
 // Based on funct3[2]: 0->sign expand, 1->unsigned
@@ -213,7 +214,7 @@ wire [63:0] M_wbData =
 
 reg MW_nop;
 always @(posedge clk_i) begin
-        if (!M_busy_o) begin
+        if (~M_busy_o) begin
                 MW_nop <= EM_nop_i;
 
                 MW_rdId_o <= EM_rdId_i;

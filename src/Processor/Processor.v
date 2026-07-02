@@ -357,6 +357,7 @@ ExecuteUnit execute(
         .csrFRM_i(csrFRM),
         .DMemRStrb_o(DMemRStrb_o),
         .DMemRAddr_o(DMemRAddr),
+        .DMemValidReady_i(DMemValidReady_i),
         .MW_wbEnable_i(MW_wbEnable),
         .MW_rdId_i(MW_rdId),
         .MW_wbData_i(MW_wbData),

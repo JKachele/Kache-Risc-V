@@ -31,7 +31,7 @@ assign E_stall_o = M_busy_i | aluBusy_i;
 
 assign D_flush_o = E_correctPC_i;
 assign E_flush_o = (E_correctPC_i | csrHazard | dataHazard_i | F_busy_i) & ~M_busy_i & ~aluBusy_i;
-assign M_flush_o = aluBusy_i;
+assign M_flush_o = aluBusy_i & ~M_busy_i;
 
 endmodule
 

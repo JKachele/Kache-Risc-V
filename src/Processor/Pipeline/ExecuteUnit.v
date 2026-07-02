@@ -35,6 +35,7 @@ module ExecuteUnit (
         // Memory Interface
         output wire        DMemRStrb_o,
         output wire [31:0] DMemRAddr_o,
+        input  wire        DMemValidReady_i,
         // Register Forwarding
         input  wire        MW_wbEnable_i,
         input  wire [5:0]  MW_rdId_i,
@@ -270,7 +271,7 @@ FPU fpu(
 
 wire [63:0] E_aluOut = DE_isFPU_i ? E_fpuOut : {32'hFFFFFFFF, E_aluOut_32};
 
-assign aluBusy_o = EE_divBusy | (DE_isDIV_i & !EE_divFinished) | E_fpuBusy;
+assign aluBusy_o = EE_divBusy | (DE_isDIV_i & !EE_divFinished) | E_fpuBusy | ~DMemValidReady_i;
 
 /*------------------JUMP/BRANCH-------------------*/
 assign E_takeBranch_o =
