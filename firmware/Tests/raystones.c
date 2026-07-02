@@ -515,8 +515,13 @@ int main() {
         render(spheres, nb_spheres, lights, nb_lights);
 
         bench_run = 0;
+#ifdef BENCH
+        graphics_width = 60;
+        graphics_height = 30;
+#else
         graphics_width = 120;
         graphics_height = 60;
+#endif
         render(spheres, nb_spheres, lights, nb_lights);
 
         return 0;

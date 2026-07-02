@@ -94,7 +94,7 @@ end
 
 
 /*-------------------------------- Block Ram --------------------------------*/
-reg [255:0] BRAM [0:4095];
+reg [255:0] BRAM [0:32767];
 
 initial begin
         $readmemh("../bin/BRAM.hex",BRAM);
@@ -123,10 +123,11 @@ end
 wire [255:0] SPI_Data;
 wire         SPI_Busy;
 
-assign SPI_RData = {SPI_Data[7:0],   SPI_Data[15:8],  SPI_Data[23:16], SPI_Data[31:24],
-                    SPI_Data[39:32], SPI_Data[47:40], SPI_Data[55:48], SPI_Data[63:56]};
+// assign SPI_RData = {SPI_Data[7:0],   SPI_Data[15:8],  SPI_Data[23:16], SPI_Data[31:24],
+//                     SPI_Data[39:32], SPI_Data[47:40], SPI_Data[55:48], SPI_Data[63:56]};
 // assign SPI_Instr = SPI_Data[255:192];
 assign SPI_Instr = SPI_Data;
+assign SPI_RData = SPI_Data;
 
 // dspiFlash flash(
 //         .clk_i(clk_i),
@@ -143,20 +144,20 @@ assign SPI_Instr = SPI_Data;
 //         // .spiData_io(spiData_io)
 // );
 
-// dspiFlash flash(
-//         .clk_i(clk_i),
-//         .reset_i(reset_i),
-//         .rstrb_i(((DMemRAddr_i[31:28] == 4'b0001) || M_isSPI_r) & DMemRStrb_i),
-//         .raddr_i(DMemRAddr_i[23:0]),
-//         .numBytes_i(8),
-//         .rdata_o(SPI_RawData),
-//         .rbusy_o(SPI_RBusy),
-//         .spiClk_o(spiClk_o),
-//         .spiCs_o(spiCs_o),
-//         .spiMosi_io(spiMosi_io),
-//         .spiMiso_i(spiMiso_i)
-//         // .spiData_io(spiData_io)
-// );
+dspiFlash flash(
+        .clk_i(clk_i),
+        .reset_i(reset_i),
+        .rstrb_i(((DMemAddr_i[31:28] == 4'b0001) || M_isSPI_r) & DMemRStrb_i),
+        .raddr_i(DMemAddr_i[23:0]),
+        .numBytes_i(32),
+        .rdata_o(SPI_Data),
+        .rbusy_o(SPI_RBusy),
+        .spiClk_o(spiClk_o),
+        .spiCs_o(spiCs_o),
+        .spiMosi_io(spiMosi_io),
+        .spiMiso_i(spiMiso_i)
+        // .spiData_io(spiData_io)
+);
 
 endmodule
 /* verilator lint_on WIDTH */

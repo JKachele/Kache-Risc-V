@@ -226,7 +226,7 @@ int main(int argc, char **argv) {
 
         UARTSIM *uart;
         int port = 0;
-        unsigned setup = 868;
+        unsigned setup = 108;
         unsigned clocks = 0;
         unsigned baudclocks;
 

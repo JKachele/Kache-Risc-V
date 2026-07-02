@@ -46,12 +46,15 @@ OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
 LDSCRIPT = firmware/Tests/ram.ld
 
 FIRMWARE := $(BIN_DIR)/firmware.elf
-BIN := $(BIN_DIR)/firmware.bin
-BRAM := $(BIN_DIR)/BRAM.hex
+BIN      := $(BIN_DIR)/firmware.bin
+BRAM     := $(BIN_DIR)/BRAM.hex
 
 .PHONY: hex sim lint build dirs clean 
 
-hex: $(BRAM)
+hex:   CFLAGS += -DBENCH 
+sim:   CFLAGS += -DBENCH
+
+hex:    $(BRAM)
 
 $(BRAM): $(BIN)
 	# hexdump -ve '"%08x\n"' $< > $@
@@ -84,10 +87,10 @@ sim: $(BRAM)
 $(BIN_DIR):
 	mkdir -p $@
 
-lint: $(BRAM)
+lint: clean $(BRAM)
 	cd tcl; vivado -mode batch -nolog -nojournal -source lint.tcl -tclargs $(VSRC)
 
-build: $(BRAM)
+build: clean $(BRAM)
 	cd tcl; vivado -mode batch -nolog -nojournal -source build.tcl -tclargs $(VSRC)
 
 upload:
