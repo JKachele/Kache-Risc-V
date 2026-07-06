@@ -9,35 +9,79 @@
 module IO (
         input  wire        clk_i,
         input  wire        reset_i,
-        input  wire [31:0] IO_memRAddr_i,
-        output wire [31:0] IO_memRData_o,
-        input  wire [31:0] IO_memWAddr_i,
-        input  wire [31:0] IO_memWData_i,
-        input  wire        IO_memWr_i,
-        output wire [3:0]  leds_o,
-        output wire        txd_o
+        input  wire [31:0] IO_addr_i,
+        input  wire [63:0] IO_wData_i,
+        input  wire        IO_rstrb_i,
+        input  wire [7:0]  IO_wren_i,
+        output wire [63:0] IO_rData_o,
+        output wire        IO_validReady_o,
+
+        // SPI Flash
+        output wire        spiClk_o,
+        output wire        spiCs_o,
+        inout  wire        spiMosi_io,
+        input  wire        spiMiso_i,
+
+        // UART
+        output wire        txd_o,
+
+        // Basic IO
+        output wire [3:0]  leds_o
 );
-wire [13:0] IO_wordRAddr = IO_memRAddr_i[15:2];
-wire [13:0] IO_wordWAddr = IO_memWAddr_i[15:2];
 
-// Output Indicators
-localparam IO_LEDS_BIT          = 0;
-localparam IO_UART_DAT_BIT      = 1;
-localparam IO_UART_CTRL_BIT     = 2;
+// addr[31] is always 1 for IO
+wire isFlash = (IO_addr_i[30:28] == 3'b000);
+wire isUART  = (IO_addr_i[30:28] == 3'b001);
+wire isBasic = (IO_addr_i[30:28] == 3'b111);
+reg  isFlash_r;
+reg  isUART_r;
+reg  isBasic_r;
 
-reg [3:0] leds;
 always @(posedge clk_i) begin
-        if (IO_memWr_i) begin
-                if (IO_wordWAddr[IO_LEDS_BIT])
-                        leds[3:0] <= IO_memWData_i[3:0];
+        if (reset_i) begin
+                isFlash_r <= 1'b0;
+                isUART_r <= 1'b0;
+                isBasic_r <= 1'b0;
+        end else if (IO_rstrb_i) begin
+                isFlash_r <= isFlash;
+                isUART_r <= isUART;
+                isBasic_r <= isBasic;
         end
 end
 
-wire uartValid = IO_memWr_i & IO_wordWAddr[IO_UART_DAT_BIT];
-wire uartBusy;
+assign IO_rData_o = isFlash_r ? SPI_Data : (isUART_r ? uartRData : 64'b0);
+assign IO_validReady_o = isFlash ? SPI_valid : 1'b1;
 
-assign IO_memRData_o = IO_wordRAddr[IO_UART_CTRL_BIT] ? {22'b0, uartBusy, 9'b0}
-                                                    : 32'b0;
+/*-------------------------------- QSPI Flash --------------------------------*/
+wire flashRstrb = isFlash & IO_rstrb_i;
+
+wire [63:0] SPI_Data;
+wire        SPI_Busy;
+wire        SPI_valid = ~(SPI_Busy | flashRstrb);
+
+spiFlash flash(
+        .clk_i(clk_i),
+        .reset_i(reset_i),
+        .rstrb_i(flashRstrb),
+        .raddr_i({IO_addr_i[23:3], 3'b0}),
+        .rdata_o(SPI_Data),
+        .rbusy_o(SPI_Busy),
+        .spiClk_o(spiClk_o),
+        .spiCs_o(spiCs_o),
+        .spiMosi_io(spiMosi_io),
+        .spiMiso_i(spiMiso_i)
+        // .spiData_io(spiData_io)
+);
+
+/*-------------------------------- UART --------------------------------*/
+
+wire isUartData = isUART & ~IO_addr_i[2];
+wire isUartCtrl = isUART & IO_addr_i[2];
+
+wire uartWren = |IO_wren_i & isUartData;
+wire uartBusy;
+wire [63:0] uartRData = isUartData ? 64'b0 : {54'b0, uartBusy, 9'b0};
+
 // 25MHz, 2M baud, 8-bit, no parity, 1 stop bit
 localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h00000D};
 
@@ -53,8 +97,8 @@ localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h00000D};
                 .i_reset(reset_i),
                 .i_setup(UART_SETUP),
                 .i_break(0),
-                .i_wr(uartValid),
-                .i_data(IO_memWData_i[7:0]),
+                .i_wr(uartWren),
+                .i_data(IO_wData_i[7:0]),
                 .i_cts_n(0),
                 .o_uart_tx(txd_o),
                 .o_busy(uartBusy)
@@ -62,12 +106,23 @@ localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h00000D};
 `else
         assign uartBusy = 1'b0;
         always @(posedge clk_i) begin
-                if(uartValid) begin
-                        $write("%c", IO_memWData_i[7:0]);
+                if(uartWren) begin
+                        $write("%c", IO_wData_i[7:0]);
                         $fflush(32'h8000_0001);
                 end
         end
 `endif
+
+/*-------------------------------- Basic IO --------------------------------*/
+wire isLED = isBasic & ~IO_addr_i[2];
+
+reg [3:0] leds;
+always @(posedge clk_i) begin
+        if (|IO_wren_i) begin
+                if (isLED)
+                        leds[3:0] <= IO_wData_i[3:0];
+        end
+end
 
 `ifdef BENCH
         assign leds_o = leds;

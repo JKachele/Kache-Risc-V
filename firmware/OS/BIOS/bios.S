@@ -1,11 +1,12 @@
-.equ IO_BASE, 0x80000000
-.equ IO_LEDS, 0x04
-
 .global _start
 .section .text.bios
 _start:
-        li gp, IO_BASE
+        .option push
+        .option norelax
         la sp, __stack_top_bios
+        la gp, __global_pointer$
+        li tp, 0
+        .option pop
 
 machine:
         # Set machine mode pointer to boot function

@@ -9,36 +9,62 @@ SECTIONS {
                 *(.text .text.*);
         }
 
-        .data : {
+        .rodata.bios : {
                 . = ALIGN(4);
-                *(.data.bios*)
-                *(.sdata.bios*)
                 *(.rodata.bios*)
                 *(.srodata.bios*)
+        }
+
+        .data.bios : {
+                . = ALIGN(4);
+                *(.data.bios*)
+        }
+
+        .sdata.bios : {
+                . = ALIGN(4);
+                *(.sdata.bios*)
+        }
+
+        .bss.bios : {
+                . = ALIGN(4);
                 __bss_bios = .;
                 *(.bss.bios*)
                 *(.sbss.bios*)
                 __bss_bios_end = .;
+        }
+        . += 8 * 1024; /* 8KB */
+        __stack_top_bios = .;
 
-                . += 8 * 1024; /* 8KB */
-                __stack_top_bios = .;
-
+        .rodata : {
                 . = ALIGN(4);
-                *(.data*)
-                *(.sdata*)
                 *(.rodata*)
                 *(.srodata*)
+        }
+
+        .data : {
+                . = ALIGN(4);
+                *(.data*)
+        }
+
+        .sdata : {
+                . = ALIGN(4);
+                __global_pointer$ = .;
+                *(.sdata*)
+        }
+
+        .bss : {
+                . = ALIGN(4);
                 __bss = .;
                 *(.bss*)
                 *(.sbss*)
                 __bss_end = .;
-
-                . += 8 * 1024; /* 8KB */
-                __stack_top = .;
-
-                . = ALIGN(4096);
-                __free_ram = .;
-                . += 128 * 1024; /*128KB */
-                __free_ram_end = .;
         }
+
+        . += 8 * 1024; /* 8KB */
+        __stack_top = .;
+
+        . = ALIGN(4096);
+        __free_ram = .;
+        . += 128 * 1024; /*128KB */
+        __free_ram_end = .;
 }

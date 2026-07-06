@@ -21,7 +21,7 @@ unsigned int getMem(unsigned addr) {
 int main(void) {
         printf("Hello, World!\n");
         for (int i = 0; i < 50; i++) {
-                printf("%08x\n", getMem(0x10400000 + (i * 4)));
+                printf("%08x\n", getMem(0x80400000 + (i * 4)));
         }
 }
 

@@ -159,6 +159,10 @@ DataMem datamem(
         .mWren_o(DC_mWren),
         .mRData_i(DC_mRData),
         .mValidReady_i(DC_mValidReady),
+        .spiClk_o(qspi_sck),
+        .spiCs_o(qspi_cs),
+        .spiMosi_io(qspi_mosi),
+        .spiMiso_i(qspi_miso),
         .leds_o(LEDS),
         .txd_o(TXD)
 );
@@ -176,7 +180,7 @@ Memory mem(
         .DMemWData_i(DC_mWData),
         .DMemWMask_i(DC_mWren),
         .DMemRData_o(DC_mRData),
-        .DMemValidReady_o(DC_mValidReady),
+        .DMemValidReady_o(DC_mValidReady)
         // .m_axi_awaddr_o(axi_awaddr),
         // .m_axi_awlen_o(axi_awlen),
         // .m_axi_awid_o(axi_awid),
@@ -202,10 +206,10 @@ Memory mem(
         // .m_axi_rid_i(axi_rid),
         // .m_axi_rvalid_i(axi_rvalid),
         // .m_axi_rready_o(axi_rready),
-        .spiClk_o(qspi_sck),
-        .spiCs_o(qspi_cs),
-        .spiMosi_io(qspi_mosi),
-        .spiMiso_i(qspi_miso)
+        // .spiClk_o(qspi_sck),
+        // .spiCs_o(qspi_cs),
+        // .spiMosi_io(qspi_mosi),
+        // .spiMiso_i(qspi_miso)
 );
 
 `ifndef BENCH

@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
 
         tb->programLog = fopen("Program.txt", "w");
 
-        tb->m_flash->load("../bin/firmware.bin");
+        tb->m_flash->load(0x400000, "../bin/firmware.bin");
 
 
         UARTSIM *uart;

@@ -1,29 +1,34 @@
 SECTIONS {
-        . = 0x70000000;
-
         .text : {
                 . = ALIGN(2);
                 *startPipeline*.o (.text)
                 *(.text*)
         }
 
-        .data : {
-                . = ALIGN(32);
-                *(.data*)
-                *(.sdata*)
+        .rodata : {
+                . = ALIGN(4);
                 *(.rodata*)
                 *(.srodata*)
+        }
+
+        .data : {
+                . = ALIGN(4);
+                *(.data*)
+        }
+
+        .sdata : {
+                . = ALIGN(4);
+                __global_pointer$ = .;
+                *(.sdata*)
+        }
+
+        .bss : {
+                . = ALIGN(4);
                 *(.bss*)
                 *(.sbss*)
-
-                *(COMMON)
-                *(.eh_frame)  
-                *(.eh_frame_hdr)
-                *(.init_array*)         
-                *(.gcc_except_table*)
-
-                . = ALIGN(32);
-                . += 16 * 1024; /* 16KB */
-                __stack_top = .;
         }
+
+        . = ALIGN(32);
+        . += 16 * 1024; /* 16KB */
+        __stack_top = .;
 }
