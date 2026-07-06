@@ -16,6 +16,7 @@ class SPIFlash {
 		SPIF_IDLE,
 		SPIF_READ_CMD,
 		SPIF_READ_ADDR,
+                SPIF_DUMMY,
 		SPIF_READ_SEND
 	} SPIF_STATE;
 

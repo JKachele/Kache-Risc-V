@@ -105,14 +105,16 @@ assign MOSI_in = spiMosi_io;
 
 reg [5:0]  snd_count;
 reg [31:0] snd_data;
+reg [5:0]  wait_count;
 reg [5:0]  rcv_count;
 reg [1:0]  rcv_byteCount;
 // reg [255:0] rcv_data;
 reg [7:0] rcv_data [0:31];
 
 wire sending   = (snd_count != 0);
+wire waiting   = (wait_count != 0);
 wire receiving = (rcv_count != 0);
-wire busy      = (sending | receiving);
+wire busy      = (sending | waiting | receiving);
 assign rbusy_o = !spiCs_o;
 
 assign MOSI_oe = !receiving;
@@ -139,6 +141,7 @@ always @(posedge clk_i) begin
                 spiCs_o <= 1'b1;
                 snd_data = 32'b0;
                 snd_count <= 6'b0;
+                wait_count <= 6'b0;
                 rcv_count <= 6'b0;
         end else if (rstrb_i) begin
                 spiCs_o <= 1'b0;
@@ -147,11 +150,17 @@ always @(posedge clk_i) begin
         end else begin
                 if (sending) begin
                         if (snd_count == 1) begin
-                                rcv_count <= numBytes_i;
-                                rcv_byteCount <= 2'b11;
+                                wait_count <= 6'd8;
                         end
                         snd_count <= snd_count - 1;
                         snd_data <= {snd_data[30:0], 1'b1};
+                end
+                if (waiting) begin
+                        if (wait_count == 1) begin
+                                rcv_count <= numBytes_i;
+                                rcv_byteCount <= 2'b11;
+                        end
+                        wait_count <= wait_count - 1;
                 end
                 if (receiving) begin
                         rcv_byteCount <= rcv_byteCount - 1;

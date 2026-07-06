@@ -105,8 +105,12 @@ unsigned int SPIFlash::operator()(const int csn, const int sck, const char dat) 
                         m_address <<= 1;
                         m_address |= dat;
                         if (m_count == 31) {
-                                m_state = SPIF_READ_SEND;
+                                m_state = SPIF_DUMMY;
                                 // printf("Addres: %d\n", m_address);
+                        }
+                } else if (m_state == SPIF_DUMMY) {
+                        if (m_count == 39) {
+                                m_state = SPIF_READ_SEND;
                         }
                 }
                 m_count++;

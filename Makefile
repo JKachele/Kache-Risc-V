@@ -40,7 +40,7 @@ BUILD_DIR := build
 # SRC += $(wildcard firmware/OS/*/*/*.c) $(wildcard firmware/OS/*/*/*.S) 
 # OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
 # LDSCRIPT = firmware/OS/kernel.ld
-SRC := firmware/Tests/startPipeline.S firmware/Tests/raystones.c
+SRC := firmware/Tests/startPipeline.S firmware/Tests/Test.c
 SRC += $(wildcard firmware/libs/*.S) $(wildcard firmware/libs/*.c) 
 OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
 LDSCRIPT = firmware/Tests/ram.ld
@@ -88,16 +88,18 @@ $(BIN_DIR):
 	mkdir -p $@
 
 lint: clean $(BRAM)
-	cd tcl; vivado -mode batch -nolog -nojournal -source lint.tcl -tclargs $(VSRC)
+	cd tcl; vivado -mode batch -nolog -nojournal \
+		-source lint.tcl -tclargs $(VSRC) | tee lint.log
 
 build: clean $(BRAM)
-	cd tcl; vivado -mode batch -nolog -nojournal -source build.tcl -tclargs $(VSRC)
+	cd tcl; vivado -mode batch -nolog -nojournal \
+		-source build.tcl -tclargs $(VSRC) | tee build.log
 
 upload:
-	cd tcl; vivado -mode tcl -nolog -nojournal -source upload.tcl
+	cd tcl; vivado -mode tcl -nolog -nojournal -source upload.tcl | tee upload.log
 
 store:
-	cd tcl; vivado -mode tcl -nolog -nojournal -source store.tcl
+	cd tcl; vivado -mode tcl -nolog -nojournal -source store.tcl | tee store.log
 
 clean:
 	rm -rf ./obj_dir
