@@ -1,12 +1,9 @@
 ENTRY(_start)
 
 SECTIONS {
-        . = 0x70000000;
-
-        .text : {
+        .text.bios : {
                 . = ALIGN(2);
                 KEEP(*(.text.bios));
-                *(.text .text.*);
         }
 
         .rodata.bios : {
@@ -34,6 +31,11 @@ SECTIONS {
         }
         . += 8 * 1024; /* 8KB */
         __stack_top_bios = .;
+
+        .text : {
+                . = ALIGN(2);
+                *(.text .text.*);
+        }
 
         .rodata : {
                 . = ALIGN(4);

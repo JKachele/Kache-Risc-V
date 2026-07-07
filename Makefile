@@ -40,13 +40,20 @@ BUILD_DIR := build
 # SRC += $(wildcard firmware/OS/*/*/*.c) $(wildcard firmware/OS/*/*/*.S) 
 # OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
 # LDSCRIPT = firmware/OS/kernel.ld
-SRC := firmware/Tests/startPipeline.S firmware/Tests/Test.c
-SRC += $(wildcard firmware/libs/*.S) $(wildcard firmware/libs/*.c) 
+SRC := firmware/Tests/startPipeline.S firmware/Tests/raystones.c
+SRC += $(wildcard firmware/Tests/libs/*.S) $(wildcard firmware/Tests/libs/*.c) 
 OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
 LDSCRIPT = firmware/Tests/ram.ld
 
+# BIOS
+SRCBIOS := firmware/Tests/startPipeline.S firmware/Tests/raystones.c
+SRCBIOS += $(wildcard firmware/Tests/libs/*.S) $(wildcard firmware/Tests/libs/*.c) 
+OBJBIOS := $(SRCBIOS:%=$(BUILD_DIR)/%.o)
+LDSCRIPTBIOS = firmware/Tests/bios.ld
+
 FIRMWARE := $(BIN_DIR)/firmware.elf
-BIN      := $(BIN_DIR)/firmware.bin
+BIOS     := $(BIN_DIR)/bios.elf
+BIN      := $(BIN_DIR)/bios.bin
 BRAM     := $(BIN_DIR)/BRAM.hex
 
 .PHONY: hex sim lint build dirs clean 
@@ -54,7 +61,7 @@ BRAM     := $(BIN_DIR)/BRAM.hex
 hex:   CFLAGS += -DBENCH 
 sim:   CFLAGS += -DBENCH
 
-hex:    $(BRAM)
+hex:    $(BRAM) $(FIRMWARE)
 
 $(BRAM): $(BIN)
 	# hexdump -ve '"%08x\n"' $< > $@
@@ -62,13 +69,18 @@ $(BRAM): $(BIN)
 	hexdump -ve '32/1 "%02x" "\n"' $< | \
 		awk '{for(i=length($$0);i>0;i-=2)printf "%s",substr($$0,i-1,2);print""}' > $@
 
-$(BIN): $(FIRMWARE)
+$(BIN): $(BIOS)
 	$(OBJCOPY) $< -O binary $@
+
+$(BIOS): $(OBJBIOS) $(LDSCRIPT) Makefile
+	@mkdir -p $(dir $@)
+	$(LD) -T $(LDSCRIPTBIOS) $(OBJBIOS) -o $@ $(LDFLAGS)
+	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DIR)/objdumpBIOS.txt
 
 $(FIRMWARE): $(OBJ) $(LDSCRIPT) Makefile
 	@mkdir -p $(dir $@)
 	$(LD) -T $(LDSCRIPT) $(OBJ) -o $@ $(LDFLAGS)
-	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DIR)/objdump.txt
+	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DIR)/objdumpFW.txt
 
 $(BUILD_DIR)/%.S.o: %.S
 	@mkdir -p $(dir $@)
@@ -78,7 +90,7 @@ $(BUILD_DIR)/%.c.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) -o $@ -c $< $(CFLAGS)
 
-sim: $(BRAM)
+sim: $(BRAM) $(FIRMWARE)
 	rm -rf ./obj_dir
 	$(TB) $(TBFLAGS) $(TBSRC) $(VSRC)
 	cd obj_dir; make -f V$(TOP).mk
