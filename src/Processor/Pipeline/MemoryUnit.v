@@ -14,6 +14,7 @@ module MemoryUnit (
         // Memory/IO Interface
         input  wire [63:0] DMemRData_i,
         output wire [31:0] DMemWAddr_o,
+        output wire        DMemFlush_o,
         output wire [63:0] DMemWData_o,
         output wire [7:0]  DMemWMask_o,
         input  wire        DMemValidReady_i,
@@ -102,6 +103,9 @@ always @(*) begin
         endcase
 end
 
+/*-----------------------Cache Flush----------------------*/
+assign DMemFlush_o = EM_isCSR_i & (EM_csrId_i == 12'h7C0);
+
 /*----------------------STORE---------------------*/
 reg [63:0] M_storeData;
 always @(*) begin
@@ -170,7 +174,7 @@ always @(*) begin
         end
 end
 
-assign DMemWAddr_o = EM_addr_i;
+assign DMemWAddr_o = DMemFlush_o ? EM_Eresult_i[31:0] : EM_addr_i;
 assign DMemWData_o = M_storeData;
 assign DMemWMask_o = {8{M_storeEnable}} & M_storeMask;
 

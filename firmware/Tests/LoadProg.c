@@ -6,7 +6,7 @@
  *License-------GNU GPL-3.0
  ************************************************/
 
-// #include <stdio.h>
+#include <stdio.h>
 
 #define ELF_ADDR 0x80400000
 
@@ -56,16 +56,30 @@ u32 getElfData(u32 offset, int numBytes) {
 // size must be alligned and a multiple of 4
 void moveData(u32 startOffset, u32 destAddr, u32 size) {
         u32 orig = ELF_ADDR + startOffset;
+        u32 dest = destAddr;
         u32 numWords = size / 4;
         for (int i = 0; i < numWords; i++) {
                 asm volatile(
                                 "lw t0, 0(%0)\n"
                                 "sw t0, 0(%1)\n"
-                                ::"r"(orig), "r"(destAddr)
-                                : "t0"
+                                ::"r"(orig), "r"(dest)
+                                : "t0", "memory"
                             );
                 orig += 4;
-                destAddr += 4;
+                dest += 4;
+        }
+
+        // Flush data cache to ensure that the data is written to memory
+        u32 numCacheLines = numWords / 8; // Assuming 32-byte cache lines
+        u32 lineAddr = destAddr & 0xFFE0; // Align to cache line
+        // Flush all lines with data we just wrote plus 1 to ensure that the last line is flushed
+        for (int i = 0; i <= numCacheLines; i++) {
+                asm volatile(
+                                "csrw 0x7C0, %0\n"
+                                ::"r"(lineAddr)
+                                : "memory"
+                            );
+                lineAddr += 32; // Move to next cache line
         }
 }
 

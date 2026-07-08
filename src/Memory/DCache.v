@@ -11,11 +11,13 @@ module DCache (
         input  wire         reset_i,
 
         input  wire [31:0]  addr_i,
+        input  wire         flush_i,
         input  wire         rden_i,
         input  wire [63:0]  wdata_i,
         input  wire [7:0]   wren_i,
         output wire [63:0]  rdata_o,
         output wire         validReady_o,
+
 
         output wire [31:0]  mAddr_o,
         output wire [255:0] mWData_o,
@@ -93,7 +95,15 @@ wire [63:0]  C_dataOffset = C_offset[4] ?
                       (C_offset[3] ? C_data[127:64]  : C_data[63:0]   );
 /*verilator public_off*/
 
-assign validReady_o = (C_curState == IDLE & (C_hit)) | (~rden_i & ~|wren_i);
+wire C_hitDirty0 = C_hit0 & dirty0[index];
+wire C_hitDirty1 = C_hit1 & dirty1[index];
+wire C_hitDirty2 = C_hit2 & dirty2[index];
+wire C_hitDirty3 = C_hit3 & dirty3[index];
+wire C_hitDirty  = C_hitDirty0 | C_hitDirty1 | C_hitDirty2 | C_hitDirty3;
+
+// the (flush_i | C_hit) it to cover flushing an address that isnt in the cache.
+assign validReady_o = (C_curState == IDLE & (flush_i | C_hit) & ~(flush_i & C_hitDirty)) |
+        (~rden_i & ~|wren_i & ~flush_i);
 assign rdata_o      = C_dataOffset;
 assign mRden_o      = C_mRden;
 assign mWren_o      = C_mWren;
@@ -134,19 +144,19 @@ always @(*) begin
         m3_rden  = 1'b0;
         m3_wren  = 8'b0;
         if (C_curState == IDLE) begin
-                if (~rden_i & ~|wren_i) begin
+                if (~rden_i & ~|wren_i & ~flush_i) begin
                         // Do nothing
                 end else if (C_hit0) begin
-                        if (rden_i)  m0_rden = 1'b1;
+                        if (rden_i | (flush_i & C_hitDirty))  m0_rden = 1'b1;
                         if (|wren_i) m0_wren = wren_i;
                 end else if (C_hit1) begin
-                        if (rden_i)  m1_rden = 1'b1;
+                        if (rden_i | (flush_i & C_hitDirty))  m1_rden = 1'b1;
                         if (|wren_i) m1_wren = wren_i;
                 end else if (C_hit2) begin
-                        if (rden_i)  m2_rden = 1'b1;
+                        if (rden_i | (flush_i & C_hitDirty))  m2_rden = 1'b1;
                         if (|wren_i) m2_wren = wren_i;
                 end else if (C_hit3) begin
-                        if (rden_i)  m3_rden = 1'b1;
+                        if (rden_i | (flush_i & C_hitDirty))  m3_rden = 1'b1;
                         if (|wren_i) m3_wren = wren_i;
                 end
                 else if (valid0[index] & valid1[index] & valid2[index] & valid3[index]) begin
@@ -181,177 +191,203 @@ always @(posedge clk_i) begin
                 C_curState <= IDLE;
         end else begin
                 case (C_curState)
-                        IDLE: begin
-                                // Reset memory read/write enable
-                                C_mRden <= 1'b0;
+                IDLE: begin
+                        // Reset memory read/write enable
+                        C_mRden <= 1'b0;
+                        C_mWren <= 8'b0;
+
+                        if (~rden_i & ~|wren_i & ~flush_i) begin
+                                // Do nothing
+                                C_curState <= IDLE;
+                        end
+                        else if (flush_i) begin
+                                if (~C_hitDirty) begin
+                                        C_curState <= IDLE;
+                                end else begin
+                                        if (C_hit0) begin
+                                                dirty0[index] <= 1'b0;
+                                                C_dataWay <= 2'b00;
+                                        end else if (C_hit1) begin
+                                                dirty1[index] <= 1'b0;
+                                                C_dataWay <= 2'b01;
+                                        end else if (C_hit2) begin
+                                                dirty2[index] <= 1'b0;
+                                                C_dataWay <= 2'b10;
+                                        end else if (C_hit3) begin
+                                                dirty3[index] <= 1'b0;
+                                                C_dataWay <= 2'b11;
+                                        end
+                                        C_mWren <= 8'hFF;
+                                        C_mAddr <= addr_i;
+                                        C_curState <= MISS_WRITE;
+                                end
+                        end
+                        // Check Way 0
+                        else if (C_hit0) begin
+                                if (|wren_i)
+                                        dirty0[index] <= 1'b1;
+                                C_offset <= offset;
+                                C_dataWay <= 2'b00;
+                                lruTop[index] <= 1'b0;
+                                lru0[index]   <= 1'b0;
+                        end
+                        // check way 1
+                        else if (C_hit1) begin
+                                if (|wren_i)
+                                        dirty1[index] <= 1'b1;
+                                C_offset <= offset;
+                                C_dataWay <= 2'b01;
+                                lruTop[index] <= 1'b0;
+                                lru0[index]   <= 1'b1;
+                        end
+                        // check way 2
+                        else if (C_hit2) begin
+                                if (|wren_i)
+                                        dirty2[index] <= 1'b1;
+                                C_offset <= offset;
+                                C_dataWay <= 2'b10;
+                                lruTop[index] <= 1'b1;
+                                lru1[index]   <= 1'b0;
+                        end
+                        // check way 3
+                        else if (C_hit3) begin
+                                if (|wren_i)
+                                        dirty3[index] <= 1'b1;
+                                C_offset <= offset;
+                                C_dataWay <= 2'b11;
+                                lruTop[index] <= 1'b1;
+                                lru1[index]   <= 1'b1;
+                        end
+                        // Cache Miss
+                        // Check for invalid ways -- no need to evict or Write-Back
+                        else if (~valid0[index]) begin
+                                tag0[index] <= tag;
+                                dirty0[index] <= 1'b0;
+                                valid0[index] <= 1'b1;
+                                C_dataWay <= 2'b00;
+                                C_curState <= MISS_READ;
+                                C_mAddr <= {tag, index, 5'b0};
+                                C_mRden <= 1'b1;
+                        end
+                        else if (~valid1[index]) begin
+                                tag1[index] <= tag;
+                                dirty1[index] <= 1'b0;
+                                valid1[index] <= 1'b1;
+                                C_dataWay <= 2'b01;
+                                C_curState <= MISS_READ;
+                                C_mAddr <= {tag, index, 5'b0};
+                                C_mRden <= 1'b1;
+                        end
+                        else if (~valid2[index]) begin
+                                tag2[index] <= tag;
+                                dirty2[index] <= 1'b0;
+                                valid2[index] <= 1'b1;
+                                C_dataWay <= 2'b10;
+                                C_curState <= MISS_READ;
+                                C_mAddr <= {tag, index, 5'b0};
+                                C_mRden <= 1'b1;
+                        end
+                        else if (~valid3[index]) begin
+                                tag3[index] <= tag;
+                                dirty3[index] <= 1'b0;
+                                valid3[index] <= 1'b1;
+                                C_dataWay <= 2'b11;
+                                C_curState <= MISS_READ;
+                                C_mAddr <= {tag, index, 5'b0};
+                                C_mRden <= 1'b1;
+                        end
+
+                        // Way 0 is Least Recently Used
+                        else if (lruTop[index] == 1'b0 && lru0[index] == 1'b0) begin
+                                if (dirty0[index]) begin
+                                        C_curState <= MISS_WRITE;
+                                        C_mWren <= 8'hFF;
+                                        C_mAddr <= {tag0[index], index, 5'b0};
+                                end else begin
+                                        C_curState <= MISS_READ;
+                                        C_mAddr <= {tag, index, 5'b0};
+                                        C_mRden <= 1'b1;
+                                end
+                                tag0[index] <= tag;
+                                valid0[index] <= 1'b1;
+                                dirty0[index] <= 1'b0;
+                                C_dataWay <= 2'b00;
+                        end
+                        // Way 1 is Least Recently Used
+                        else if (lruTop[index] == 1'b0 && lru0[index] == 1'b1) begin
+                                if (dirty1[index]) begin
+                                        C_curState <= MISS_WRITE;
+                                        C_mWren <= 8'hFF;
+                                        C_mAddr <= {tag1[index], index, 5'b0};
+                                end else begin
+                                        C_curState <= MISS_READ;
+                                        C_mAddr <= {tag, index, 5'b0};
+                                        C_mRden <= 1'b1;
+                                end
+                                tag1[index] <= tag;
+                                valid1[index] <= 1'b1;
+                                dirty1[index] <= 1'b0;
+                                C_dataWay <= 2'b01;
+                        end
+                        // Way 2 is Least Recently Used
+                        else if (lruTop[index] == 1'b1 && lru1[index] == 1'b0) begin
+                                if (dirty2[index]) begin
+                                        C_curState <= MISS_WRITE;
+                                        C_mWren <= 8'hFF;
+                                        C_mAddr <= {tag2[index], index, 5'b0};
+                                end else begin
+                                        C_curState <= MISS_READ;
+                                        C_mAddr <= {tag, index, 5'b0};
+                                        C_mRden <= 1'b1;
+                                end
+                                tag2[index] <= tag;
+                                valid2[index] <= 1'b1;
+                                dirty2[index] <= 1'b0;
+                                C_dataWay <= 2'b10;
+                        end
+                        // Way 3 is Least Recently Used
+                        else if (lruTop[index] == 1'b1 && lru1[index] == 1'b1) begin
+                                if (dirty3[index]) begin
+                                        C_curState <= MISS_WRITE;
+                                        C_mWren <= 8'hFF;
+                                        C_mAddr <= {tag3[index], index, 5'b0};
+                                end else begin
+                                        C_curState <= MISS_READ;
+                                        C_mAddr <= {tag, index, 5'b0};
+                                        C_mRden <= 1'b1;
+                                end
+                                tag3[index] <= tag;
+                                valid3[index] <= 1'b1;
+                                dirty3[index] <= 1'b0;
+                                C_dataWay <= 2'b11;
+                        end
+                end
+
+                MISS_WRITE: begin
+                        if (|C_mWren) begin
+                                // Turn off for 1-cycle strobe
                                 C_mWren <= 8'b0;
-
-                                if (~rden_i & ~|wren_i) begin
-                                        // Do nothing
+                        end else if (mValidReady_i) begin
+                                if (flush_i) begin
                                         C_curState <= IDLE;
-                                end
-                                // Check Way 0
-                                else if (C_hit0) begin
-                                        if (|wren_i)
-                                                dirty0[index] <= 1'b1;
-                                        C_offset <= offset;
-                                        C_dataWay <= 2'b00;
-                                        lruTop[index] <= 1'b0;
-                                        lru0[index]   <= 1'b0;
-                                end
-                                // check way 1
-                                else if (C_hit1) begin
-                                        if (|wren_i)
-                                                dirty1[index] <= 1'b1;
-                                        C_offset <= offset;
-                                        C_dataWay <= 2'b01;
-                                        lruTop[index] <= 1'b0;
-                                        lru0[index]   <= 1'b1;
-                                end
-                                // check way 2
-                                else if (C_hit2) begin
-                                        if (|wren_i)
-                                                dirty2[index] <= 1'b1;
-                                        C_offset <= offset;
-                                        C_dataWay <= 2'b10;
-                                        lruTop[index] <= 1'b1;
-                                        lru1[index]   <= 1'b0;
-                                end
-                                // check way 3
-                                else if (C_hit3) begin
-                                        if (|wren_i)
-                                                dirty3[index] <= 1'b1;
-                                        C_offset <= offset;
-                                        C_dataWay <= 2'b11;
-                                        lruTop[index] <= 1'b1;
-                                        lru1[index]   <= 1'b1;
-                                end
-                                // Cache Miss
-                                // Check for invalid ways -- no need to evict or Write-Back
-                                else if (~valid0[index]) begin
-                                        tag0[index] <= tag;
-                                        dirty0[index] <= 1'b0;
-                                        valid0[index] <= 1'b1;
-                                        C_dataWay <= 2'b00;
-                                        C_curState <= MISS_READ;
-                                        C_mAddr <= {tag, index, 5'b0};
-                                        C_mRden <= 1'b1;
-                                end
-                                else if (~valid1[index]) begin
-                                        tag1[index] <= tag;
-                                        dirty1[index] <= 1'b0;
-                                        valid1[index] <= 1'b1;
-                                        C_dataWay <= 2'b01;
-                                        C_curState <= MISS_READ;
-                                        C_mAddr <= {tag, index, 5'b0};
-                                        C_mRden <= 1'b1;
-                                end
-                                else if (~valid2[index]) begin
-                                        tag2[index] <= tag;
-                                        dirty2[index] <= 1'b0;
-                                        valid2[index] <= 1'b1;
-                                        C_dataWay <= 2'b10;
-                                        C_curState <= MISS_READ;
-                                        C_mAddr <= {tag, index, 5'b0};
-                                        C_mRden <= 1'b1;
-                                end
-                                else if (~valid3[index]) begin
-                                        tag3[index] <= tag;
-                                        dirty3[index] <= 1'b0;
-                                        valid3[index] <= 1'b1;
-                                        C_dataWay <= 2'b11;
-                                        C_curState <= MISS_READ;
-                                        C_mAddr <= {tag, index, 5'b0};
-                                        C_mRden <= 1'b1;
-                                end
-
-                                // Way 0 is Least Recently Used
-                                else if (lruTop[index] == 1'b0 && lru0[index] == 1'b0) begin
-                                        if (dirty0[index]) begin
-                                                C_curState <= MISS_WRITE;
-                                                C_mWren <= 8'hFF;
-                                                C_mAddr <= {tag0[index], index, 5'b0};
-                                        end else begin
-                                                C_curState <= MISS_READ;
-                                                C_mAddr <= {tag, index, 5'b0};
-                                                C_mRden <= 1'b1;
-                                        end
-                                        tag0[index] <= tag;
-                                        valid0[index] <= 1'b1;
-                                        dirty0[index] <= 1'b0;
-                                        C_dataWay <= 2'b00;
-                                end
-                                // Way 1 is Least Recently Used
-                                else if (lruTop[index] == 1'b0 && lru0[index] == 1'b1) begin
-                                        if (dirty1[index]) begin
-                                                C_curState <= MISS_WRITE;
-                                                C_mWren <= 8'hFF;
-                                                C_mAddr <= {tag1[index], index, 5'b0};
-                                        end else begin
-                                                C_curState <= MISS_READ;
-                                                C_mAddr <= {tag, index, 5'b0};
-                                                C_mRden <= 1'b1;
-                                        end
-                                        tag1[index] <= tag;
-                                        valid1[index] <= 1'b1;
-                                        dirty1[index] <= 1'b0;
-                                        C_dataWay <= 2'b01;
-                                end
-                                // Way 2 is Least Recently Used
-                                else if (lruTop[index] == 1'b1 && lru1[index] == 1'b0) begin
-                                        if (dirty2[index]) begin
-                                                C_curState <= MISS_WRITE;
-                                                C_mWren <= 8'hFF;
-                                                C_mAddr <= {tag2[index], index, 5'b0};
-                                        end else begin
-                                                C_curState <= MISS_READ;
-                                                C_mAddr <= {tag, index, 5'b0};
-                                                C_mRden <= 1'b1;
-                                        end
-                                        tag2[index] <= tag;
-                                        valid2[index] <= 1'b1;
-                                        dirty2[index] <= 1'b0;
-                                        C_dataWay <= 2'b10;
-                                end
-                                // Way 3 is Least Recently Used
-                                else if (lruTop[index] == 1'b1 && lru1[index] == 1'b1) begin
-                                        if (dirty3[index]) begin
-                                                C_curState <= MISS_WRITE;
-                                                C_mWren <= 8'hFF;
-                                                C_mAddr <= {tag3[index], index, 5'b0};
-                                        end else begin
-                                                C_curState <= MISS_READ;
-                                                C_mAddr <= {tag, index, 5'b0};
-                                                C_mRden <= 1'b1;
-                                        end
-                                        tag3[index] <= tag;
-                                        valid3[index] <= 1'b1;
-                                        dirty3[index] <= 1'b0;
-                                        C_dataWay <= 2'b11;
-                                end
-                        end
-
-                        MISS_WRITE: begin
-                                if (|C_mWren) begin
-                                        // Turn off for 1-cycle strobe
-                                        C_mWren <= 8'b0;
-                                end else if (mValidReady_i) begin
+                                end else begin
                                         C_curState <= MISS_READ;
                                         C_mAddr <= {tag, index, 5'b0};
                                         C_mRden <= 1'b1;
                                 end
                         end
+                end
 
-                        MISS_READ: begin
-                                if (C_mRden) begin
-                                        // Turn off for 1-cycle strobe
-                                        C_mRden <= 1'b0;
-                                end else if (mValidReady_i) begin
-                                        C_curState <= IDLE;
-                                end
+                MISS_READ: begin
+                        if (C_mRden) begin
+                                // Turn off for 1-cycle strobe
+                                C_mRden <= 1'b0;
+                        end else if (mValidReady_i) begin
+                                C_curState <= IDLE;
                         end
+                end
 
-                        default: C_curState = IDLE;
+                default: C_curState = IDLE;
                 endcase
         end
 end

@@ -19,6 +19,7 @@ module Processor(
         input  wire        ICacheCmp_i,
 
         output wire [31:0] DMemAddr_o,
+        output wire        DMemFlush_o,
         output wire        DMemRStrb_o,
         output wire [63:0] DMemWData_o,
         output wire [7:0]  DMemWMask_o,
@@ -432,6 +433,7 @@ MemoryUnit memory(
         .M_busy_o(M_busy),
         .DMemRData_i(DMemRData_i),
         .DMemWAddr_o(DMemWAddr),
+        .DMemFlush_o(DMemFlush_o),
         .DMemWData_o(DMemWData_o),
         .DMemWMask_o(DMemWMask_o),
         .DMemValidReady_i(DMemValidReady_i),

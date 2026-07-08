@@ -18,25 +18,25 @@ module SOC (
         output wire qspi_sck,
         output wire qspi_cs,
         inout  wire qspi_mosi,
-        input  wire qspi_miso
+        input  wire qspi_miso,
         // inout  wire [3:0] qspi_dq,
 
         // DDR3 SDRAM
-        // output wire        ddr3_reset_n,
-        // output wire [0:0]  ddr3_cke,
-        // output wire [0:0]  ddr3_ck_p,
-        // output wire [0:0]  ddr3_ck_n,
-        // output wire [0:0]  ddr3_cs_n,
-        // output wire        ddr3_ras_n,
-        // output wire        ddr3_cas_n,
-        // output wire        ddr3_we_n,
-        // output wire [2:0]  ddr3_ba,
-        // output wire [13:0] ddr3_addr,
-        // output wire [0:0]  ddr3_odt,
-        // output wire [1:0]  ddr3_dm,
-        // inout  wire [1:0]  ddr3_dqs_p,
-        // inout  wire [1:0]  ddr3_dqs_n,
-        // inout  wire [15:0] ddr3_dq
+        output wire        ddr3_reset_n,
+        output wire [0:0]  ddr3_cke,
+        output wire [0:0]  ddr3_ck_p,
+        output wire [0:0]  ddr3_ck_n,
+        output wire [0:0]  ddr3_cs_n,
+        output wire        ddr3_ras_n,
+        output wire        ddr3_cas_n,
+        output wire        ddr3_we_n,
+        output wire [2:0]  ddr3_ba,
+        output wire [13:0] ddr3_addr,
+        output wire [0:0]  ddr3_odt,
+        output wire [1:0]  ddr3_dm,
+        inout  wire [1:0]  ddr3_dqs_p,
+        inout  wire [1:0]  ddr3_dqs_n,
+        inout  wire [15:0] ddr3_dq
 );
 
 /*verilator public_flat_rw_on*/
@@ -69,6 +69,7 @@ wire        ICacheCmp;
 
 // Data Cache
 wire [31:0] DCacheAddr;
+wire        DCacheFlush;
 wire        DCacheRden;
 wire [63:0] DCacheWData;
 wire [7:0]  DCacheWren;
@@ -122,6 +123,7 @@ Processor CPU(
         .ICacheValid_i(ICacheValid),
         .ICacheCmp_i(ICacheCmp),
         .DMemAddr_o(DCacheAddr),
+        .DMemFlush_o(DCacheFlush),
         .DMemRStrb_o(DCacheRden),
         .DMemWData_o(DCacheWData),
         .DMemWMask_o(DCacheWren),
@@ -148,6 +150,7 @@ DataMem datamem(
         .clk_i(clk),
         .reset_i(reset),
         .addr_i(DCacheAddr),
+        .flush_i(DCacheFlush),
         .rden_i(DCacheRden),
         .wdata_i(DCacheWData),
         .wren_i(DCacheWren),
@@ -209,55 +212,55 @@ Memory mem(
 );
 
 `ifndef BENCH
-// ArtyDDR3 ddr3 (
-//         .clk100_i(clk0),
-//         .clk200_i(clk1),
-//         .reset_i(RESET),
-//         .clkOut_o(),
-//         .rstOut_o(reset),
-//
-//         .s_axi_awaddr_i(axi_awaddr),
-//         .s_axi_awlen_i(axi_awlen),
-//         .s_axi_awid_i(axi_awid),
-//         .s_axi_awvalid_i(axi_awvalid),
-//         .s_axi_awready_o(axi_awready),
-//         .s_axi_wdata_i(axi_wdata),
-//         .s_axi_wstrb_i(axi_wstrb),
-//         .s_axi_wlast_i(axi_wlast),
-//         .s_axi_wvalid_i(axi_wvalid),
-//         .s_axi_wready_o(axi_wready),
-//         .s_axi_bresp_o(axi_bresp),
-//         .s_axi_bid_o(axi_bid),
-//         .s_axi_bvalid_o(axi_bvalid),
-//         .s_axi_bready_i(axi_bready),
-//         .s_axi_araddr_i(axi_araddr),
-//         .s_axi_arlen_i(axi_arlen),
-//         .s_axi_arid_i(axi_arid),
-//         .s_axi_arvalid_i(axi_arvalid),
-//         .s_axi_arready_o(axi_arready),
-//         .s_axi_rdata_o(axi_rdata),
-//         .s_axi_rresp_o(axi_rresp),
-//         .s_axi_rlast_o(axi_rlast),
-//         .s_axi_rid_o(axi_rid),
-//         .s_axi_rvalid_o(axi_rvalid),
-//         .s_axi_rready_i(axi_rready),
-//
-//         .ddr3_reset_n(ddr3_reset_n),
-//         .ddr3_cke(ddr3_cke),
-//         .ddr3_ck_p(ddr3_ck_p),
-//         .ddr3_ck_n(ddr3_ck_n),
-//         .ddr3_cs_n(ddr3_cs_n),
-//         .ddr3_ras_n(ddr3_ras_n),
-//         .ddr3_cas_n(ddr3_cas_n),
-//         .ddr3_we_n(ddr3_we_n),
-//         .ddr3_ba(ddr3_ba),
-//         .ddr3_addr(ddr3_addr),
-//         .ddr3_odt(ddr3_odt),
-//         .ddr3_dm(ddr3_dm),
-//         .ddr3_dqs_p(ddr3_dqs_p),
-//         .ddr3_dqs_n(ddr3_dqs_n),
-//         .ddr3_dq(ddr3_dq)
-// );
+ArtyDDR3 ddr3 (
+        .clk100_i(clk0),
+        .clk200_i(clk1),
+        .reset_i(RESET),
+        .clkOut_o(),
+        .rstOut_o(),
+
+        .s_axi_awaddr_i(axi_awaddr),
+        .s_axi_awlen_i(axi_awlen),
+        .s_axi_awid_i(axi_awid),
+        .s_axi_awvalid_i(axi_awvalid),
+        .s_axi_awready_o(axi_awready),
+        .s_axi_wdata_i(axi_wdata),
+        .s_axi_wstrb_i(axi_wstrb),
+        .s_axi_wlast_i(axi_wlast),
+        .s_axi_wvalid_i(axi_wvalid),
+        .s_axi_wready_o(axi_wready),
+        .s_axi_bresp_o(axi_bresp),
+        .s_axi_bid_o(axi_bid),
+        .s_axi_bvalid_o(axi_bvalid),
+        .s_axi_bready_i(axi_bready),
+        .s_axi_araddr_i(axi_araddr),
+        .s_axi_arlen_i(axi_arlen),
+        .s_axi_arid_i(axi_arid),
+        .s_axi_arvalid_i(axi_arvalid),
+        .s_axi_arready_o(axi_arready),
+        .s_axi_rdata_o(axi_rdata),
+        .s_axi_rresp_o(axi_rresp),
+        .s_axi_rlast_o(axi_rlast),
+        .s_axi_rid_o(axi_rid),
+        .s_axi_rvalid_o(axi_rvalid),
+        .s_axi_rready_i(axi_rready),
+
+        .ddr3_reset_n(ddr3_reset_n),
+        .ddr3_cke(ddr3_cke),
+        .ddr3_ck_p(ddr3_ck_p),
+        .ddr3_ck_n(ddr3_ck_n),
+        .ddr3_cs_n(ddr3_cs_n),
+        .ddr3_ras_n(ddr3_ras_n),
+        .ddr3_cas_n(ddr3_cas_n),
+        .ddr3_we_n(ddr3_we_n),
+        .ddr3_ba(ddr3_ba),
+        .ddr3_addr(ddr3_addr),
+        .ddr3_odt(ddr3_odt),
+        .ddr3_dm(ddr3_dm),
+        .ddr3_dqs_p(ddr3_dqs_p),
+        .ddr3_dqs_n(ddr3_dqs_n),
+        .ddr3_dq(ddr3_dq)
+);
 `endif
 
 `ifdef BENCH

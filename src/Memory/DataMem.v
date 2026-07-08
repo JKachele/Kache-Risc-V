@@ -11,6 +11,7 @@ module DataMem (
         input  wire         reset_i,
 
         input  wire [31:0]  addr_i,
+        input  wire         flush_i,
         input  wire         rden_i,
         input  wire [63:0]  wdata_i,
         input  wire [7:0]   wren_i,
@@ -73,6 +74,7 @@ DCache dcache(
         .clk_i(clk_i),
         .reset_i(reset_i),
         .addr_i(addr_i),
+        .flush_i(flush_i),
         .rden_i(DCacheRden),
         .wdata_i(wdata_i),
         .wren_i(DCacheWren),

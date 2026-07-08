@@ -46,7 +46,7 @@ OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
 LDSCRIPT = firmware/Tests/ram.ld
 
 # BIOS
-SRCBIOS := firmware/Tests/startPipeline.S firmware/Tests/raystones.c
+SRCBIOS := firmware/Tests/startPipeline.S firmware/Tests/LoadProg.c
 SRCBIOS += $(wildcard firmware/Tests/libs/*.S) $(wildcard firmware/Tests/libs/*.c) 
 OBJBIOS := $(SRCBIOS:%=$(BUILD_DIR)/%.o)
 LDSCRIPTBIOS = firmware/Tests/bios.ld
