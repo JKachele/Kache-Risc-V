@@ -3,9 +3,11 @@
 7000_0000 - 7007_FFFF: BRAM (512KB)
         Reset-Vector: 7000-0000
 8000_0000 - FFFF_FFFF: IO
-        8000_0000 - 80FF_FFFF: QSPI Flash (16MB)
-        9000_0000 - 9000_00FF: UART
-                9000_0000: UART Data
-                9000_0004: UART Control
-        F000_0000 - FFFF_FFFF: Basic I/O
-                F000_0000: Arty White LEDs
+        8000_0000 - 8FFF_FFFF: Memory Mapped Registers
+                8000_0000: mtime
+                8000_0008: mtimecmp
+        9000_0000 - 90FF_FFFF: QSPI Flash (16MB)
+        F000_0000 - FFFF_FFFF: Basic I/O and UART
+                F000_0000: UART Data
+                F000_0004: UART Control
+                F000_0008: Arty White LEDs

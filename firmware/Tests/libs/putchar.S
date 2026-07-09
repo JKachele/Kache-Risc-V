@@ -1,5 +1,5 @@
-.equ IO_UART_DATA, 0x90000000
-.equ IO_UART_CNTL, 0x90000004
+.equ IO_UART_DATA, 0xF0000000
+.equ IO_UART_CNTL, 0xF0000004
 
 .global putchar
 .text

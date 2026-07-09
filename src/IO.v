@@ -9,10 +9,11 @@
 module IO (
         input  wire        clk_i,
         input  wire        reset_i,
+        input  wire        rtc_i,
         input  wire [31:0] IO_addr_i,
         input  wire [63:0] IO_wData_i,
         input  wire        IO_rstrb_i,
-        input  wire [7:0]  IO_wren_i,
+        input  wire [7:0]  IO_wstrb_i,
         output wire [63:0] IO_rData_o,
         output wire        IO_validReady_o,
 
@@ -30,27 +31,35 @@ module IO (
 );
 
 // addr[31] is always 1 for IO
-wire isFlash = (IO_addr_i[30:28] == 3'b000);
-wire isUART  = (IO_addr_i[30:28] == 3'b001);
+wire isMMReg = (IO_addr_i[30:28] == 3'b000);
+wire isFlash = (IO_addr_i[30:28] == 3'b001);
 wire isBasic = (IO_addr_i[30:28] == 3'b111);
+wire isUART  = isBasic & (IO_addr_i[27:3] == 25'b0);
+reg  isMMReg_r;
 reg  isFlash_r;
-reg  isUART_r;
 reg  isBasic_r;
+reg  isUART_r;
 
 always @(posedge clk_i) begin
         if (reset_i) begin
+                isMMReg_r <= 1'b0;
                 isFlash_r <= 1'b0;
-                isUART_r <= 1'b0;
                 isBasic_r <= 1'b0;
+                isUART_r <= 1'b0;
         end else if (IO_rstrb_i) begin
+                isMMReg_r <= isMMReg;
                 isFlash_r <= isFlash;
-                isUART_r <= isUART;
                 isBasic_r <= isBasic;
+                isUART_r <= isUART;
         end
 end
 
 assign IO_rData_o = isFlash_r ? SPI_Data : (isUART_r ? uartRData : 64'b0);
 assign IO_validReady_o = isFlash ? SPI_valid : 1'b1;
+
+/*-------------------------------- Memory Mapped Registers --------------------------------*/
+reg [63:0] mtime = 64'b0;
+reg [63:0] mtimecmp = 64'b0;
 
 /*-------------------------------- QSPI Flash --------------------------------*/
 wire flashRstrb = isFlash & IO_rstrb_i;
@@ -78,7 +87,7 @@ spiFlash flash(
 wire isUartData = isUART & ~IO_addr_i[2];
 wire isUartCtrl = isUART & IO_addr_i[2];
 
-wire uartWren = |IO_wren_i & isUartData;
+wire uartWren = |IO_wstrb_i & isUartData;
 wire uartBusy;
 wire [63:0] uartRData = isUartData ? 64'b0 : {54'b0, uartBusy, 9'b0};
 
@@ -114,11 +123,11 @@ localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h00000D};
 `endif
 
 /*-------------------------------- Basic IO --------------------------------*/
-wire isLED = isBasic & ~IO_addr_i[2];
+wire isLED = isBasic & (IO_addr_i[27:3] == 25'h1);
 
 reg [3:0] leds;
 always @(posedge clk_i) begin
-        if (|IO_wren_i) begin
+        if (|IO_wstrb_i) begin
                 if (isLED)
                         leds[3:0] <= IO_wData_i[3:0];
         end

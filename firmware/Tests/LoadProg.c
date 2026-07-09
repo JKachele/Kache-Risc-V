@@ -6,7 +6,7 @@
  *License-------GNU GPL-3.0
  ************************************************/
 
-#define ELF_ADDR 0x80400000
+#define ELF_ADDR 0x90400000
 
 typedef unsigned char u8;
 typedef unsigned short u16;

@@ -52,20 +52,25 @@ wire        DCacheValidReady;
 wire [31:0] IO_addr = addr_i;
 wire [63:0] IO_wData = wdata_i;
 wire        IO_rstrb = isIO & rstrb;
-wire [7:0]  IO_wren = isIO ? wren_i : 8'b0;
+wire [7:0]  IO_wstrb = isIO ? wstrb : 8'b0;
 wire [63:0] IO_rData;
 wire        IO_validReady;
 
-// Turn read enable signal into strobe
+// Turn read/write enable signal into strobe
 reg  [31:0] prev_addr = 32'b0;
 reg         prev_rden = 1'b0;
+reg  [7:0]  prev_wren = 8'b0;
 wire        rstrb     = rden_i & ((addr_i != prev_addr) | (rden_i != prev_rden));
+wire [7:0]  wstrb     = (|wren_i & ((addr_i != prev_addr) | (wren_i != prev_wren))) ? wren_i : 8'b0;
 always @(posedge clk_i) begin
         if (reset_i) begin
                 prev_addr <= 32'b0;
+                prev_rden <= 1'b0;
+                prev_wren <= 8'b0;
         end else begin
                 prev_addr <= addr_i;
                 prev_rden <= rden_i;
+                prev_wren <= wren_i;
         end
 end
 
@@ -95,10 +100,11 @@ DCache dcache(
 IO io(
         .clk_i(clk_i),
         .reset_i(reset_i),
+        .rtc_i(1'b0),
         .IO_addr_i(IO_addr),
         .IO_wData_i(IO_wData),
         .IO_rstrb_i(IO_rstrb),
-        .IO_wren_i(IO_wren),
+        .IO_wstrb_i(IO_wstrb),
         .IO_rData_o(IO_rData),
         .IO_validReady_o(IO_validReady),
         .spiClk_o(spiClk_o),

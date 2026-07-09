@@ -14,9 +14,9 @@ CC := $(RVTOOL_PREFIX)-gcc
 LD := $(RVTOOL_PREFIX)-ld
 OBJCOPY := $(RVTOOL_PREFIX)-objcopy
 OBJDUMP := $(RVTOOL_PREFIX)-objdump
-CFLAGS  := -O2 -march=$(RVARCH) -mabi=$(RVABI) -Wno-builtin-declaration-mismatch
+CFLAGS  := -g0 -O2 -march=$(RVARCH) -mabi=$(RVABI) -Wno-builtin-declaration-mismatch
 CFLAGS  += -fno-pic -fno-stack-protector -w -nostdlib
-LDFLAGS := -m elf32lriscv -nostdlib
+LDFLAGS := -O2 -S -m elf32lriscv -nostdlib
 LDFLAGS += -L$(RV_LIB_DIR) -lm $(GCC_LIB_DIR)/libgcc.a
 ODFLAGS := -sj .data -dj .text
 
@@ -114,7 +114,7 @@ store:
 	cd tcl; vivado -mode tcl -nolog -nojournal -source store.tcl | tee store.log
 
 clean:
-	rm -rf ./obj_dir
+	rm -rf obj_dir
 	rm -rf $(BIN_DIR)
 	rm -rf $(BUILD_DIR)
 
