@@ -95,14 +95,13 @@ wire [63:0]  C_dataOffset = C_offset[4] ?
                       (C_offset[3] ? C_data[127:64]  : C_data[63:0]   );
 /*verilator public_off*/
 
-wire C_hitDirty0 = C_hit0 & dirty0[index];
-wire C_hitDirty1 = C_hit1 & dirty1[index];
-wire C_hitDirty2 = C_hit2 & dirty2[index];
-wire C_hitDirty3 = C_hit3 & dirty3[index];
-wire C_hitDirty  = C_hitDirty0 | C_hitDirty1 | C_hitDirty2 | C_hitDirty3;
+wire C_validDirty0 = valid0[flushSet] & dirty0[flushSet];
+wire C_validDirty1 = valid1[flushSet] & dirty1[flushSet];
+wire C_validDirty2 = valid2[flushSet] & dirty2[flushSet];
+wire C_validDirty3 = valid3[flushSet] & dirty3[flushSet];
+wire C_validDirty  = C_validDirty0 | C_validDirty1 | C_validDirty2 | C_validDirty3;
 
-// the (flush_i | C_hit) it to cover flushing an address that isnt in the cache.
-assign validReady_o = (C_curState == IDLE & (flush_i | C_hit) & ~(flush_i & C_hitDirty)) |
+assign validReady_o = (C_curState == IDLE & (flush_i | C_hit) & (~flush_i | flushDone)) |
         (~rden_i & ~|wren_i & ~flush_i);
 assign rdata_o      = C_dataOffset;
 assign mRden_o      = C_mRden;
@@ -112,6 +111,8 @@ assign mWData_o     = C_data;
 
 /*-------------------------------- Cache Memory Control --------------------------------*/
 wire         C_missRead = (C_curState == MISS_READ) & ~C_mRden & mValidReady_i;
+
+wire [7:0] curIndex = flush_i ? flushSet : index;
 
 reg          m0_rden;
 reg   [7:0]  m0_wren;
@@ -146,17 +147,24 @@ always @(*) begin
         if (C_curState == IDLE) begin
                 if (~rden_i & ~|wren_i & ~flush_i) begin
                         // Do nothing
+                end else if (flush_i) begin
+                        if (C_validDirty) begin
+                                m0_rden = 1'b1;
+                                m1_rden = 1'b1;
+                                m2_rden = 1'b1;
+                                m3_rden = 1'b1;
+                        end
                 end else if (C_hit0) begin
-                        if (rden_i | (flush_i & C_hitDirty))  m0_rden = 1'b1;
+                        if (rden_i)  m0_rden = 1'b1;
                         if (|wren_i) m0_wren = wren_i;
                 end else if (C_hit1) begin
-                        if (rden_i | (flush_i & C_hitDirty))  m1_rden = 1'b1;
+                        if (rden_i)  m1_rden = 1'b1;
                         if (|wren_i) m1_wren = wren_i;
                 end else if (C_hit2) begin
-                        if (rden_i | (flush_i & C_hitDirty))  m2_rden = 1'b1;
+                        if (rden_i)  m2_rden = 1'b1;
                         if (|wren_i) m2_wren = wren_i;
                 end else if (C_hit3) begin
-                        if (rden_i | (flush_i & C_hitDirty))  m3_rden = 1'b1;
+                        if (rden_i)  m3_rden = 1'b1;
                         if (|wren_i) m3_wren = wren_i;
                 end
                 else if (valid0[index] & valid1[index] & valid2[index] & valid3[index]) begin
@@ -179,6 +187,11 @@ localparam MISS_READ  = 2'b10; // Read data from main memory
 
 reg [1:0] C_curState = IDLE;
 
+reg [7:0] flushSet;
+reg [3:0] flushWay;
+reg       flushBusy;
+reg       flushDone;
+
 integer i;
 always @(posedge clk_i) begin
         if (reset_i) begin
@@ -189,6 +202,8 @@ always @(posedge clk_i) begin
                         valid3[i] <= 0;
                 end
                 C_curState <= IDLE;
+                flushDone <= 0;
+                flushBusy <= 1'b0;
         end else begin
                 case (C_curState)
                 IDLE: begin
@@ -196,30 +211,75 @@ always @(posedge clk_i) begin
                         C_mRden <= 1'b0;
                         C_mWren <= 8'b0;
 
+                        // Reset Flush done and busy flags
+                        if (~flush_i) begin
+                                flushDone <= 1'b0;
+                                flushBusy <= 1'b0;
+                        end
+
                         if (~rden_i & ~|wren_i & ~flush_i) begin
                                 // Do nothing
                                 C_curState <= IDLE;
                         end
                         else if (flush_i) begin
-                                if (~C_hitDirty) begin
-                                        C_curState <= IDLE;
-                                end else begin
-                                        if (C_hit0) begin
-                                                dirty0[index] <= 1'b0;
-                                                C_dataWay <= 2'b00;
-                                        end else if (C_hit1) begin
-                                                dirty1[index] <= 1'b0;
-                                                C_dataWay <= 2'b01;
-                                        end else if (C_hit2) begin
-                                                dirty2[index] <= 1'b0;
-                                                C_dataWay <= 2'b10;
-                                        end else if (C_hit3) begin
-                                                dirty3[index] <= 1'b0;
-                                                C_dataWay <= 2'b11;
+                                if (flushDone) begin
+                                        flushSet <= 0;
+                                        flushBusy <= 1'b0;
+                                end
+                                else if (~flushBusy) begin
+                                        flushSet <= 8'hFF;
+                                        flushWay <= 4'b0001;
+                                        flushBusy <= 1'b1;
+                                end
+                                else begin
+                                        if (flushWay[0]) begin
+                                                if (C_validDirty0) begin
+                                                        C_mWren <= 8'hFF;
+                                                        C_mAddr <= {tag0[flushSet], flushSet, 5'b0};
+                                                        C_dataWay <= 2'b00;
+                                                        C_curState <= MISS_WRITE;
+                                                        dirty0[flushSet] <= 1'b0;
+                                                end
+                                                if (valid0[flushSet])
+                                                        valid0[flushSet] <= 1'b0;
+                                                flushWay <= 4'b0010;
+                                        end else if (flushWay[1]) begin
+                                                if (C_validDirty1) begin
+                                                        C_mWren <= 8'hFF;
+                                                        C_mAddr <= {tag1[flushSet], flushSet, 5'b0};
+                                                        C_curState <= MISS_WRITE;
+                                                        C_dataWay <= 2'b01;
+                                                        dirty1[flushSet] <= 1'b0;
+                                                end
+                                                if (valid1[flushSet])
+                                                        valid1[flushSet] <= 1'b0;
+                                                flushWay <= 4'b0100;
+                                        end else if (flushWay[2]) begin
+                                                if (C_validDirty2) begin
+                                                        C_mWren <= 8'hFF;
+                                                        C_mAddr <= {tag2[flushSet], flushSet, 5'b0};
+                                                        C_curState <= MISS_WRITE;
+                                                        C_dataWay <= 2'b10;
+                                                        dirty2[flushSet] <= 1'b0;
+                                                end
+                                                if (valid2[flushSet])
+                                                        valid2[flushSet] <= 1'b0;
+                                                flushWay <= 4'b1000;
+                                        end else if (flushWay[3]) begin
+                                                if (C_validDirty3) begin
+                                                        C_mWren <= 8'hFF;
+                                                        C_mAddr <= {tag3[flushSet], flushSet, 5'b0};
+                                                        C_curState <= MISS_WRITE;
+                                                        C_dataWay <= 2'b11;
+                                                        dirty3[flushSet] <= 1'b0;
+                                                end
+                                                if (valid3[flushSet])
+                                                        valid3[flushSet] <= 1'b0;
+                                                flushWay <= 4'b0001;
+                                                flushSet <= flushSet - 1;
+                                                if (flushSet == 0)
+                                                        flushDone <= 1'b1;
                                         end
-                                        C_mWren <= 8'hFF;
-                                        C_mAddr <= addr_i;
-                                        C_curState <= MISS_WRITE;
                                 end
                         end
                         // Check Way 0
@@ -409,7 +469,7 @@ DCacheMem #(
 )mem0(
         .clk_i(clk_i),
         .reset_i(reset_i),
-        .index_i(index),
+        .index_i(curIndex),
         .offset_i(offset),
         .rden_i(m0_rden),
         .wren_i(m0_wren),
@@ -425,7 +485,7 @@ DCacheMem #(
 )mem1(
         .clk_i(clk_i),
         .reset_i(reset_i),
-        .index_i(index),
+        .index_i(curIndex),
         .offset_i(offset),
         .rden_i(m1_rden),
         .wren_i(m1_wren),
@@ -441,7 +501,7 @@ DCacheMem #(
 )mem2(
         .clk_i(clk_i),
         .reset_i(reset_i),
-        .index_i(index),
+        .index_i(curIndex),
         .offset_i(offset),
         .rden_i(m2_rden),
         .wren_i(m2_wren),
@@ -457,7 +517,7 @@ DCacheMem #(
 )mem3(
         .clk_i(clk_i),
         .reset_i(reset_i),
-        .index_i(index),
+        .index_i(curIndex),
         .offset_i(offset),
         .rden_i(m3_rden),
         .wren_i(m3_wren),
@@ -467,6 +527,4 @@ DCacheMem #(
 );
 
 endmodule
-
-
 

@@ -310,6 +310,7 @@ wire        EM_isStore;
 wire        EM_isCSR;
 wire        EM_isCSRWrite;
 wire        EM_isAMO;
+wire        EM_isFENCE;
 wire [5:0]  EM_rdId;
 wire [5:0]  EM_rs1Id;
 wire [5:0]  EM_rs2Id;
@@ -405,6 +406,7 @@ ExecuteUnit execute(
         .EM_isCSR_o(EM_isCSR),
         .EM_isCSRWrite_o(EM_isCSRWrite),
         .EM_isAMO_o(EM_isAMO),
+        .EM_isFENCE_o(EM_isFENCE),
         .EM_rdId_o(EM_rdId),
         .EM_rs1Id_o(EM_rs1Id),
         .EM_rs2Id_o(EM_rs2Id),
@@ -446,6 +448,7 @@ MemoryUnit memory(
         .EM_isStore_i(EM_isStore),
         .EM_isCSR_i(EM_isCSR),
         .EM_isAMO_i(EM_isAMO),
+        .EM_isFENCE_i(EM_isFENCE),
         .EM_rdId_i(EM_rdId),
         .EM_rs1Id_i(EM_rs1Id),
         .EM_rs2Id_i(EM_rs2Id),

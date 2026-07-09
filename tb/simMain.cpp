@@ -22,6 +22,7 @@
 #define ICacheHit               SOC__DOT__icache__DOT__C_hit
 #define ICacheSplit             SOC__DOT__CPU__DOT__fetch__DOT__ICacheSplit
 #define DCacheState             SOC__DOT__datamem__DOT__dcache__DOT__C_curState
+#define DCacheFlush             SOC__DOT__DCacheFlush
 
 #define Reg_A0                  SOC__DOT__CPU__DOT__registers__DOT__reg_10
 #define Reg_A1                  SOC__DOT__CPU__DOT__registers__DOT__reg_11
@@ -95,7 +96,7 @@ class SOC_TB : public TESTB<VSOC> {
                                 nbICacheSplit++;
                         nbICache++;
                 } 
-                if (rootp->DCacheState != 0 && prevDCacheState == 0) {
+                if (rootp->DCacheState != 0 && prevDCacheState == 0 && !rootp->DCacheFlush) {
                         nbDCacheMiss++;
                 }
                 prevDCacheState = rootp->DCacheState;

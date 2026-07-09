@@ -29,6 +29,7 @@ module MemoryUnit (
         input  wire        EM_isStore_i,
         input  wire        EM_isCSR_i,
         input  wire        EM_isAMO_i,
+        input  wire        EM_isFENCE_i,
         input  wire [5:0]  EM_rdId_i,
         input  wire [5:0]  EM_rs1Id_i,
         input  wire [5:0]  EM_rs2Id_i,
@@ -104,7 +105,7 @@ always @(*) begin
 end
 
 /*-----------------------Cache Flush----------------------*/
-assign DMemFlush_o = EM_isCSR_i & (EM_csrId_i == 12'h7C0);
+assign DMemFlush_o = EM_isFENCE_i & (EM_funct3_i == 3'b0);
 
 /*----------------------STORE---------------------*/
 reg [63:0] M_storeData;
@@ -174,7 +175,7 @@ always @(*) begin
         end
 end
 
-assign DMemWAddr_o = DMemFlush_o ? EM_Eresult_i[31:0] : EM_addr_i;
+assign DMemWAddr_o = EM_addr_i;
 assign DMemWData_o = M_storeData;
 assign DMemWMask_o = {8{M_storeEnable}} & M_storeMask;
 

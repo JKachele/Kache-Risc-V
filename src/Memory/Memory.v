@@ -253,7 +253,7 @@ end
 // assign m_axi_arlen_o = 8'd7; // 8 byte burst
 
 /*-------------------------------- Block RAM --------------------------------*/
-reg [255:0] BRAM [0:8191];
+reg [255:0] BRAM [0:1023];
 
 initial begin
         $readmemh("../bin/BRAM.hex",BRAM);

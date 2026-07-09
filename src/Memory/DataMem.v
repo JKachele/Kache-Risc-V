@@ -58,12 +58,14 @@ wire        IO_validReady;
 
 // Turn read enable signal into strobe
 reg  [31:0] prev_addr = 32'b0;
-wire        rstrb     = rden_i & (addr_i != prev_addr);
+reg         prev_rden = 1'b0;
+wire        rstrb     = rden_i & ((addr_i != prev_addr) | (rden_i != prev_rden));
 always @(posedge clk_i) begin
         if (reset_i) begin
                 prev_addr <= 32'b0;
         end else begin
                 prev_addr <= addr_i;
+                prev_rden <= rden_i;
         end
 end
 

@@ -6,8 +6,6 @@
  *License-------GNU GPL-3.0
  ************************************************/
 
-#include <stdio.h>
-
 #define ELF_ADDR 0x80400000
 
 typedef unsigned char u8;
@@ -70,17 +68,7 @@ void moveData(u32 startOffset, u32 destAddr, u32 size) {
         }
 
         // Flush data cache to ensure that the data is written to memory
-        u32 numCacheLines = numWords / 8; // Assuming 32-byte cache lines
-        u32 lineAddr = destAddr & 0xFFE0; // Align to cache line
-        // Flush all lines with data we just wrote plus 1 to ensure that the last line is flushed
-        for (int i = 0; i <= numCacheLines; i++) {
-                asm volatile(
-                                "csrw 0x7C0, %0\n"
-                                ::"r"(lineAddr)
-                                : "memory"
-                            );
-                lineAddr += 32; // Move to next cache line
-        }
+        asm volatile("fence\n");
 }
 
 struct elfHeader getElfHeader() {
@@ -147,10 +135,6 @@ int main(void) {
                         "jr 0(%0)\n"
                         ::"r"(elfHeader.entry)
                     );
-
-        // for (int i = 0; i < 50; i++) {
-        //         printf("%08x\n", getMem(elfHeader.entry + (i * 4)));
-        // }
 
         return 0;
 }

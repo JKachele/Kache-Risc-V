@@ -85,6 +85,7 @@ module ExecuteUnit (
         output reg         EM_isCSR_o,
         output reg         EM_isCSRWrite_o,
         output reg         EM_isAMO_o,
+        output reg         EM_isFENCE_o,
         output reg  [5:0]  EM_rdId_o,
         output reg  [5:0]  EM_rs1Id_o,
         output reg  [5:0]  EM_rs2Id_o,
@@ -316,6 +317,7 @@ always @(posedge clk_i) begin
                 EM_isCSR_o <= DE_isCSR_i;
                 EM_isCSRWrite_o <= DE_isCSR_i && (DE_rs1Id_i != 6'b0);
                 EM_isAMO_o <= DE_isAMO_i;
+                EM_isFENCE_o <= DE_isFENCE_i;
                 EM_rdId_o <= DE_rdId_i;
                 EM_rs1Id_o <= DE_rs1Id_i;
                 EM_rs2Id_o <= DE_rs2Id_i;
