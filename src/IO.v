@@ -16,6 +16,7 @@ module IO (
         input  wire [7:0]  IO_wstrb_i,
         output wire [63:0] IO_rData_o,
         output wire        IO_validReady_o,
+        output wire        TimerIRQ_o,
 
         // SPI Flash
         output wire        spiClk_o,
@@ -58,9 +59,84 @@ assign IO_rData_o = isFlash_r ? SPI_Data : (isUART_r ? {2{uartRData}} : 64'b0);
 assign IO_validReady_o = isFlash ? SPI_valid : 1'b1;
 
 /*-------------------------------- Memory Mapped Registers --------------------------------*/
-reg [63:0] mtime = 64'b0;
-reg [63:0] mtimecmp = 64'b0;
+/* verilator lint_off MULTIDRIVEN */
+(* ram_style = "block" *) reg [63:0] mtime [0:1]; // mtime[0] = mtime, mtime[1] = mtimecmp
 
+wire isMTime = isMMReg & (IO_addr_i[27:3] == 25'h0) & (IO_rstrb_i | |IO_wstrb_i);
+wire isMTimecmp = isMMReg & (IO_addr_i[27:3] == 25'h1) & (IO_rstrb_i | |IO_wstrb_i);
+reg  [63:0] mtimeRData;
+reg  [63:0] mtimecmpRData;
+
+// Registers used to declare an interupt
+reg  [63:0] mtimeData;
+reg  [63:0] mtimecmpData;
+assign TimerIRQ_o = (mtimeData >= mtimecmpData) ? 1'b1 : 1'b0;
+
+integer i;
+always @(posedge clk_i) begin
+        if (isMTime) begin
+                for (i = 0; i < 8; i = i+1) begin
+                        if (IO_wstrb_i[i]) begin
+                                mtime[0][i*8 +: 8] <= IO_wData_i[i*8 +: 8];
+                        end
+                end
+                if (IO_rstrb_i) begin
+                        mtimeRData <= mtime[0];
+                end
+                mtimeData <= mtime[0];
+        end else if (isMTimecmp) begin
+                for (i = 0; i < 8; i = i+1) begin
+                        if (IO_wstrb_i[i]) begin
+                                mtime[1][i*8 +: 8] <= IO_wData_i[i*8 +: 8];
+                        end
+                end
+                if (IO_rstrb_i) begin
+                        mtimecmpRData <= mtime[1];
+                end
+                mtimecmpData <= mtime[1];
+        end
+end
+
+always @(posedge rtc_i) begin
+        mtime[0] <= mtime[0] + 1;
+end
+
+// generate
+//         genvar i;
+//         for (i = 0; i < 8; i = i+1) begin: g_byte_write
+//                 always @(posedge clk_i) begin
+//                         if (isMTime) begin
+//                                 if (IO_wstrb_i[i]) begin
+//                                         mtime[0][(i+1)*7:i*8] <= IO_wData_i[(i+1)*7:i*8];
+//                                         mtimeData[(i+1)*7:i*8] <= mtime[0][(i+1)*7:i*8];
+//                                 end else if (IO_rstrb_i) begin
+//                                         mtimeRData[(i+1)*7:i*8] <= mtime[0][(i+1)*7:i*8];
+//                                         mtimeData[(i+1)*7:i*8] <= mtime[0][(i+1)*7:i*8];
+//                                 end else begin
+//                                         mtimeData[(i+1)*7:i*8] <= mtime[0][(i+1)*7:i*8];
+//                                 end
+//                         end
+//                         else if (isMTimeCmp) begin
+//                                 if (IO_wstrb_i[i]) begin
+//                                         mtime[1][(i+1)*7:i*8] <= IO_wData_i[(i+1)*7:i*8];
+//                                         mtimecmpData[(i+1)*7:i*8] <= mtime[1][(i+1)*7:i*8];
+//                                 end else if (IO_rstrb_i) begin
+//                                         mtimecmpRData[(i+1)*7:i*8] <= mtime[1][(i+1)*7:i*8];
+//                                         mtimecmpData[(i+1)*7:i*8] <= mtime[1][(i+1)*7:i*8];
+//                                 end else begin
+//                                         mtimecmpData[(i+1)*7:i*8] <= mtime[1][(i+1)*7:i*8];
+//                                 end
+//                         end
+//                 end
+//
+//         end
+// endgenerate
+//
+// always @(posedge rtc_i) begin
+//         mtime[0] <= mtime[0] + 1;
+// end
+
+/* verilator lint_on MULTIDRIVEN */
 /*-------------------------------- QSPI Flash --------------------------------*/
 wire flashRstrb = isFlash & IO_rstrb_i;
 

@@ -12,7 +12,7 @@ public:
                 m_core = new MODULE();
                 Verilated::traceEverOn(true);
                 m_tickcount = 01;
-                m_core->CLK = 0;
+                m_core->CLK100MHZ = 0;
                 m_core->eval();
                 rootp = m_core->rootp;
         }
@@ -56,13 +56,13 @@ public:
                 if (m_trace) m_trace->dump((vluint64_t)(10*m_tickcount-2));
 
                 // Toggle Clock
-                m_core->CLK = 1;
+                m_core->CLK100MHZ = 1;
                 m_core->eval();
                 if (m_trace) m_trace->dump((vluint64_t)(10*m_tickcount));
         }
 
         virtual void tickDown(void) {
-                m_core->CLK = 0;
+                m_core->CLK100MHZ = 0;
                 m_core->eval();
                 if (m_trace) {
                         m_trace->dump((vluint64_t)(10*m_tickcount+5));

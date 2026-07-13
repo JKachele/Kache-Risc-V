@@ -8,9 +8,10 @@
 /* verilator lint_off WIDTH */
 
 module SOC (
-        input  wire CLK,
+        input  wire CLK100MHZ,
         input  wire RESET,
 
+        // input  wire RTC,
         output wire [3:0] LEDS,
         input  wire RXD,
         output wire TXD,
@@ -46,6 +47,10 @@ wire clk0;
 wire clk1;
 
 wire [31:0] rvec = 32'h7000_0000;
+wire RTC = CLK100MHZ;
+
+// Interupts
+wire TimerIRQ;
 
 // Cache-Memory Interface
 wire         IC_mRden;
@@ -156,12 +161,14 @@ DataMem datamem(
         .wren_i(DCacheWren),
         .rdata_o(DCacheRData),
         .validReady_o(DCacheValidReady),
+        .TimerIRQ_o(TimerIRQ),
         .mAddr_o(DC_mAddr),
         .mWData_o(DC_mWData),
         .mRden_o(DC_mRden),
         .mWren_o(DC_mWren),
         .mRData_i(DC_mRData),
         .mValidReady_i(DC_mValidReady),
+        .rtc_i(RTC),
         .spiClk_o(qspi_sck),
         .spiCs_o(qspi_cs),
         .spiMosi_io(qspi_mosi),
@@ -267,14 +274,14 @@ Memory mem(
 Clockworks #(
         .SLOW(0)
 )CW(
-        .CLK(CLK),
+        .CLK(CLK100MHZ),
         .RESET(RESET),
         .clk(clk),
         .resetn(reset)
 );
 `else
 ClockworksA7 cw (
-        .clkref_i(CLK),
+        .clkref_i(CLK100MHZ),
         .RESET(RESET),
         .clk0_o(clk0),
         .clk1_o(clk1),

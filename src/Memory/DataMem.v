@@ -17,6 +17,7 @@ module DataMem (
         input  wire [7:0]   wren_i,
         output wire [63:0]  rdata_o,
         output wire         validReady_o,
+        output wire         TimerIRQ_o,
 
         output wire [31:0]  mAddr_o,
         output wire [255:0] mWData_o,
@@ -33,6 +34,7 @@ module DataMem (
         // input  wire [31:0]  IO_RData_i,
         // input  wire         IO_ValidReady_i
         // SPI Flash
+        input  wire        rtc_i,
         output wire        spiClk_o,
         output wire        spiCs_o,
         inout  wire        spiMosi_io,
@@ -100,13 +102,14 @@ DCache dcache(
 IO io(
         .clk_i(clk_i),
         .reset_i(reset_i),
-        .rtc_i(1'b0),
+        .rtc_i(rtc_i),
         .IO_addr_i(IO_addr),
         .IO_wData_i(IO_wData),
         .IO_rstrb_i(IO_rstrb),
         .IO_wstrb_i(IO_wstrb),
         .IO_rData_o(IO_rData),
         .IO_validReady_o(IO_validReady),
+        .TimerIRQ_o(TimerIRQ_o),
         .spiClk_o(spiClk_o),
         .spiCs_o(spiCs_o),
         .spiMosi_io(spiMosi_io),
