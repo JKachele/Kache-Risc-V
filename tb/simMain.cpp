@@ -3,9 +3,9 @@
 #include "VSOC.h"
 #include "VSOC___024root.h"
 #include "testbench.h"
-#include "uartsim.h"
-#include "spiflash.h"
 #include "riscVDis.h"
+#include "peripherals/uart.h"
+#include "peripherals/spiflash.h"
 
 #define HALT                    SOC__DOT__CPU__DOT__HALT
 #define D_stall                 SOC__DOT__CPU__DOT__D_stall
@@ -226,14 +226,8 @@ int main(int argc, char **argv) {
 
 
         UARTSIM *uart;
-        int port = 0;
-        unsigned setup = 108;
-        unsigned clocks = 0;
-        unsigned baudclocks;
-
-        uart = new UARTSIM(port);
-        uart->setup(setup);
-        baudclocks = setup & 0xfffffff;
+        unsigned clksPerBaud = 13;
+        uart = new UARTSIM(clksPerBaud);
 
         // tb->opentrace("trace.vcd");
 
@@ -242,9 +236,8 @@ int main(int argc, char **argv) {
         int rxPrev = 1;
         while (!tb->done()) {
                 tb->tick();
+                (*uart)(tb->m_core->TXD);
                 // tb->recordExecution();
-                // tb->m_core->RXD = (*uart)(tb->m_core->TXD);
-                // clocks++;
         }
         tb->printStatusReport();
 

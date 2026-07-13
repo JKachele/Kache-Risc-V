@@ -54,7 +54,7 @@ always @(posedge clk_i) begin
         end
 end
 
-assign IO_rData_o = isFlash_r ? SPI_Data : (isUART_r ? uartRData : 64'b0);
+assign IO_rData_o = isFlash_r ? SPI_Data : (isUART_r ? {2{uartRData}} : 64'b0);
 assign IO_validReady_o = isFlash ? SPI_valid : 1'b1;
 
 /*-------------------------------- Memory Mapped Registers --------------------------------*/
@@ -89,7 +89,7 @@ wire isUartCtrl = isUART & IO_addr_i[2];
 
 wire uartWren = |IO_wstrb_i & isUartData;
 wire uartBusy;
-wire [63:0] uartRData = isUartData ? 64'b0 : {54'b0, uartBusy, 9'b0};
+wire [31:0] uartRData = isUartData ? 32'b0 : {22'b0, uartBusy, 9'b0};
 
 // 25MHz, 2M baud, 8-bit, no parity, 1 stop bit
 localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h00000D};
@@ -100,27 +100,28 @@ localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h00000D};
 // 100MHz, 115200 baud, 8-bit, no parity, 1 stop bit
 // localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h000364};
 
-`ifndef BENCH
-        txuart TXUART (
-                .i_clk(clk_i),
-                .i_reset(reset_i),
-                .i_setup(UART_SETUP),
-                .i_break(0),
-                .i_wr(uartWren),
-                .i_data(IO_wData_i[7:0]),
-                .i_cts_n(0),
-                .o_uart_tx(txd_o),
-                .o_busy(uartBusy)
-        );
-`else
-        assign uartBusy = 1'b0;
-        always @(posedge clk_i) begin
-                if(uartWren) begin
-                        $write("%c", IO_wData_i[7:0]);
-                        $fflush(32'h8000_0001);
-                end
-        end
-`endif
+txuart TXUART (
+        .i_clk(clk_i),
+        .i_reset(reset_i),
+        .i_setup(UART_SETUP),
+        .i_break(0),
+        .i_wr(uartWren),
+        .i_data(IO_wData_i[7:0]),
+        .i_cts_n(0),
+        .o_uart_tx(txd_o),
+        .o_busy(uartBusy)
+);
+
+// `ifndef BENCH
+// `else
+//         assign uartBusy = 1'b0;
+//         always @(posedge clk_i) begin
+//                 if(uartWren) begin
+//                         $write("%c", IO_wData_i[7:0]);
+//                         $fflush(32'h8000_0001);
+//                 end
+//         end
+// `endif
 
 /*-------------------------------- Basic IO --------------------------------*/
 wire isLED = isBasic & (IO_addr_i[27:3] == 25'h1);

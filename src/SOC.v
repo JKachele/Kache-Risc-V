@@ -18,25 +18,25 @@ module SOC (
         output wire qspi_sck,
         output wire qspi_cs,
         inout  wire qspi_mosi,
-        input  wire qspi_miso,
+        input  wire qspi_miso
         // inout  wire [3:0] qspi_dq,
 
         // DDR3 SDRAM
-        output wire        ddr3_reset_n,
-        output wire [0:0]  ddr3_cke,
-        output wire [0:0]  ddr3_ck_p,
-        output wire [0:0]  ddr3_ck_n,
-        output wire [0:0]  ddr3_cs_n,
-        output wire        ddr3_ras_n,
-        output wire        ddr3_cas_n,
-        output wire        ddr3_we_n,
-        output wire [2:0]  ddr3_ba,
-        output wire [13:0] ddr3_addr,
-        output wire [0:0]  ddr3_odt,
-        output wire [1:0]  ddr3_dm,
-        inout  wire [1:0]  ddr3_dqs_p,
-        inout  wire [1:0]  ddr3_dqs_n,
-        inout  wire [15:0] ddr3_dq
+        // output wire        ddr3_reset_n,
+        // output wire [0:0]  ddr3_cke,
+        // output wire [0:0]  ddr3_ck_p,
+        // output wire [0:0]  ddr3_ck_n,
+        // output wire [0:0]  ddr3_cs_n,
+        // output wire        ddr3_ras_n,
+        // output wire        ddr3_cas_n,
+        // output wire        ddr3_we_n,
+        // output wire [2:0]  ddr3_ba,
+        // output wire [13:0] ddr3_addr,
+        // output wire [0:0]  ddr3_odt,
+        // output wire [1:0]  ddr3_dm,
+        // inout  wire [1:0]  ddr3_dqs_p,
+        // inout  wire [1:0]  ddr3_dqs_n,
+        // inout  wire [15:0] ddr3_dq
 );
 
 /*verilator public_flat_rw_on*/

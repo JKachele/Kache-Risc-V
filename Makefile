@@ -29,7 +29,7 @@ XDC  := src/Extern/NexusA7.xdc
 TB := verilator
 TBFLAGS := -DBENCH -Wno-fatal --pins-inout-enables
 TBFLAGS += --top-module $(TOP) --trace -cc -exe #--build
-TBSRC := $(wildcard tb/*.cpp)
+TBSRC := $(wildcard tb/*.cpp) $(wildcard tb/*/*.cpp)
 
 BIN_DIR := bin
 BUILD_DIR := build
