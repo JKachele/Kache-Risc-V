@@ -103,14 +103,14 @@ lint: clean $(BRAM)
 	cd tcl; vivado -mode batch -nolog -nojournal \
 		-source lint.tcl -tclargs $(VSRC) | tee lint.log
 
-build: clean $(BRAM)
+build: clean $(BRAM) $(FIRMWARE)
 	cd tcl; vivado -mode batch -nolog -nojournal \
 		-source build.tcl -tclargs $(VSRC) | tee build.log
 
 upload:
 	cd tcl; vivado -mode tcl -nolog -nojournal -source upload.tcl | tee upload.log
 
-store:
+store: $(FIRMWARE)
 	cd tcl; vivado -mode tcl -nolog -nojournal -source store.tcl | tee store.log
 
 clean:
