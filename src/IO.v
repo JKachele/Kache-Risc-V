@@ -101,41 +101,6 @@ always @(posedge rtc_i) begin
         mtime[0] <= mtime[0] + 1;
 end
 
-// generate
-//         genvar i;
-//         for (i = 0; i < 8; i = i+1) begin: g_byte_write
-//                 always @(posedge clk_i) begin
-//                         if (isMTime) begin
-//                                 if (IO_wstrb_i[i]) begin
-//                                         mtime[0][(i+1)*7:i*8] <= IO_wData_i[(i+1)*7:i*8];
-//                                         mtimeData[(i+1)*7:i*8] <= mtime[0][(i+1)*7:i*8];
-//                                 end else if (IO_rstrb_i) begin
-//                                         mtimeRData[(i+1)*7:i*8] <= mtime[0][(i+1)*7:i*8];
-//                                         mtimeData[(i+1)*7:i*8] <= mtime[0][(i+1)*7:i*8];
-//                                 end else begin
-//                                         mtimeData[(i+1)*7:i*8] <= mtime[0][(i+1)*7:i*8];
-//                                 end
-//                         end
-//                         else if (isMTimeCmp) begin
-//                                 if (IO_wstrb_i[i]) begin
-//                                         mtime[1][(i+1)*7:i*8] <= IO_wData_i[(i+1)*7:i*8];
-//                                         mtimecmpData[(i+1)*7:i*8] <= mtime[1][(i+1)*7:i*8];
-//                                 end else if (IO_rstrb_i) begin
-//                                         mtimecmpRData[(i+1)*7:i*8] <= mtime[1][(i+1)*7:i*8];
-//                                         mtimecmpData[(i+1)*7:i*8] <= mtime[1][(i+1)*7:i*8];
-//                                 end else begin
-//                                         mtimecmpData[(i+1)*7:i*8] <= mtime[1][(i+1)*7:i*8];
-//                                 end
-//                         end
-//                 end
-//
-//         end
-// endgenerate
-//
-// always @(posedge rtc_i) begin
-//         mtime[0] <= mtime[0] + 1;
-// end
-
 /* verilator lint_on MULTIDRIVEN */
 /*-------------------------------- QSPI Flash --------------------------------*/
 wire flashRstrb = isFlash & IO_rstrb_i;

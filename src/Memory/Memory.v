@@ -5,7 +5,6 @@
  *Author--------Justin Kachele
  *Created-------Monday Nov 17, 2025 20:59:49 UTC
  ************************************************/
-/* verilator lint_off WIDTH */
 
 module Memory (
         input  wire        clk_i,
@@ -106,19 +105,19 @@ reg [255:0] SDRAM [0:8191];
 
 always @(posedge clk_i) begin
         if (|SDRamWMask)
-                SDRAM[DMemAddr_i[18:5]] <= DMemWData_i;
+                SDRAM[DMemAddr_i[17:5]] <= DMemWData_i;
 end
 
 always @(posedge clk_i) begin
         if (reset_i) begin
-                SDRamRData <= 64'b0;
-                SDRamInstr <= 64'b0;
+                SDRamRData <= 256'b0;
+                SDRamInstr <= 256'b0;
         end
         if (DMemRStrb_i) begin
-                SDRamRData <= SDRAM[DMemAddr_i[18:5]];
+                SDRamRData <= SDRAM[DMemAddr_i[17:5]];
         end
         if (IMemStrb_i) begin
-                SDRamInstr <= SDRAM[IMemAddr_i[18:5]];
+                SDRamInstr <= SDRAM[IMemAddr_i[17:5]];
         end
 end
 // wire isSDRamRead  =  DMemRStrb_i & M_isSDRAM;
@@ -261,22 +260,21 @@ end
 
 always @(posedge clk_i) begin
         if (|BRamWMask)
-                BRAM[DMemAddr_i[18:5]] <= DMemWData_i;
+                BRAM[DMemAddr_i[14:5]] <= DMemWData_i;
 end
 
 always @(posedge clk_i) begin
         if (reset_i) begin
-                BRamRData <= 64'b0;
-                BRamInstr <= 64'b0;
+                BRamRData <= 256'b0;
+                BRamInstr <= 256'b0;
         end
         if (DMemRStrb_i) begin
-                BRamRData <= BRAM[DMemAddr_i[18:5]];
+                BRamRData <= BRAM[DMemAddr_i[14:5]];
         end
         if (IMemStrb_i) begin
-                BRamInstr <= BRAM[IMemAddr_i[18:5]];
+                BRamInstr <= BRAM[IMemAddr_i[14:5]];
         end
 end
 
 endmodule
-/* verilator lint_on WIDTH */
 

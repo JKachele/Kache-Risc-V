@@ -5,7 +5,6 @@
  *Author--------Justin Kachele
  *Created-------Monday Nov 17, 2025 20:09:00 UTC
  ************************************************/
-/* verilator lint_off WIDTH */
 
 module SOC (
         input  wire CLK100MHZ,
@@ -291,5 +290,4 @@ ClockworksA7 cw (
 `endif
 
 endmodule
-/* verilator lint_on WIDTH */
 

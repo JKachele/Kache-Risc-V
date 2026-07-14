@@ -19,7 +19,7 @@ module FSQRT #(
         input  wire        [5:0]        rs1Class_i,
         input  wire        [2:0]        rm_i,
 
-        output reg                      ready_o,
+        output wire                     ready_o,
         output wire        [FLEN-1:0]   fsqrtOut_o
 );
 `ifdef BENCH
@@ -172,16 +172,14 @@ always @(*) begin
 end
 
 // Logic to generate the busy signal
-always @(negedge clk_i) begin
-        if (counter > 0) begin
+always @(posedge clk_i) begin
+        if (sqrtEnable_i && !reset_i && !busy) begin
                 busy <= 1'b1;
-                ready_o <= 1'b0;
-        end else if (busy) begin
+        end else if (counter == 0 && busy) begin
                 busy <= 1'b0;
-                ready_o <= 1'b1;
-        end else begin
-                ready_o <= 1'b0;
         end
 end
+assign ready_o = (counter == 0 && busy);
+
 endmodule
 

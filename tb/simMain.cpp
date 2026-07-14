@@ -224,7 +224,6 @@ int main(int argc, char **argv) {
 
         tb->m_flash->load(0x400000, "../bin/firmware.elf");
 
-
         UARTSIM *uart;
         unsigned clksPerBaud = 13;
         uart = new UARTSIM(clksPerBaud);
@@ -242,6 +241,7 @@ int main(int argc, char **argv) {
         tb->printStatusReport();
 
         fclose(tb->programLog);
+        delete uart;
         delete tb;
         return 0;
 }

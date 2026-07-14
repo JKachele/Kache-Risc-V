@@ -23,8 +23,8 @@ module FDIV #(
         input  wire        [5:0]        rs2Class_i,
         input  wire        [2:0]        rm_i,
 
-        output reg                      ready_o,
-        output wire        [FLEN-1:0]       fdivOut_o
+        output wire                     ready_o,
+        output wire        [FLEN-1:0]   fdivOut_o
 );
 `ifdef BENCH
         `include "src/Processor/FPU/FClassFlags.vh"
@@ -85,7 +85,7 @@ always @(posedge clk_i) begin
                 counter <= SPECIAL_CYCLES;
 
                 // initalize output
-                divOut = 0;
+                divOut <= 0;
 
                 // Handle all cases
                 /* verilator lint_off CASEOVERLAP */
@@ -209,17 +209,14 @@ always @(posedge clk_i) begin
 end
 
 // Logic to generate the busy signal
-always @(negedge clk_i) begin
-        if (counter > 0) begin
+always @(posedge clk_i) begin
+        if (divEnable_i && !reset_i && !busy) begin
                 busy <= 1'b1;
-                ready_o <= 1'b0;
-        end else if (busy) begin
+        end else if (counter == 0 && busy) begin
                 busy <= 1'b0;
-                ready_o <= 1'b1;
-        end else begin
-                ready_o <= 1'b0;
         end
 end
+assign ready_o = (counter == 0 && busy);
 
 endmodule
 
