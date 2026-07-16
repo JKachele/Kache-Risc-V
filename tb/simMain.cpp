@@ -225,7 +225,7 @@ int main(int argc, char **argv) {
         tb->m_flash->load(0x400000, "../bin/firmware.elf");
 
         UARTSIM *uart;
-        unsigned clksPerBaud = 13;
+        unsigned clksPerBaud = 3;
         uart = new UARTSIM(clksPerBaud);
 
         // tb->opentrace("trace.vcd");

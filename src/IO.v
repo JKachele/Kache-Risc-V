@@ -132,11 +132,11 @@ wire uartWren = |IO_wstrb_i & isUartData;
 wire uartBusy;
 wire [31:0] uartRData = isUartData ? 32'b0 : {22'b0, uartBusy, 9'b0};
 
-// 25MHz, 2M baud, 8-bit, no parity, 1 stop bit
-localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h00000D};
+// 25MHz, 8M baud, 8-bit, no parity, 1 stop bit
+localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h000003};
 
-// 25MHz, 921600 baud, 8-bit, no parity, 1 stop bit
-// localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h00001B};
+// 25MHz, 2M baud, 8-bit, no parity, 1 stop bit
+// localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h00000D};
 
 // 100MHz, 115200 baud, 8-bit, no parity, 1 stop bit
 // localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h000364};
