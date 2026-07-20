@@ -3,17 +3,21 @@
 # @file        : Makefile
 # @created     : Friday Oct 17, 2025 14:39:28 UTC
 ######################################################################
-RVARCH  = rv32imafdc
-RVABI = ilp32d
+ARCH  := rv32imafdc
+RVARCH := $(shell riscv64-unknown-elf-gcc --print-multi-lib | awk -F '[/;]' '/$(ARCH)_/ {print $$1}')
+RVABI := $(shell riscv64-unknown-elf-gcc --print-multi-lib | awk -F '[/;]' '/$(ARCH)_/ {print $$2}')
+# RVARCH  := rv32imafdc
+# RVABI  := ilp32d
 RVTOOL_PREFIX := riscv64-unknown-elf
 RVTOOL_DIR := /opt/riscv
+RVTOOL_BIN_PREFIX := $(RVTOOL_DIR)/bin/$(RVTOOL_PREFIX)
 RV_LIB_DIR := $(RVTOOL_DIR)/$(RVTOOL_PREFIX)/lib/$(RVARCH)/$(RVABI)
-GCC_LIB_DIR := /opt/riscv/lib/gcc/riscv64-unknown-elf/10.1.0/$(RVARCH)/$(RVABI)
+GCC_LIB_DIR := $(RVTOOL_DIR)/lib/gcc/$(RVTOOL_PREFIX)/16.1.0/$(RVARCH)/$(RVABI)
 
-CC := $(RVTOOL_PREFIX)-gcc
-LD := $(RVTOOL_PREFIX)-ld
-OBJCOPY := $(RVTOOL_PREFIX)-objcopy
-OBJDUMP := $(RVTOOL_PREFIX)-objdump
+CC := $(RVTOOL_BIN_PREFIX)-gcc
+LD := $(RVTOOL_BIN_PREFIX)-ld
+OBJCOPY := $(RVTOOL_BIN_PREFIX)-objcopy
+OBJDUMP := $(RVTOOL_BIN_PREFIX)-objdump
 CFLAGS  := -g0 -O2 -march=$(RVARCH) -mabi=$(RVABI) -Wno-builtin-declaration-mismatch
 CFLAGS  += -fno-pic -fno-stack-protector -w -nostdlib
 LDFLAGS := -O2 -S -m elf32lriscv -nostdlib

@@ -7,38 +7,48 @@
  ************************************************/
 
 #define ELF_ADDR 0x90400000
+#define ELF_HEADER_SIZE 52
+#define ELF_PHENT_SIZE 32
 
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
 
-struct elfHeader {
-        u16 type;
-        u16 machine;
-        u32 version;
-        u32 entry;
-        u32 phoff;
-        u32 shoff;
-        u16 flags;
-        u16 ehsize;
-        u16 phentsize;
-        u16 phnum;
-        u16 shentsize;
-        u16 shnum;
+union elfHeader {
+        u32 data[ELF_HEADER_SIZE / 4];
+        struct {
+                u8  ident[16];
+                u16 type;
+                u16 machine;
+                u32 version;
+                u32 entry;
+                u32 phoff;
+                u32 shoff;
+                u32 flags;
+                u16 ehsize;
+                u16 phentsize;
+                u16 phnum;
+                u16 shentsize;
+                u16 shnum;
+                u16 shstrndx;
+        };
 };
 
-struct progHeader {
-        u32 type;
-        u32 offset;
-        u32 vaddr;
-        u32 paddr;
-        u32 filesz;
-        u32 memsz;
-        u32 flags;
-        u32 align;
+union progHeader {
+        u32 data[ELF_PHENT_SIZE / 4];
+        struct {
+                u32 type;
+                u32 offset;
+                u32 vaddr;
+                u32 paddr;
+                u32 filesz;
+                u32 memsz;
+                u32 flags;
+                u32 align;
+        };
 };
 
-u32 getElfData(u32 offset, int numBytes) {
+u32 getElfData(u32 offset) {
         u32 addr = ELF_ADDR + offset;
         u32 data;
         asm volatile(
@@ -46,8 +56,7 @@ u32 getElfData(u32 offset, int numBytes) {
                         :"=r"(data)
                         :"r"(addr)
                     );
-        u32 mask = 0xFFFFFFFF >> (8 * (4 - numBytes));
-        return data & mask;
+        return data;
 }
 
 // Moves data from offset in elf file to destination address in memory
@@ -71,33 +80,21 @@ void moveData(u32 startOffset, u32 destAddr, u32 size) {
         asm volatile("fence\n");
 }
 
-struct elfHeader getElfHeader() {
-        struct elfHeader header;
-        header.type      = getElfData(0x10, 2);
-        header.machine   = getElfData(0x12, 2);
-        header.version   = getElfData(0x14, 4);
-        header.entry     = getElfData(0x18, 4);
-        header.phoff     = getElfData(0x1C, 4);
-        header.shoff     = getElfData(0x20, 4);
-        header.flags     = getElfData(0x24, 4);
-        header.ehsize    = getElfData(0x28, 2);
-        header.phentsize = getElfData(0x2A, 2);
-        header.phnum     = getElfData(0x2C, 2);
-        header.shentsize = getElfData(0x30, 2);
-        header.shnum     = getElfData(0x34, 2);
+union elfHeader getElfHeader() {
+        union elfHeader header;
+        u32 numWords = ELF_HEADER_SIZE / 4;
+        for (int i = 0; i < numWords; i++) {
+                header.data[i] = getElfData(i * 4);
+        }
         return header;
 }
 
-struct progHeader getProgHeader(u32 offset) {
-        struct progHeader header;
-        header.type   = getElfData(offset + 0x00, 4);
-        header.offset = getElfData(offset + 0x04, 4);
-        header.vaddr  = getElfData(offset + 0x08, 4);
-        header.paddr  = getElfData(offset + 0x0C, 4);
-        header.filesz = getElfData(offset + 0x10, 4);
-        header.memsz  = getElfData(offset + 0x14, 4);
-        header.flags  = getElfData(offset + 0x18, 4);
-        header.align  = getElfData(offset + 0x1C, 4);
+union progHeader getProgHeader(u32 offset) {
+        union progHeader header;
+        u32 numWords = ELF_PHENT_SIZE / 4;
+        for (int i = 0; i < numWords; i++) {
+                header.data[i] = getElfData(offset + (i * 4));
+        }
         return header;
 }
 
@@ -113,10 +110,10 @@ unsigned int getMem(unsigned addr) {
 
 int main(void) {
         // Get ELF header
-        struct elfHeader elfHeader = getElfHeader();
+        union elfHeader elfHeader = getElfHeader();
 
         // Get Program Headers
-        struct progHeader progs[elfHeader.phnum];
+        union progHeader progs[elfHeader.phnum];
         u32 offset = elfHeader.phoff;
         for (int i = 0; i < elfHeader.phnum; i++) {
                 progs[i] = getProgHeader(offset);
@@ -125,7 +122,7 @@ int main(void) {
 
         // Move program data to memory
         for (int i = 0; i < elfHeader.phnum; i++) {
-                struct progHeader header = progs[i];
+                union progHeader header = progs[i];
                 if (header.type != 1) continue;
                 moveData(header.offset, header.paddr, header.filesz);
         }

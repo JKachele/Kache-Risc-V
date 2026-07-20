@@ -7,32 +7,32 @@
 #include "peripherals/uart.h"
 #include "peripherals/spiflash.h"
 
-#define HALT                    SOC__DOT__CPU__DOT__HALT
-#define D_stall                 SOC__DOT__CPU__DOT__D_stall
-#define dataHazard              SOC__DOT__CPU__DOT__dataHazard
-#define DE_pc                   SOC__DOT__CPU__DOT__DE_PC
-#define DE_instr                SOC__DOT__CPU__DOT__DE_instr
-#define E_takeBranch            SOC__DOT__CPU__DOT__E_takeBranch
-#define DE_predictBranch        SOC__DOT__CPU__DOT__DE_predictBranch
-#define DE_predictRA            SOC__DOT__CPU__DOT__DE_predictRA
-#define E_JALRaddr              SOC__DOT__CPU__DOT__execute__DOT__E_JALRaddr
-#define CYCLE                   SOC__DOT__CPU__DOT__csr__DOT__CSR_cycle
-#define INSTRET                 SOC__DOT__CPU__DOT__csr__DOT__CSR_instret
-#define F_pc                    SOC__DOT__CPU__DOT__fetch__DOT__PC
-#define ICacheHit               SOC__DOT__icache__DOT__C_hit
-#define ICacheSplit             SOC__DOT__CPU__DOT__fetch__DOT__ICacheSplit
-#define DCacheState             SOC__DOT__datamem__DOT__dcache__DOT__C_curState
-#define DCacheFlush             SOC__DOT__DCacheFlush
+#define HALT                    SOC__DOT__riscv__DOT__CPU__DOT__HALT
+#define D_stall                 SOC__DOT__riscv__DOT__CPU__DOT__D_stall
+#define dataHazard              SOC__DOT__riscv__DOT__CPU__DOT__dataHazard
+#define DE_pc                   SOC__DOT__riscv__DOT__CPU__DOT__DE_PC
+#define DE_instr                SOC__DOT__riscv__DOT__CPU__DOT__DE_instr
+#define E_takeBranch            SOC__DOT__riscv__DOT__CPU__DOT__E_takeBranch
+#define DE_predictBranch        SOC__DOT__riscv__DOT__CPU__DOT__DE_predictBranch
+#define DE_predictRA            SOC__DOT__riscv__DOT__CPU__DOT__DE_predictRA
+#define E_JALRaddr              SOC__DOT__riscv__DOT__CPU__DOT__execute__DOT__E_JALRaddr
+#define CYCLE                   SOC__DOT__riscv__DOT__CPU__DOT__csr__DOT__CSR_cycle
+#define INSTRET                 SOC__DOT__riscv__DOT__CPU__DOT__csr__DOT__CSR_instret
+#define F_pc                    SOC__DOT__riscv__DOT__CPU__DOT__fetch__DOT__PC
+#define ICacheHit               SOC__DOT__riscv__DOT__icache__DOT__C_hit
+#define ICacheSplit             SOC__DOT__riscv__DOT__CPU__DOT__fetch__DOT__ICacheSplit
+#define DCacheState             SOC__DOT__riscv__DOT__datamem__DOT__dcache__DOT__C_curState
+#define DCacheFlush             SOC__DOT__riscv__DOT__DCacheFlush
 
-#define Reg_A0                  SOC__DOT__CPU__DOT__registers__DOT__reg_10
-#define Reg_A1                  SOC__DOT__CPU__DOT__registers__DOT__reg_11
-#define Reg_FA0                 SOC__DOT__CPU__DOT__registers__DOT__reg_F10
-#define Reg_FA1                 SOC__DOT__CPU__DOT__registers__DOT__reg_F11
-#define Reg_FA2                 SOC__DOT__CPU__DOT__registers__DOT__reg_F12
-#define Reg_FA3                 SOC__DOT__CPU__DOT__registers__DOT__reg_F13
-#define Reg_FA4                 SOC__DOT__CPU__DOT__registers__DOT__reg_F14
-#define Reg_FA5                 SOC__DOT__CPU__DOT__registers__DOT__reg_F15
-#define Reg_FS0                 SOC__DOT__CPU__DOT__registers__DOT__reg_F8
+#define Reg_A0                  SOC__DOT__riscv__DOT__CPU__DOT__registers__DOT__reg_10
+#define Reg_A1                  SOC__DOT__riscv__DOT__CPU__DOT__registers__DOT__reg_11
+#define Reg_FA0                 SOC__DOT__riscv__DOT__CPU__DOT__registers__DOT__reg_F10
+#define Reg_FA1                 SOC__DOT__riscv__DOT__CPU__DOT__registers__DOT__reg_F11
+#define Reg_FA2                 SOC__DOT__riscv__DOT__CPU__DOT__registers__DOT__reg_F12
+#define Reg_FA3                 SOC__DOT__riscv__DOT__CPU__DOT__registers__DOT__reg_F13
+#define Reg_FA4                 SOC__DOT__riscv__DOT__CPU__DOT__registers__DOT__reg_F14
+#define Reg_FA5                 SOC__DOT__riscv__DOT__CPU__DOT__registers__DOT__reg_F15
+#define Reg_FS0                 SOC__DOT__riscv__DOT__CPU__DOT__registers__DOT__reg_F8
 
 class SOC_TB : public TESTB<VSOC> {
         // Statistics counters
@@ -126,12 +126,12 @@ public:
                 (*m_flash)(m_core->qspi_cs, m_core->qspi_sck, m_core->qspi_mosi__out);
 
                 prevLEDS = m_core->LEDS;
-                prevCLK = m_core->rootp->SOC__DOT__clk;
+                prevCLK = m_core->rootp->SOC__DOT__clk_25;
 
-                if (m_core->rootp->SOC__DOT__DMemWMask != 0 &&
-                                m_core->rootp->SOC__DOT__DMemRStrb != 0) {
+                if (m_core->rootp->SOC__DOT__riscv__DOT__DMemWMask != 0 &&
+                                m_core->rootp->SOC__DOT__riscv__DOT__DMemRStrb != 0) {
                         printf("Read-write collision detected: ");
-                        printf("DE_pc = %x\n", m_core->rootp->SOC__DOT__CPU__DOT__DE_PC);
+                        printf("DE_pc = %x\n", m_core->rootp->SOC__DOT__riscv__DOT__CPU__DOT__DE_PC);
                 }
 
                 updateStats();

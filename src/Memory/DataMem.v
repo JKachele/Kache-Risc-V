@@ -17,7 +17,6 @@ module DataMem (
         input  wire [7:0]   wren_i,
         output wire [63:0]  rdata_o,
         output wire         validReady_o,
-        output wire         TimerIRQ_o,
 
         output wire [31:0]  mAddr_o,
         output wire [255:0] mWData_o,
@@ -27,20 +26,20 @@ module DataMem (
         input  wire         mValidReady_i,
 
         // IO
-        // output wire [31:0]  IO_Addr_o,
-        // output wire [31:0]  IO_WData_o,
-        // output wire         IO_Rden_o,
-        // output wire         IO_Wren_o,
-        // input  wire [31:0]  IO_RData_i,
-        // input  wire         IO_ValidReady_i
+        output wire [31:0] IO_addr_o,
+        output wire [63:0] IO_wData_o,
+        output wire        IO_rstrb_o,
+        output wire [7:0]  IO_wstrb_o,
+        input  wire [63:0] IO_rData_i,
+        input  wire        IO_validReady_i
         // SPI Flash
-        input  wire        rtc_i,
-        output wire        spiClk_o,
-        output wire        spiCs_o,
-        inout  wire        spiMosi_io,
-        input  wire        spiMiso_i,
-        output wire [3:0]  leds_o,
-        output wire        txd_o
+        // input  wire        rtc_i,
+        // output wire        spiClk_o,
+        // output wire        spiCs_o,
+        // inout  wire        spiMosi_io,
+        // input  wire        spiMiso_i,
+        // output wire [3:0]  leds_o,
+        // output wire        txd_o
 );
 
 wire isIO = addr_i[31];
@@ -51,12 +50,10 @@ wire [7:0] DCacheWren = isIO ? 8'b0 : wren_i;
 wire [63:0] DCacheRData;
 wire        DCacheValidReady;
 
-wire [31:0] IO_addr = addr_i;
-wire [63:0] IO_wData = wdata_i;
-wire        IO_rstrb = isIO & rstrb;
-wire [7:0]  IO_wstrb = isIO ? wstrb : 8'b0;
-wire [63:0] IO_rData;
-wire        IO_validReady;
+assign IO_addr_o = addr_i;
+assign IO_wData_o = wdata_i;
+assign IO_rstrb_o = isIO & rstrb;
+assign IO_wstrb_o = isIO ? wstrb : 8'b0;
 
 // Turn read/write enable signal into strobe
 reg  [31:0] prev_addr = 32'b0;
@@ -76,8 +73,8 @@ always @(posedge clk_i) begin
         end
 end
 
-assign rdata_o = isIO ? IO_rData : DCacheRData;
-assign validReady_o = isIO ? IO_validReady : DCacheValidReady;
+assign rdata_o = isIO ? IO_rData_i : DCacheRData;
+assign validReady_o = isIO ? IO_validReady_i : DCacheValidReady;
 
 DCache dcache(
         .clk_i(clk_i),
@@ -99,23 +96,23 @@ DCache dcache(
 
 
 /*-------------------------------- IO --------------------------------*/
-IO io(
-        .clk_i(clk_i),
-        .reset_i(reset_i),
-        .rtc_i(rtc_i),
-        .IO_addr_i(IO_addr),
-        .IO_wData_i(IO_wData),
-        .IO_rstrb_i(IO_rstrb),
-        .IO_wstrb_i(IO_wstrb),
-        .IO_rData_o(IO_rData),
-        .IO_validReady_o(IO_validReady),
-        .TimerIRQ_o(TimerIRQ_o),
-        .spiClk_o(spiClk_o),
-        .spiCs_o(spiCs_o),
-        .spiMosi_io(spiMosi_io),
-        .spiMiso_i(spiMiso_i),
-        .txd_o(txd_o),
-        .leds_o(leds_o)
-);
+// IO io(
+//         .clk_i(clk_i),
+//         .reset_i(reset_i),
+//         .rtc_i(rtc_i),
+//         .IO_addr_i(IO_addr),
+//         .IO_wData_i(IO_wData),
+//         .IO_rstrb_i(IO_rstrb),
+//         .IO_wstrb_i(IO_wstrb),
+//         .IO_rData_o(IO_rData),
+//         .IO_validReady_o(IO_validReady),
+//         .TimerIRQ_o(TimerIRQ_o),
+//         .spiClk_o(spiClk_o),
+//         .spiCs_o(spiCs_o),
+//         .spiMosi_io(spiMosi_io),
+//         .spiMiso_i(spiMiso_i),
+//         .txd_o(txd_o),
+//         .leds_o(leds_o)
+// );
 endmodule
 

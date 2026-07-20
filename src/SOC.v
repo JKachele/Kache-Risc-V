@@ -40,216 +40,228 @@ module SOC (
 );
 
 /*verilator public_flat_rw_on*/
-wire clk;
+wire clk_100;
+wire clk_200;
+wire clk_25;
+wire axi_clk;
 wire reset;
-wire clk0;
-wire clk1;
 
-wire [31:0] rvec = 32'h7000_0000;
 wire RTC = CLK100MHZ;
 
 // Interupts
 wire TimerIRQ;
 
-// Cache-Memory Interface
-wire         IC_mRden;
-wire [31:0]  IC_mAddr;
-wire [255:0] IC_mData;
-wire         IC_mValid;
-wire [31:0]  DC_mAddr;
-wire         DC_mRden;
-wire [255:0] DC_mWData;
-wire [7:0]   DC_mWren;
-wire [255:0] DC_mRData;
-wire         DC_mValidReady;
-
-// Instruction Cache
-wire        ICacheStrb;
-wire        ICacheCancel;
-wire [31:0] ICacheAddr;
-wire [31:0] ICacheData;
-wire        ICacheValid;
-wire        ICacheCmp;
-
-// Data Cache
-wire [31:0] DCacheAddr;
-wire        DCacheFlush;
-wire        DCacheRden;
-wire [63:0] DCacheWData;
-wire [7:0]  DCacheWren;
-wire [63:0] DCacheRData;
-wire        DCacheValidReady;
-
-//Memory
-wire [31:0] DMemAddr;
-wire        DMemRStrb;
-wire [63:0] DMemRData;
-wire [63:0] DMemWData;
-wire [7:0]  DMemWMask;
-wire        DMemValidReady;
+// IO
+wire [31:0] IO_addr;
+wire [63:0] IO_wData;
+wire        IO_rstrb;
+wire [7:0]  IO_wstrb;
+wire [63:0] IO_rData;
+wire        IO_validReady;
 
 // DDR3 AXI
-wire [31:0] axi_awaddr;
-wire [ 7:0] axi_awlen;
-wire [ 3:0] axi_awid;
-wire        axi_awvalid;
-wire        axi_awready;
-wire [31:0] axi_wdata;
-wire [ 3:0] axi_wstrb;
-wire        axi_wlast;
-wire        axi_wvalid;
-wire        axi_wready;
-wire [ 1:0] axi_bresp;
-wire [ 3:0] axi_bid;
-wire        axi_bvalid;
-wire        axi_bready;
-wire [31:0] axi_araddr;
-wire [ 7:0] axi_arlen;
-wire [ 3:0] axi_arid;
-wire        axi_arvalid;
-wire        axi_arready;
-wire [31:0] axi_rdata;
-wire [ 1:0] axi_rresp;
-wire        axi_rlast;
-wire [ 3:0] axi_rid;
-wire        axi_rvalid;
-wire        axi_rready;
+wire [31:0] m_axi_awaddr;
+wire [ 7:0] m_axi_awlen;
+wire [ 3:0] m_axi_awid;
+wire        m_axi_awvalid;
+wire        m_axi_awready;
+wire [31:0] m_axi_wdata;
+wire [ 3:0] m_axi_wstrb;
+wire        m_axi_wlast;
+wire        m_axi_wvalid;
+wire        m_axi_wready;
+wire [ 1:0] m_axi_bresp;
+wire [ 3:0] m_axi_bid;
+wire        m_axi_bvalid;
+wire        m_axi_bready;
+wire [31:0] m_axi_araddr;
+wire [ 7:0] m_axi_arlen;
+wire [ 3:0] m_axi_arid;
+wire        m_axi_arvalid;
+wire        m_axi_arready;
+wire [31:0] m_axi_rdata;
+wire [ 1:0] m_axi_rresp;
+wire        m_axi_rlast;
+wire [ 3:0] m_axi_rid;
+wire        m_axi_rvalid;
+wire        m_axi_rready;
+
+wire [31:0] s_axi_awaddr;
+wire [ 7:0] s_axi_awlen;
+wire [ 3:0] s_axi_awid;
+wire        s_axi_awvalid;
+wire        s_axi_awready;
+wire [31:0] s_axi_wdata;
+wire [ 3:0] s_axi_wstrb;
+wire        s_axi_wlast;
+wire        s_axi_wvalid;
+wire        s_axi_wready;
+wire [ 1:0] s_axi_bresp;
+wire [ 3:0] s_axi_bid;
+wire        s_axi_bvalid;
+wire        s_axi_bready;
+wire [31:0] s_axi_araddr;
+wire [ 7:0] s_axi_arlen;
+wire [ 3:0] s_axi_arid;
+wire        s_axi_arvalid;
+wire        s_axi_arready;
+wire [31:0] s_axi_rdata;
+wire [ 1:0] s_axi_rresp;
+wire        s_axi_rlast;
+wire [ 3:0] s_axi_rid;
+wire        s_axi_rvalid;
+wire        s_axi_rready;
 /*verilator public_off*/
 
-Processor CPU(
-        .clk_i(clk),
+RiscV_Top riscv(
+        .clk_i(clk_25),
         .reset_i(reset),
-        .rvec_i(rvec),
-        .ICacheStrb_o(ICacheStrb),
-        .ICacheCancel_o(ICacheCancel),
-        .ICacheAddr_o(ICacheAddr),
-        .ICacheData_i(ICacheData),
-        .ICacheValid_i(ICacheValid),
-        .ICacheCmp_i(ICacheCmp),
-        .DMemAddr_o(DCacheAddr),
-        .DMemFlush_o(DCacheFlush),
-        .DMemRStrb_o(DCacheRden),
-        .DMemWData_o(DCacheWData),
-        .DMemWMask_o(DCacheWren),
-        .DMemRData_i(DCacheRData),
-        .DMemValidReady_i(DCacheValidReady)
+        .TimerIRQ_i(TimerIRQ),
+        .m_axi_awaddr_o(m_axi_awaddr),
+        .m_axi_awlen_o(m_axi_awlen),
+        .m_axi_awid_o(m_axi_awid),
+        .m_axi_awvalid_o(m_axi_awvalid),
+        .m_axi_awready_i(m_axi_awready),
+        .m_axi_wdata_o(m_axi_wdata),
+        .m_axi_wstrb_o(m_axi_wstrb),
+        .m_axi_wlast_o(m_axi_wlast),
+        .m_axi_wvalid_o(m_axi_wvalid),
+        .m_axi_wready_i(m_axi_wready),
+        .m_axi_bresp_i(m_axi_bresp),
+        .m_axi_bid_i(m_axi_bid),
+        .m_axi_bvalid_i(m_axi_bvalid),
+        .m_axi_bready_o(m_axi_bready),
+        .m_axi_araddr_o(m_axi_araddr),
+        .m_axi_arlen_o(m_axi_arlen),
+        .m_axi_arid_o(m_axi_arid),
+        .m_axi_arvalid_o(m_axi_arvalid),
+        .m_axi_arready_i(m_axi_arready),
+        .m_axi_rdata_i(m_axi_rdata),
+        .m_axi_rresp_i(m_axi_rresp),
+        .m_axi_rlast_i(m_axi_rlast),
+        .m_axi_rid_i(m_axi_rid),
+        .m_axi_rvalid_i(m_axi_rvalid),
+        .m_axi_rready_o(m_axi_rready),
+        .IO_addr_o(IO_addr),
+        .IO_wData_o(IO_wData),
+        .IO_rstrb_o(IO_rstrb),
+        .IO_wstrb_o(IO_wstrb),
+        .IO_rData_i(IO_rData),
+        .IO_validReady_i(IO_validReady)
 );
 
-ICache icache(
-        .clk_i(clk),
+IO io(
+        .clk_i(clk_25),
         .reset_i(reset),
-        .addr_i(ICacheAddr),
-        .rden_i(ICacheStrb),
-        .cancel_i(ICacheCancel),
-        .data_o(ICacheData),
-        .valid_o(ICacheValid),
-        .cmp_o(ICacheCmp),
-        .mAddr_o(IC_mAddr),
-        .mRden_o(IC_mRden),
-        .mData_i(IC_mData),
-        .mValid_i(IC_mValid)
-);
-
-DataMem datamem(
-        .clk_i(clk),
-        .reset_i(reset),
-        .addr_i(DCacheAddr),
-        .flush_i(DCacheFlush),
-        .rden_i(DCacheRden),
-        .wdata_i(DCacheWData),
-        .wren_i(DCacheWren),
-        .rdata_o(DCacheRData),
-        .validReady_o(DCacheValidReady),
-        .TimerIRQ_o(TimerIRQ),
-        .mAddr_o(DC_mAddr),
-        .mWData_o(DC_mWData),
-        .mRden_o(DC_mRden),
-        .mWren_o(DC_mWren),
-        .mRData_i(DC_mRData),
-        .mValidReady_i(DC_mValidReady),
         .rtc_i(RTC),
+        .IO_addr_i(IO_addr),
+        .IO_wData_i(IO_wData),
+        .IO_rstrb_i(IO_rstrb),
+        .IO_wstrb_i(IO_wstrb),
+        .IO_rData_o(IO_rData),
+        .IO_validReady_o(IO_validReady),
+        .TimerIRQ_o(TimerIRQ),
         .spiClk_o(qspi_sck),
         .spiCs_o(qspi_cs),
         .spiMosi_io(qspi_mosi),
         .spiMiso_i(qspi_miso),
-        .leds_o(LEDS),
-        .txd_o(TXD)
-);
-
-Memory mem(
-        .clk_i(clk),
-        .reset_i(reset),
-        .rvec_i(rvec),
-        .IMemStrb_i(IC_mRden),
-        .IMemAddr_i(IC_mAddr),
-        .IMemData_o(IC_mData),
-        .IMemValid_o(IC_mValid),
-        .DMemAddr_i(DC_mAddr),
-        .DMemRStrb_i(DC_mRden),
-        .DMemWData_i(DC_mWData),
-        .DMemWMask_i(DC_mWren),
-        .DMemRData_o(DC_mRData),
-        .DMemValidReady_o(DC_mValidReady),
-        .m_axi_awaddr_o(axi_awaddr),
-        .m_axi_awlen_o(axi_awlen),
-        .m_axi_awid_o(axi_awid),
-        .m_axi_awvalid_o(axi_awvalid),
-        .m_axi_awready_i(axi_awready),
-        .m_axi_wdata_o(axi_wdata),
-        .m_axi_wstrb_o(axi_wstrb),
-        .m_axi_wlast_o(axi_wlast),
-        .m_axi_wvalid_o(axi_wvalid),
-        .m_axi_wready_i(axi_wready),
-        .m_axi_bresp_i(axi_bresp),
-        .m_axi_bid_i(axi_bid),
-        .m_axi_bvalid_i(axi_bvalid),
-        .m_axi_bready_o(axi_bready),
-        .m_axi_araddr_o(axi_araddr),
-        .m_axi_arlen_o(axi_arlen),
-        .m_axi_arid_o(axi_arid),
-        .m_axi_arvalid_o(axi_arvalid),
-        .m_axi_arready_i(axi_arready),
-        .m_axi_rdata_i(axi_rdata),
-        .m_axi_rresp_i(axi_rresp),
-        .m_axi_rlast_i(axi_rlast),
-        .m_axi_rid_i(axi_rid),
-        .m_axi_rvalid_i(axi_rvalid),
-        .m_axi_rready_o(axi_rready)
+        .txd_o(TXD),
+        .leds_o(LEDS)
 );
 
 `ifndef BENCH
+// AXI_CDC axi_cdc(
+//         .s_axi_aclk(clk_25),
+//         .s_axi_aresetn(RESET),
+//
+//         .s_axi_awid(m_axi_awid),
+//         .s_axi_awaddr(m_axi_awaddr),
+//         .s_axi_awlen(m_axi_awlen),
+//         .s_axi_awvalid(m_axi_awvalid),
+//         .s_axi_awready(m_axi_awready),
+//         .s_axi_wdata(m_axi_wdata),
+//         .s_axi_wstrb(m_axi_wstrb),
+//         .s_axi_wlast(m_axi_wlast),
+//         .s_axi_wvalid(m_axi_wvalid),
+//         .s_axi_wready(m_axi_wready),
+//         .s_axi_bid(m_axi_bid),
+//         .s_axi_bresp(m_axi_bresp),
+//         .s_axi_bvalid(m_axi_bvalid),
+//         .s_axi_bready(m_axi_bready),
+//         .s_axi_arid(m_axi_arid),
+//         .s_axi_araddr(m_axi_araddr),
+//         .s_axi_arlen(m_axi_arlen),
+//         .s_axi_arvalid(m_axi_arvalid),
+//         .s_axi_arready(m_axi_arready),
+//         .s_axi_rid(m_axi_rid),
+//         .s_axi_rdata(m_axi_rdata),
+//         .s_axi_rresp(m_axi_rresp),
+//         .s_axi_rlast(m_axi_rlast),
+//         .s_axi_rvalid(m_axi_rvalid),
+//         .s_axi_rready(m_axi_rready),
+//
+//         .m_axi_aclk(axi_clk),
+//         .m_axi_aresetn(RESET),
+//
+//         .m_axi_awid(s_axi_awid),
+//         .m_axi_awaddr(s_axi_awaddr),
+//         .m_axi_awlen(s_axi_awlen),
+//         .m_axi_awvalid(s_axi_awvalid),
+//         .m_axi_awready(s_axi_awready),
+//         .m_axi_wdata(s_axi_wdata),
+//         .m_axi_wstrb(s_axi_wstrb),
+//         .m_axi_wlast(s_axi_wlast),
+//         .m_axi_wvalid(s_axi_wvalid),
+//         .m_axi_wready(s_axi_wready),
+//         .m_axi_bid(s_axi_bid),
+//         .m_axi_bresp(s_axi_bresp),
+//         .m_axi_bvalid(s_axi_bvalid),
+//         .m_axi_bready(s_axi_bready),
+//         .m_axi_arid(s_axi_arid),
+//         .m_axi_araddr(s_axi_araddr),
+//         .m_axi_arlen(s_axi_arlen),
+//         .m_axi_arvalid(s_axi_arvalid),
+//         .m_axi_arready(s_axi_arready),
+//         .m_axi_rid(s_axi_rid),
+//         .m_axi_rdata(s_axi_rdata),
+//         .m_axi_rresp(s_axi_rresp),
+//         .m_axi_rlast(s_axi_rlast),
+//         .m_axi_rvalid(s_axi_rvalid),
+//         .m_axi_rready(s_axi_rready)
+// );
+
 // ArtyDDR3 ddr3 (
-//         .clk100_i(clk0),
-//         .clk200_i(clk1),
+//         .clk100_i(clk100),
+//         .clk200_i(clk200),
 //         .reset_i(RESET),
-//         .clkOut_o(),
+//         .clkOut_o(axi_clk),
 //         .rstOut_o(),
 //
-//         .s_axi_awaddr_i(axi_awaddr),
-//         .s_axi_awlen_i(axi_awlen),
-//         .s_axi_awid_i(axi_awid),
-//         .s_axi_awvalid_i(axi_awvalid),
-//         .s_axi_awready_o(axi_awready),
-//         .s_axi_wdata_i(axi_wdata),
-//         .s_axi_wstrb_i(axi_wstrb),
-//         .s_axi_wlast_i(axi_wlast),
-//         .s_axi_wvalid_i(axi_wvalid),
-//         .s_axi_wready_o(axi_wready),
-//         .s_axi_bresp_o(axi_bresp),
-//         .s_axi_bid_o(axi_bid),
-//         .s_axi_bvalid_o(axi_bvalid),
-//         .s_axi_bready_i(axi_bready),
-//         .s_axi_araddr_i(axi_araddr),
-//         .s_axi_arlen_i(axi_arlen),
-//         .s_axi_arid_i(axi_arid),
-//         .s_axi_arvalid_i(axi_arvalid),
-//         .s_axi_arready_o(axi_arready),
-//         .s_axi_rdata_o(axi_rdata),
-//         .s_axi_rresp_o(axi_rresp),
-//         .s_axi_rlast_o(axi_rlast),
-//         .s_axi_rid_o(axi_rid),
-//         .s_axi_rvalid_o(axi_rvalid),
-//         .s_axi_rready_i(axi_rready),
+//         .s_axi_awaddr_i(s_axi_awaddr),
+//         .s_axi_awlen_i(s_axi_awlen),
+//         .s_axi_awid_i(s_axi_awid),
+//         .s_axi_awvalid_i(s_axi_awvalid),
+//         .s_axi_awready_o(s_axi_awready),
+//         .s_axi_wdata_i(s_axi_wdata),
+//         .s_axi_wstrb_i(s_axi_wstrb),
+//         .s_axi_wlast_i(s_axi_wlast),
+//         .s_axi_wvalid_i(s_axi_wvalid),
+//         .s_axi_wready_o(s_axi_wready),
+//         .s_axi_bresp_o(s_axi_bresp),
+//         .s_axi_bid_o(s_axi_bid),
+//         .s_axi_bvalid_o(s_axi_bvalid),
+//         .s_axi_bready_i(s_axi_bready),
+//         .s_axi_araddr_i(s_axi_araddr),
+//         .s_axi_arlen_i(s_axi_arlen),
+//         .s_axi_arid_i(s_axi_arid),
+//         .s_axi_arvalid_i(s_axi_arvalid),
+//         .s_axi_arready_o(s_axi_arready),
+//         .s_axi_rdata_o(s_axi_rdata),
+//         .s_axi_rresp_o(s_axi_rresp),
+//         .s_axi_rlast_o(s_axi_rlast),
+//         .s_axi_rid_o(s_axi_rid),
+//         .s_axi_rvalid_o(s_axi_rvalid),
+//         .s_axi_rready_i(s_axi_rready),
 //
 //         .ddr3_reset_n(ddr3_reset_n),
 //         .ddr3_cke(ddr3_cke),
@@ -275,16 +287,16 @@ Clockworks #(
 )CW(
         .CLK(CLK100MHZ),
         .RESET(RESET),
-        .clk(clk),
+        .clk(clk_25),
         .resetn(reset)
 );
 `else
 ClockworksA7 cw (
         .clkref_i(CLK100MHZ),
         .RESET(RESET),
-        .clk0_o(clk0),
-        .clk1_o(clk1),
-        .clk2_o(clk),
+        .clkBuf_o(clk_100),
+        .clk0_o(clk_200),
+        .clk1_o(clk_25),
         .resetn(reset)
 );
 `endif
