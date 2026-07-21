@@ -197,7 +197,11 @@ reg EE_divFinished = 1'b0;
 wire E_divstepDo = (EE_divisor <= {31'b0, EE_dividend});
 
 always @(posedge clk_i) begin
-        if (!EE_divBusy) begin
+        if (reset_i) begin
+                EE_divSign <= 1'b0;
+                EE_divBusy <= 1'b0;
+                EE_divFinished <= 1'b0;
+        end else if (!EE_divBusy) begin
                 if (DE_isDIV_i & !dataHazard_i & !EE_divFinished) begin
                         EE_quotientMsk <= 1 << 31;
                         EE_divBusy <= 1'b1;
@@ -340,7 +344,9 @@ always @(posedge clk_i) begin
                 EM_isStore_o    <= 1'b0;
                 EM_isCSR_o      <= 1'b0;
                 EM_isAMO_o      <= 1'b0;
+                EM_isFENCE_o    <= 1'b0;
                 EF_correctPC_o  <= 1'b0;
+                EM_addr_o       <= 32'b0;
                 EM_wbEnable_o   <= 1'b0;
                 EM_isCSRWrite_o <= 1'b0;
         end
@@ -354,7 +360,9 @@ initial begin
         EM_isStore_o    = 1'b0;
         EM_isCSR_o      = 1'b0;
         EM_isAMO_o      = 1'b0;
+        EM_isFENCE_o    = 1'b0;
         EF_correctPC_o  = 1'b0;
+        EM_addr_o       = 32'b0;
         EM_wbEnable_o   = 1'b0;
         EM_isCSRWrite_o = 1'b0;
 end

@@ -1,10 +1,18 @@
 .global main
 .section .text
 main:
-        la t0, data
-        li t1, 0x98765432
-        sw t1, 0(t0)
-        csrw 0x7c0, t0
+        li t0, 0
+        la t1, data
+        lw t2, 0(t1)
+        sw t2, 0(t0)
+        lw t2, 4(t1)
+        sw t2, 4(t0)
+        nop
+        li a0, 0
+        li a1, 0
+        nop
+        lw a0, 0(t0)
+        lw a1, 4(t0)
         ret
 
 .section .data

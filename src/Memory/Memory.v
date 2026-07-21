@@ -64,9 +64,9 @@ reg  [255:0] BRamRData;
 reg  [255:0] BRamInstr;
 wire [7:0]   BRamWMask;
 
-assign DMemValidReady_o = ~((M_isSDRAM_r | M_isSDRAM) & SDRamBusy);
+assign DMemValidReady_o = ~((M_isSDRAM_r | M_isSDRAM) & ~SDRamDataReady);
 
-assign IMemValid_o = ~(M_isSDRAM_i & SDRamBusy);
+assign IMemValid_o = ~(M_isSDRAM_i & ~SDRamInstrReady);
 // assign IMemValid_o = 1'b1;
 
 /*-------------------------------- Memory Map --------------------------------*/
@@ -102,6 +102,9 @@ end
 /*-------------------------------- SDRAM --------------------------------*/
 // For now will fake with block ram
 reg [255:0] SDRAM [0:8191];
+
+wire SDRamDataReady = 1'b1;
+wire SDRamInstrReady = 1'b1;
 
 always @(posedge clk_i) begin
         if (|SDRamWMask)
@@ -249,6 +252,7 @@ end
 // assign m_axi_awid_o = 4'b0;
 // assign m_axi_bready_o = 1'b1;
 // assign m_axi_awlen_o = 8'd7; // 8 byte burst
+// assign m_axi_arid_o = 4'b0;
 // assign m_axi_arlen_o = 8'd7; // 8 byte burst
 
 /*-------------------------------- Block RAM --------------------------------*/

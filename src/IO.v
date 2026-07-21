@@ -9,7 +9,7 @@
 module IO (
         input  wire        clk_i,
         input  wire        reset_i,
-        input  wire        rtc_i,
+        input  wire        timerClk_i,
         input  wire [31:0] IO_addr_i,
         input  wire [63:0] IO_wData_i,
         input  wire        IO_rstrb_i,
@@ -97,7 +97,7 @@ always @(posedge clk_i) begin
         end
 end
 
-always @(posedge rtc_i) begin
+always @(posedge timerClk_i) begin
         mtime[0] <= mtime[0] + 1;
 end
 

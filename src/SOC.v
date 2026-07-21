@@ -40,13 +40,11 @@ module SOC (
 );
 
 /*verilator public_flat_rw_on*/
-wire clk_100;
-wire clk_200;
-wire clk_25;
-wire axi_clk;
-wire reset;
-
-wire RTC = CLK100MHZ;
+wire clk_100;   // 100 MHz      - Buffered System Clock for DDR3 MIG
+wire clk_200;   // 200 MHz      - Reference Clock for DDR3 MIG
+wire clk_25;    // 25 MHz       - System Clock for RiscV and IO
+wire clk_timer; // 1.5625 MHz   - Timer Clock MTIME register
+wire reset;     // Active High Reset
 
 // Interupts
 wire TimerIRQ;
@@ -60,88 +58,62 @@ wire [63:0] IO_rData;
 wire        IO_validReady;
 
 // DDR3 AXI
-wire [31:0] m_axi_awaddr;
-wire [ 7:0] m_axi_awlen;
-wire [ 3:0] m_axi_awid;
-wire        m_axi_awvalid;
-wire        m_axi_awready;
-wire [31:0] m_axi_wdata;
-wire [ 3:0] m_axi_wstrb;
-wire        m_axi_wlast;
-wire        m_axi_wvalid;
-wire        m_axi_wready;
-wire [ 1:0] m_axi_bresp;
-wire [ 3:0] m_axi_bid;
-wire        m_axi_bvalid;
-wire        m_axi_bready;
-wire [31:0] m_axi_araddr;
-wire [ 7:0] m_axi_arlen;
-wire [ 3:0] m_axi_arid;
-wire        m_axi_arvalid;
-wire        m_axi_arready;
-wire [31:0] m_axi_rdata;
-wire [ 1:0] m_axi_rresp;
-wire        m_axi_rlast;
-wire [ 3:0] m_axi_rid;
-wire        m_axi_rvalid;
-wire        m_axi_rready;
-
-wire [31:0] s_axi_awaddr;
-wire [ 7:0] s_axi_awlen;
-wire [ 3:0] s_axi_awid;
-wire        s_axi_awvalid;
-wire        s_axi_awready;
-wire [31:0] s_axi_wdata;
-wire [ 3:0] s_axi_wstrb;
-wire        s_axi_wlast;
-wire        s_axi_wvalid;
-wire        s_axi_wready;
-wire [ 1:0] s_axi_bresp;
-wire [ 3:0] s_axi_bid;
-wire        s_axi_bvalid;
-wire        s_axi_bready;
-wire [31:0] s_axi_araddr;
-wire [ 7:0] s_axi_arlen;
-wire [ 3:0] s_axi_arid;
-wire        s_axi_arvalid;
-wire        s_axi_arready;
-wire [31:0] s_axi_rdata;
-wire [ 1:0] s_axi_rresp;
-wire        s_axi_rlast;
-wire [ 3:0] s_axi_rid;
-wire        s_axi_rvalid;
-wire        s_axi_rready;
+wire [31:0] axi_awaddr;
+wire [ 7:0] axi_awlen;
+wire [ 3:0] axi_awid;
+wire        axi_awvalid;
+wire        axi_awready;
+wire [31:0] axi_wdata;
+wire [ 3:0] axi_wstrb;
+wire        axi_wlast;
+wire        axi_wvalid;
+wire        axi_wready;
+wire [ 1:0] axi_bresp;
+wire [ 3:0] axi_bid;
+wire        axi_bvalid;
+wire        axi_bready;
+wire [31:0] axi_araddr;
+wire [ 7:0] axi_arlen;
+wire [ 3:0] axi_arid;
+wire        axi_arvalid;
+wire        axi_arready;
+wire [31:0] axi_rdata;
+wire [ 1:0] axi_rresp;
+wire        axi_rlast;
+wire [ 3:0] axi_rid;
+wire        axi_rvalid;
+wire        axi_rready;
 /*verilator public_off*/
 
 RiscV_Top riscv(
         .clk_i(clk_25),
         .reset_i(reset),
         .TimerIRQ_i(TimerIRQ),
-        .m_axi_awaddr_o(m_axi_awaddr),
-        .m_axi_awlen_o(m_axi_awlen),
-        .m_axi_awid_o(m_axi_awid),
-        .m_axi_awvalid_o(m_axi_awvalid),
-        .m_axi_awready_i(m_axi_awready),
-        .m_axi_wdata_o(m_axi_wdata),
-        .m_axi_wstrb_o(m_axi_wstrb),
-        .m_axi_wlast_o(m_axi_wlast),
-        .m_axi_wvalid_o(m_axi_wvalid),
-        .m_axi_wready_i(m_axi_wready),
-        .m_axi_bresp_i(m_axi_bresp),
-        .m_axi_bid_i(m_axi_bid),
-        .m_axi_bvalid_i(m_axi_bvalid),
-        .m_axi_bready_o(m_axi_bready),
-        .m_axi_araddr_o(m_axi_araddr),
-        .m_axi_arlen_o(m_axi_arlen),
-        .m_axi_arid_o(m_axi_arid),
-        .m_axi_arvalid_o(m_axi_arvalid),
-        .m_axi_arready_i(m_axi_arready),
-        .m_axi_rdata_i(m_axi_rdata),
-        .m_axi_rresp_i(m_axi_rresp),
-        .m_axi_rlast_i(m_axi_rlast),
-        .m_axi_rid_i(m_axi_rid),
-        .m_axi_rvalid_i(m_axi_rvalid),
-        .m_axi_rready_o(m_axi_rready),
+        .m_axi_awaddr_o(axi_awaddr),
+        .m_axi_awlen_o(axi_awlen),
+        .m_axi_awid_o(axi_awid),
+        .m_axi_awvalid_o(axi_awvalid),
+        .m_axi_awready_i(axi_awready),
+        .m_axi_wdata_o(axi_wdata),
+        .m_axi_wstrb_o(axi_wstrb),
+        .m_axi_wlast_o(axi_wlast),
+        .m_axi_wvalid_o(axi_wvalid),
+        .m_axi_wready_i(axi_wready),
+        .m_axi_bresp_i(axi_bresp),
+        .m_axi_bid_i(axi_bid),
+        .m_axi_bvalid_i(axi_bvalid),
+        .m_axi_bready_o(axi_bready),
+        .m_axi_araddr_o(axi_araddr),
+        .m_axi_arlen_o(axi_arlen),
+        .m_axi_arid_o(axi_arid),
+        .m_axi_arvalid_o(axi_arvalid),
+        .m_axi_arready_i(axi_arready),
+        .m_axi_rdata_i(axi_rdata),
+        .m_axi_rresp_i(axi_rresp),
+        .m_axi_rlast_i(axi_rlast),
+        .m_axi_rid_i(axi_rid),
+        .m_axi_rvalid_i(axi_rvalid),
+        .m_axi_rready_o(axi_rready),
         .IO_addr_o(IO_addr),
         .IO_wData_o(IO_wData),
         .IO_rstrb_o(IO_rstrb),
@@ -153,7 +125,7 @@ RiscV_Top riscv(
 IO io(
         .clk_i(clk_25),
         .reset_i(reset),
-        .rtc_i(RTC),
+        .timerClk_i(clk_timer),
         .IO_addr_i(IO_addr),
         .IO_wData_i(IO_wData),
         .IO_rstrb_i(IO_rstrb),
@@ -170,98 +142,39 @@ IO io(
 );
 
 `ifndef BENCH
-// AXI_CDC axi_cdc(
-//         .s_axi_aclk(clk_25),
-//         .s_axi_aresetn(RESET),
-//
-//         .s_axi_awid(m_axi_awid),
-//         .s_axi_awaddr(m_axi_awaddr),
-//         .s_axi_awlen(m_axi_awlen),
-//         .s_axi_awvalid(m_axi_awvalid),
-//         .s_axi_awready(m_axi_awready),
-//         .s_axi_wdata(m_axi_wdata),
-//         .s_axi_wstrb(m_axi_wstrb),
-//         .s_axi_wlast(m_axi_wlast),
-//         .s_axi_wvalid(m_axi_wvalid),
-//         .s_axi_wready(m_axi_wready),
-//         .s_axi_bid(m_axi_bid),
-//         .s_axi_bresp(m_axi_bresp),
-//         .s_axi_bvalid(m_axi_bvalid),
-//         .s_axi_bready(m_axi_bready),
-//         .s_axi_arid(m_axi_arid),
-//         .s_axi_araddr(m_axi_araddr),
-//         .s_axi_arlen(m_axi_arlen),
-//         .s_axi_arvalid(m_axi_arvalid),
-//         .s_axi_arready(m_axi_arready),
-//         .s_axi_rid(m_axi_rid),
-//         .s_axi_rdata(m_axi_rdata),
-//         .s_axi_rresp(m_axi_rresp),
-//         .s_axi_rlast(m_axi_rlast),
-//         .s_axi_rvalid(m_axi_rvalid),
-//         .s_axi_rready(m_axi_rready),
-//
-//         .m_axi_aclk(axi_clk),
-//         .m_axi_aresetn(RESET),
-//
-//         .m_axi_awid(s_axi_awid),
-//         .m_axi_awaddr(s_axi_awaddr),
-//         .m_axi_awlen(s_axi_awlen),
-//         .m_axi_awvalid(s_axi_awvalid),
-//         .m_axi_awready(s_axi_awready),
-//         .m_axi_wdata(s_axi_wdata),
-//         .m_axi_wstrb(s_axi_wstrb),
-//         .m_axi_wlast(s_axi_wlast),
-//         .m_axi_wvalid(s_axi_wvalid),
-//         .m_axi_wready(s_axi_wready),
-//         .m_axi_bid(s_axi_bid),
-//         .m_axi_bresp(s_axi_bresp),
-//         .m_axi_bvalid(s_axi_bvalid),
-//         .m_axi_bready(s_axi_bready),
-//         .m_axi_arid(s_axi_arid),
-//         .m_axi_araddr(s_axi_araddr),
-//         .m_axi_arlen(s_axi_arlen),
-//         .m_axi_arvalid(s_axi_arvalid),
-//         .m_axi_arready(s_axi_arready),
-//         .m_axi_rid(s_axi_rid),
-//         .m_axi_rdata(s_axi_rdata),
-//         .m_axi_rresp(s_axi_rresp),
-//         .m_axi_rlast(s_axi_rlast),
-//         .m_axi_rvalid(s_axi_rvalid),
-//         .m_axi_rready(s_axi_rready)
-// );
-
 // ArtyDDR3 ddr3 (
-//         .clk100_i(clk100),
-//         .clk200_i(clk200),
+//         .clk100_i(clk_100),
+//         .clk200_i(clk_200),
+//         .clk25_i(clk_25),
 //         .reset_i(RESET),
-//         .clkOut_o(axi_clk),
+//         .clkOut_o(),
 //         .rstOut_o(),
 //
-//         .s_axi_awaddr_i(s_axi_awaddr),
-//         .s_axi_awlen_i(s_axi_awlen),
-//         .s_axi_awid_i(s_axi_awid),
-//         .s_axi_awvalid_i(s_axi_awvalid),
-//         .s_axi_awready_o(s_axi_awready),
-//         .s_axi_wdata_i(s_axi_wdata),
-//         .s_axi_wstrb_i(s_axi_wstrb),
-//         .s_axi_wlast_i(s_axi_wlast),
-//         .s_axi_wvalid_i(s_axi_wvalid),
-//         .s_axi_wready_o(s_axi_wready),
-//         .s_axi_bresp_o(s_axi_bresp),
-//         .s_axi_bid_o(s_axi_bid),
-//         .s_axi_bvalid_o(s_axi_bvalid),
-//         .s_axi_bready_i(s_axi_bready),
-//         .s_axi_araddr_i(s_axi_araddr),
-//         .s_axi_arlen_i(s_axi_arlen),
-//         .s_axi_arid_i(s_axi_arid),
-//         .s_axi_arvalid_i(s_axi_arvalid),
-//         .s_axi_arready_o(s_axi_arready),
-//         .s_axi_rdata_o(s_axi_rdata),
-//         .s_axi_rresp_o(s_axi_rresp),
-//         .s_axi_rlast_o(s_axi_rlast),
-//         .s_axi_rid_o(s_axi_rid),
-//         .s_axi_rvalid_o(s_axi_rvalid),
-//         .s_axi_rready_i(s_axi_rready),
+//         .s_axi_awaddr(axi_awaddr),
+//         .s_axi_awlen(axi_awlen),
+//         .s_axi_awid(axi_awid),
+//         .s_axi_awvalid(axi_awvalid),
+//         .s_axi_awready(axi_awready),
+//         .s_axi_wdata(axi_wdata),
+//         .s_axi_wstrb(axi_wstrb),
+//         .s_axi_wlast(axi_wlast),
+//         .s_axi_wvalid(axi_wvalid),
+//         .s_axi_wready(axi_wready),
+//         .s_axi_bresp(axi_bresp),
+//         .s_axi_bid(axi_bid),
+//         .s_axi_bvalid(axi_bvalid),
+//         .s_axi_bready(axi_bready),
+//         .s_axi_araddr(axi_araddr),
+//         .s_axi_arlen(axi_arlen),
+//         .s_axi_arid(axi_arid),
+//         .s_axi_arvalid(axi_arvalid),
+//         .s_axi_arready(axi_arready),
+//         .s_axi_rdata(axi_rdata),
+//         .s_axi_rresp(axi_rresp),
+//         .s_axi_rlast(axi_rlast),
+//         .s_axi_rid(axi_rid),
+//         .s_axi_rvalid(axi_rvalid),
+//         .s_axi_rready(axi_rready),
 //
 //         .ddr3_reset_n(ddr3_reset_n),
 //         .ddr3_cke(ddr3_cke),
@@ -279,6 +192,21 @@ IO io(
 //         .ddr3_dqs_n(ddr3_dqs_n),
 //         .ddr3_dq(ddr3_dq)
 // );
+`endif
+
+// Timer Clock: 1.5625 MHz
+reg [5:0] clk_div;
+always @(posedge CLK100MHZ) begin
+        if (reset) begin
+                clk_div <= 6'b0;
+        end else begin
+                clk_div <= clk_div + 1;
+        end
+end
+`ifdef BENCH
+assign clk_timer = clk_div[3];
+`else
+assign clk_timer = clk_div[5];
 `endif
 
 `ifdef BENCH
