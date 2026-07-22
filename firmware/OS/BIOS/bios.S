@@ -1,3 +1,6 @@
+.equ MTIME,    0x80000000
+.equ MTIMECMP, 0x80000008
+
 .global _start
 .section .text.bios
 _start:
@@ -23,12 +26,38 @@ machine:
         li      t3, 0x800
         csrs    mstatus, t3
 
-        # Set user mode exceprions to be handled by the supervisor trap handler
-        li      t4, 0x104
+        // Enable Interupts
+        li      t3, 0xAA
+        csrs    mstatus, t3
+
+        # Set U-Mode exceptions to be handled by the supervisor trap handler
+        li      t4, 0x100
         csrs    medeleg, t4
+
+        # Set S-Mode interupts to be handled by the supervisor trap handler
+        li      t6, 0x222
+        csrs    mideleg, t6
 
         # Save the current stack pointer in the scratch reister
         csrw    mscratch, sp
+
+        // Set timer
+        li      t0, MTIME
+        lw      a0, 0(t0)
+        lw      a1, 4(t0)
+        li      t1, 0x2000
+        add     a0, a0, t1
+        sltu    t2, a0, t1
+        add     a1, a1, t2
+        li      t0, MTIMECMP
+        li      t1, -1
+        sw      t1, 0(t0)
+        sw      a1, 4(t0)
+        sw      a0, 0(t0)
+
+        // Enable M-Mode Timer Interupts
+        li      t4, 0xA0
+        csrs    mie, t4
 
         # Return to boot function in s-mode
         mret

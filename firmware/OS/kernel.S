@@ -82,12 +82,12 @@ s_trap_start:
         sw a0, 4 * 94(sp)
 
         # Reset kernel stack
-        # addi a0, sp, 4 * 31
-        # csrw sscratch, a0
+        addi a0, sp, 4 * 31
+        csrw sscratch, a0
 
         mv a0, sp
         csrr a1, scause
-        call handleTrap
+        call handle_trap
 
         lw a0, 4 * 94(sp)
         csrw sscratch, a0

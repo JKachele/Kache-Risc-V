@@ -10,6 +10,8 @@
 #define ELF_HEADER_SIZE 52
 #define ELF_PHENT_SIZE 32
 
+extern void putchar(char c);
+
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
@@ -48,10 +50,17 @@ union progHeader {
         };
 };
 
+void print(const char *str) {
+        while (*str) {
+                putchar(*str);
+                str++;
+        }
+}
+
 u32 getElfData(u32 offset) {
         u32 addr = ELF_ADDR + offset;
         u32 data;
-        asm volatile(
+        __asm__ volatile(
                         "lw %0, 0(%1)\n"
                         :"=r"(data)
                         :"r"(addr)
@@ -64,9 +73,9 @@ u32 getElfData(u32 offset) {
 void moveData(u32 startOffset, u32 destAddr, u32 size) {
         u32 orig = ELF_ADDR + startOffset;
         u32 dest = destAddr;
-        u32 numWords = size / 4;
+        u32 numWords = (size / 4) + 1;
         for (int i = 0; i < numWords; i++) {
-                asm volatile(
+                __asm__ volatile(
                                 "lw t0, 0(%0)\n"
                                 "sw t0, 0(%1)\n"
                                 ::"r"(orig), "r"(dest)
@@ -77,7 +86,7 @@ void moveData(u32 startOffset, u32 destAddr, u32 size) {
         }
 
         // Flush data cache to ensure that the data is written to memory
-        asm volatile("fence\n");
+        __asm__ volatile("fence\n");
 }
 
 union elfHeader getElfHeader() {
@@ -100,7 +109,7 @@ union progHeader getProgHeader(u32 offset) {
 
 unsigned int getMem(unsigned addr) {
         unsigned int data;
-        asm volatile(
+        __asm__ volatile(
                         "lw %0, 0(%1)\n"
                         :"=r"(data)
                         :"r"(addr)
@@ -111,6 +120,12 @@ unsigned int getMem(unsigned addr) {
 int main(void) {
         // Get ELF header
         union elfHeader elfHeader = getElfHeader();
+
+        // Verify ELF magic number: 7F 45 4C 46
+        if (elfHeader.data[0] != 0x464C457F) {
+                print("ERROR: Unrecognised file type\n");
+                return 1;
+        }
 
         // Get Program Headers
         union progHeader progs[elfHeader.phnum];
@@ -128,7 +143,7 @@ int main(void) {
         }
 
         // Jump to start of program
-        asm volatile(
+        __asm__ volatile(
                         "jr 0(%0)\n"
                         ::"r"(elfHeader.entry)
                     );

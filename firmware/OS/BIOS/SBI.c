@@ -13,6 +13,33 @@
 
 extern void _putchar(char c);
 
+void print(const char *str) {
+        while (*str) {
+                _putchar(*str);
+                str++;
+        }
+        return;
+}
+
+void timer_handler(void) {
+        print("\nTimer Interupt!\n");
+        __asm__ volatile(
+                        "li     t0, 0x80000008\n"
+                        "lw     a0, 0(t0)\n"
+                        "lw     a1, 4(t0)\n"
+                        "li     t1, 0x2000\n"
+                        "add    a0, a0, t1\n"
+                        "sltu   t2, a0, t1\n"
+                        "add    a1, a1, t2\n"
+                        "li     t1, -1\n"
+                        "sw     t1, 0(t0)\n"
+                        "sw     a1, 4(t0)\n"
+                        "sw     a0, 0(t0)\n"
+                        ::: "a0", "a1", "t0", "t1", "t2", "memory"
+                        );
+        return;
+}
+
 struct sbiret sbi_handler(long arg0, long arg1, long arg2, long arg3, long arg4,
                        long arg5, long fid, long eid) {
         struct sbiret ret = {0};
@@ -37,8 +64,24 @@ struct sbiret sbi_handler(long arg0, long arg1, long arg2, long arg3, long arg4,
 
 void mtrap_handler(struct trap_frame *f, int cause) {
         struct sbiret ret;
-        ret = sbi_handler(f->a0, f->a1, f->a2, f->a3, f->a4, f->a5, f->a6, f->a7);
-        f->a0 = ret.error;
-        f->a1 = ret.uvalue;
+        switch (cause) {
+                case 0x02: // Illegal Instruction
+                        print("\nIllegal Instruction!\n");
+                        sbi_shutdown();
+                        break;
+                case 0x09: // S-Mode ecall
+                case 0x0A: // M-Mode ecall
+                        ret = sbi_handler(f->a0, f->a1, f->a2, f->a3, f->a4, f->a5, f->a6, f->a7);
+                        f->a0 = ret.error;
+                        f->a1 = ret.uvalue;
+                        break;
+                case 0x8007: // M-Mode timer interupt
+                        timer_handler();
+                        break;
+                default:
+                        print("\nUnexpected Trap!\n");
+                        sbi_shutdown();
+                        break;
+        }
 }
 

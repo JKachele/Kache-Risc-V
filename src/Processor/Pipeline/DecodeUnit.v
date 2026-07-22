@@ -27,9 +27,12 @@ module DecodeUnit #(
         // CSR Interface
         input  wire [63:0] csrMStatus_i,
         input  wire [63:0] csrMedeleg_i,
+        input  wire [31:0] csrMideleg_i,
+        input  wire [31:0] csrMie_i,
         input  wire [31:0] csrMtvec_i,
         input  wire [31:0] csrMepc_i,
         input  wire [31:0] csrMCause_i,
+        input  wire [31:0] csrMip_i,
         input  wire [31:0] csrStvec_i,
         input  wire [31:0] csrSepc_i,
         input  wire [31:0] csrSCause_i,
@@ -113,8 +116,8 @@ localparam NOP = 32'b0000000_00000_00000_000_00000_0110011;
  */
 
 /*------------Instruction Allignment and Decompression-----------*/
-// wire [31:0] D_rawInstr = FD_nop_i ? NOP : FD_instr_i;
-wire [31:0] D_rawInstr = FD_instr_i;
+wire [31:0] D_rawInstr = FD_nop_i ? NOP : FD_instr_i;
+// wire [31:0] D_rawInstr = FD_instr_i;
 wire [31:0] D_instr; // = FD_instr_i; // = FD_nop_i ? NOP : FD_instr_i;
 // wire        D_isRV32C = ~&D_rawInstr[1:0];
 Decompressor decomp(.compressed_i(D_rawInstr), .decompressed_o(D_instr));
@@ -295,59 +298,82 @@ always @(posedge clk_i) begin
         end
 end
 
+/*------------------Illegal Instruction Check-----------------*/
+wire       D_csrRO   = D_csrId[11] & D_csrId[10]; // CSR is read only if csrId[11:10] == 11
+wire [1:0] D_csrPriv = D_csrId[9:8];              // Lowest priv allowed
+wire       D_isCSRWrite = D_isCSR & |D_rs1Id;     // Is rs1 is not 0, then is CSR Write
+
+wire D_isIllegalCSR = (D_isCSR & ((D_csrRO & D_isCSRWrite) | (D_csrPriv > DD_privilege)));
+wire D_isIllegal = (D_isUNIMP | D_isIllegalCSR);
+
 /*------------------Trap Handlers-----------------*/
 localparam US = 2'b00, SU = 2'b01, MA = 2'b11;
 
-/*verilator public_flat_rw_on*/
 // Privilage is machine on startup
 reg [1:0] DD_privilege = MA;
-/*verilator public_off*/
 
-wire D_isTrap = D_isECALL | D_isUNIMP;
+// Interupts
+wire D_isMTIP = csrMip_i[7] & csrMie_i[7];
+wire D_isSTIP = csrMip_i[5] & csrMie_i[5];
+wire D_isMInterupt = (csrMStatus_i[3] | csrMStatus_i[1]) & D_isMTIP;
+wire D_isSInterupt = csrMStatus_i[1] & D_isSTIP;
+wire D_isInterupt  = ~FD_nop_i & (D_isMInterupt | D_isSInterupt);
+
+wire D_isTrap = D_isInterupt | D_isECALL | D_isIllegal;
 wire D_isPrivileged = D_isTrap | D_isMRET | D_isSRET;
 
 // Set PC, CSRs, and privilege level for traps
 reg [31:0] D_trapCause;
 always @(*) begin
-        if (D_isECALL) begin
+        if (D_isInterupt) begin
+                if (D_isMTIP)
+                        D_trapCause = 32'h8007;
+                else // if (D_isSTIP)
+                        D_trapCause = 32'h8005;
+        end else if (D_isECALL) begin
                 if (DD_privilege == US)
                         D_trapCause = 32'd8;
                 else if (DD_privilege == SU)
                         D_trapCause = 32'd9;
                 else
                         D_trapCause = 32'd11;
-        end else if (D_isUNIMP) begin
+        end else if (D_isIllegal) begin
                 D_trapCause = 32'd2;
         end else begin
                 D_trapCause = 32'd19; // Default to hardware error
         end
 end
 
-wire [1:0] D_trapPrivilege = csrMedeleg_i[D_trapCause] ? SU : MA;
+wire [1:0] D_trapPrivilege = D_isInterupt ?
+        (csrMideleg_i[D_trapCause[4:0]] ? SU : MA) :
+        (csrMedeleg_i[D_trapCause[5:0]] ? SU : MA);
 
 wire [31:0] D_MRetJumpAddr = csrMepc_i;
 wire [31:0] D_SRetJumpAddr = csrSepc_i;
 wire [31:0] D_trapJumpAddr = (D_trapPrivilege == SU) ? csrStvec_i : csrMtvec_i;
 
 wire [1:0]  D_privilegeSet =
-         D_isTrap ? ((D_trapPrivilege == SU) ? SU : MA) :
-        (D_isMRET ? csrMStatus_i[12:11] :
-        (D_isSRET ? {1'b0, csrMStatus_i[8]} : DD_privilege));
+         D_isInterupt ? ((D_isSInterupt) ? SU : MA) :
+        (D_isTrap     ? ((D_trapPrivilege == SU) ? SU : MA) :
+        (D_isMRET     ? csrMStatus_i[12:11] :
+        (D_isSRET     ? {1'b0, csrMStatus_i[8]} : DD_privilege)));
 
 wire D_isMTrap = D_isTrap && D_trapPrivilege == MA;
 wire D_isSTrap = D_isTrap && D_trapPrivilege == SU;
 
 wire [1:0] D_mppSet    = D_isMTrap ? DD_privilege    : csrMStatus_i[12:11];
-wire       D_mpieSet   = D_isMTrap ? csrMStatus_i[3] : csrMStatus_i[7];
-wire       D_mieSet    = D_isMTrap ? 1'b0            : csrMStatus_i[3];
 wire       D_sppSet    = D_isSTrap ? DD_privilege[0] : csrMStatus_i[8];
-wire       D_spieSet   = D_isSTrap ? csrMStatus_i[1] : csrMStatus_i[5];
-wire       D_sieSet    = D_isSTrap ? 1'b0            : csrMStatus_i[1];
+
+wire       D_mpieSet   = D_isMTrap ? csrMStatus_i[3] : (D_isMRET  ? 1'b1 : csrMStatus_i[7]);
+wire       D_mieSet    = D_isMTrap ? 1'b0 : (D_isMRET  ? csrMStatus_i[7] : csrMStatus_i[3]);
+wire       D_spieSet   = D_isTrap  ? csrMStatus_i[1] : (D_isSRET  ? 1'b1 : csrMStatus_i[5]);
+wire       D_sieSet    = D_isTrap  ? 1'b0 : (D_isSRET  ? csrMStatus_i[5] : csrMStatus_i[1]);
+
 assign csrMStatusSet_o = {D_mppSet, D_mpieSet, D_mieSet, D_sppSet, D_spieSet, D_sieSet};
 
-assign csrMepcSet_o    = D_isMTrap ? D_nextPC : csrMepc_i;
+assign csrMepcSet_o    = D_isMTrap ? (D_isInterupt ? FD_PC_i : D_nextPC) : csrMepc_i;
 assign csrMCauseSet_o  = D_isMTrap ? D_trapCause : csrMCause_i;
-assign csrSepcSet_o    = D_isSTrap ? D_nextPC : csrSepc_i;
+assign csrSepcSet_o    = D_isSTrap ? (D_isInterupt ? FD_PC_i : D_nextPC) : csrSepc_i;
 assign csrSCauseSet_o  = D_isSTrap ? D_trapCause : csrSCause_i;
 assign csrTrapSetEn_o  = D_stall_i ? 1'b0 : D_isPrivileged;
 
@@ -361,7 +387,7 @@ always @(posedge clk_i) begin
 end
 
 /*------------Branch Prediction Result------------*/
-assign D_predictPC_o = !FD_nop_i && !D_isUNIMP &&
+assign D_predictPC_o = !FD_nop_i && // !D_isUNIMP &&
         (D_isJAL || D_isJALR || D_isTrap || D_isMRET || D_isSRET ||
         (D_isBranch && D_predictBranch));
 
@@ -433,7 +459,7 @@ always @(posedge clk_i) begin
                 DE_predictRA_o <= RAS_0;
         end
 
-        if (reset_i || ((E_flush_i || FD_nop_i) && !M_busy_i)) begin
+        if (reset_i || ((E_flush_i || FD_nop_i || D_isInterupt) && !M_busy_i)) begin
                 DE_instr_o    <= NOP;
                 DE_nop_o      <= 1'b1;
                 DE_isLUI_o    <= 1'b0;

@@ -1,36 +1,34 @@
-SECTIONS {
-        . = 0x70000000;
+ENTRY(_start)
 
-        .text : {
-                . = ALIGN(2);
+SECTIONS {
+        .text.start (0x70000000) : {
                 *startPipeline*.o (.text)
+        }
+
+        .text : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 *(.text*)
         }
 
-        .rodata : {
-                . = ALIGN(4);
+        .rodata : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 *(.rodata*)
                 *(.srodata*)
         }
 
-        .data : {
-                . = ALIGN(4);
+        .data : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 *(.data*)
         }
 
-        .sdata : {
-                . = ALIGN(4);
+        .sdata : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 __global_pointer$ = .;
                 *(.sdata*)
         }
 
-        .bss : {
-                . = ALIGN(4);
+        .bss : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 *(.bss*)
                 *(.sbss*)
         }
 
-        . = ALIGN(32);
+        . = ALIGN(CONSTANT(MAXPAGESIZE));
         . += 16 * 1024; /* 16KB */
         __stack_top = .;
 }

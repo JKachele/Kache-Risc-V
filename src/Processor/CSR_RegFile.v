@@ -9,6 +9,8 @@
 module CSR_RegFile (
         input  wire        clk_i,
         input  wire        reset_i,
+        // Interupts
+        input  wire        timerIRQ_i,
         // Write
         input  wire [11:0] csrWAddr_i,
         input  wire [31:0] csrWData_i,
@@ -18,6 +20,8 @@ module CSR_RegFile (
         output wire [31:0] csrRData_o,
         // Instret update
         input wire         csrInstStep_i,
+        // Time csr
+        input  wire [63:0] csrTime_i,
         // FPU Rounding Mode and flags
         input  wire [4:0]  csrFFlagsSet_i,
         output wire [2:0]  csrFRM_o,
@@ -25,9 +29,11 @@ module CSR_RegFile (
         output wire [63:0] csrMStatus_o,
         output wire [63:0] csrMedeleg_o,
         output wire [31:0] csrMideleg_o,
+        output wire [31:0] csrMie_o,
         output wire [31:0] csrMtvec_o,
         output wire [31:0] csrMepc_o,
         output wire [31:0] csrMCause_o,
+        output wire [31:0] csrMip_o,
         // Supervisor Mode CSRs
         output wire [31:0] csrStvec_o,
         output wire [31:0] csrSepc_o,
@@ -41,9 +47,12 @@ module CSR_RegFile (
         input  wire        csrTrapSetEn_i
 );
 
+/*verilator public_flat_rw_on*/
 // Counters
-reg [63:0] CSR_cycle = 0;   // 0xC00 / 0xC80 ([31:0] / [63:32])
-reg [63:0] CSR_instret = 0; // 0xC02 / 0xC82 ([31:0] / [63:32])
+reg  [63:0] CSR_cycle = 0;        // 0xC00 / 0xC80 ([31:0] / [63:32])
+wire [63:0] CSR_time = csrTime_i; // 0xC01 / 0xC81 ([31:0] / [63:32])
+reg  [63:0] CSR_instret = 0;      // 0xC02 / 0xC82 ([31:0] / [63:32])
+/*verilator public_off*/
 
 // Floating Point Extension
 reg [31:0] CSR_fcsr = 0;    // 0x001 - 0x003 (fflags, frm, fcsr)
@@ -53,10 +62,23 @@ reg [31:0] CSR_mstatus  = 0;
 reg [31:0] CSR_mstatush = 0;
 reg [63:0] CSR_medeleg  = 0;
 reg [31:0] CSR_mideleg  = 0;
+reg [31:0] CSR_mie      = 0;
 reg [31:0] CSR_mtvec    = 0;
+reg [31:0] CSR_mscratch = 0;
 reg [31:0] CSR_mepc     = 0;
 reg [31:0] CSR_mcause   = 0;
-reg [31:0] CSR_mscratch = 0;
+
+// Interupts
+reg  [31:0] CSR_mip_r = 0;
+wire [31:0] CSR_mip = {
+        CSR_mip_r[31:12],
+        CSR_mip_r[11],             // External Interupt
+        CSR_mip_r[10:8],
+        CSR_mip_r[7] | timerIRQ_i, // Timer Interupt
+        CSR_mip_r[6:4],
+        CSR_mip_r[3],              // Software Interupt
+        CSR_mip_r[2:0]
+        };
 
 // Supervisor Mode CSRs
 // sstatus CSR is subset of mstatus CSR
@@ -68,6 +90,8 @@ reg [31:0] CSR_sscratch = 0;
 // Register IDs
 localparam CYCLE_ID      = 12'hC00;
 localparam CYCLEH_ID     = 12'hC80;
+localparam TIME_ID       = 12'hC01;
+localparam TIMEH_ID      = 12'hC81;
 localparam INSTRET_ID    = 12'hC02;
 localparam INSTRETH_ID   = 12'hC82;
 
@@ -83,19 +107,24 @@ localparam MSTATUSH_ID   = 12'h310;
 localparam MEDELEG_ID    = 12'h302;
 localparam MEDELEGH_ID   = 12'h312;
 localparam MIDELEG_ID    = 12'h303;
+localparam MIE_ID        = 12'h304;
 localparam MTVEC_ID      = 12'h305;
 localparam MSCRATCH_ID   = 12'h340;
 localparam MEPC_ID       = 12'h341;
 localparam MCAUSE_ID     = 12'h342;
+localparam MIP_ID        = 12'h344;
 localparam MSTATUS_MASK  = 32'h81FFFFEA;
 localparam MSTATUSH_MASK = 32'h000006F0;
 
 localparam SSTATUS_ID    = 12'h100;
+localparam SIE_ID        = 12'h104;
 localparam STVEC_ID      = 12'h105;
 localparam SSCRATCH_ID   = 12'h140;
 localparam SEPC_ID       = 12'h141;
 localparam SCAUSE_ID     = 12'h142;
+localparam SIP_ID        = 12'h144;
 localparam SSTATUS_MASK  = 32'h818DE762;
+localparam SIRQ_MASK     = 32'h00000222;
 
 // CSR Read
 reg [31:0] rData;
@@ -105,6 +134,8 @@ always @(*) begin
         case (csrRAddr_i)
                 CYCLE_ID:    rData = CSR_cycle[31:0];
                 CYCLEH_ID:   rData = CSR_cycle[63:32];
+                TIME_ID:     rData = CSR_time[31:0];
+                TIMEH_ID:    rData = CSR_time[63:32];
                 INSTRET_ID:  rData = CSR_instret[31:0];
                 INSTRETH_ID: rData = CSR_instret[63:32];
                 FFLAGS_ID:   rData = {27'b0, csrWData_i[4:0]};
@@ -116,16 +147,20 @@ always @(*) begin
                 MEDELEG_ID:  rData = CSR_medeleg[31:0];
                 MEDELEGH_ID: rData = CSR_medeleg[63:32];
                 MIDELEG_ID:  rData = CSR_mideleg;
+                MIE_ID:      rData = CSR_mie;
                 MTVEC_ID:    rData = CSR_mtvec;
                 MSCRATCH_ID: rData = CSR_mscratch;
                 MEPC_ID:     rData = CSR_mepc;
                 MCAUSE_ID:   rData = CSR_mcause;
+                MIP_ID:      rData = CSR_mip;
 
                 SSTATUS_ID:  rData = CSR_mstatus & SSTATUS_MASK;
+                SIE_ID:      rData = CSR_mie & SIRQ_MASK;
                 STVEC_ID:    rData = CSR_stvec;
                 SSCRATCH_ID: rData = CSR_sscratch;
                 SEPC_ID:     rData = CSR_sepc;
                 SCAUSE_ID:   rData = CSR_scause;
+                SIP_ID:      rData = CSR_mip & SIRQ_MASK;
                 default:     rData = 32'b0;
         endcase
 end
@@ -133,9 +168,11 @@ assign csrRData_o   = rData;
 assign csrMStatus_o = {CSR_mstatush, CSR_mstatus};
 assign csrMedeleg_o = CSR_medeleg;
 assign csrMideleg_o = CSR_mideleg;
+assign csrMie_o     = CSR_mie;
 assign csrMtvec_o   = CSR_mtvec;
 assign csrMepc_o    = CSR_mepc;
 assign csrMCause_o  = CSR_mcause;
+assign csrMip_o     = CSR_mip;
 
 assign csrStvec_o   = CSR_stvec;
 assign csrSepc_o    = CSR_sepc;
@@ -149,11 +186,12 @@ always @(posedge clk_i) begin
                 CSR_mstatush       <= 32'b0;
                 CSR_medeleg        <= 64'b0;
                 CSR_mideleg        <= 32'b0;
+                CSR_mie            <= 32'b0;
                 CSR_mtvec          <= 32'b0;
                 CSR_mscratch       <= 32'b0;
                 CSR_mepc           <= 32'b0;
                 CSR_mcause         <= 32'b0;
-                CSR_mstatus        <= 32'b0;
+                CSR_mip_r          <= 32'b0;
                 CSR_stvec          <= 32'b0;
                 CSR_sscratch       <= 32'b0;
                 CSR_sepc           <= 32'b0;
@@ -181,16 +219,20 @@ always @(posedge clk_i) begin
                         MEDELEG_ID:  CSR_medeleg  <= {CSR_medeleg[63:32], csrWData_i};
                         MEDELEGH_ID: CSR_medeleg  <= {csrWData_i, CSR_medeleg[31:0]};
                         MIDELEG_ID:  CSR_mideleg  <= csrWData_i;
+                        MIE_ID:      CSR_mie      <= csrWData_i;
                         MTVEC_ID:    CSR_mtvec    <= csrWData_i;
                         MSCRATCH_ID: CSR_mscratch <= csrWData_i;
                         MEPC_ID:     CSR_mepc     <= csrWData_i;
                         MCAUSE_ID:   CSR_mcause   <= csrWData_i;
+                        MIP_ID:      CSR_mip_r    <= csrWData_i;
 
                         SSTATUS_ID:  CSR_mstatus  <= csrWData_i & SSTATUS_MASK;
+                        SIE_ID:      CSR_mie      <= csrWData_i & SIRQ_MASK;
                         STVEC_ID:    CSR_stvec    <= csrWData_i;
                         SSCRATCH_ID: CSR_sscratch <= csrWData_i;
                         SEPC_ID:     CSR_sepc     <= csrWData_i;
                         SCAUSE_ID:   CSR_scause   <= csrWData_i;
+                        SIP_ID:      CSR_mip_r    <= csrWData_i & SIRQ_MASK;
                         default:;
                 endcase
         end

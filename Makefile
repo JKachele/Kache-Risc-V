@@ -17,11 +17,11 @@ RVTOOL_BIN_PREFIX := $(RVTOOL_DIR)/bin/$(RVTOOL_PREFIX)
 RV_LIB_DIR := $(RVTOOL_DIR)/$(RVTOOL_PREFIX)/lib/$(RVARCH)/$(RVABI)
 GCC_LIB_DIR := $(RVTOOL_DIR)/lib/gcc/$(RVTOOL_PREFIX)/16.1.0/$(RVARCH)/$(RVABI)
 
-CFLAGS  := -g0 -O2 -march=$(RVARCH) -mabi=$(RVABI) -Wno-builtin-declaration-mismatch
-CFLAGS  += -fno-pic -fno-stack-protector -w -nostdlib
+CFLAGS  := -g0 -O2 -march=$(RVARCH) -mabi=$(RVABI) -std=c99
+CFLAGS  += -Wno-builtin-declaration-mismatch -fno-pic -fno-stack-protector -w -nostdlib
 LDFLAGS := -O2 -S -m elf32lriscv -nostdlib
 LDFLAGS += -L$(RV_LIB_DIR) -lm $(GCC_LIB_DIR)/libgcc.a
-ODFLAGS := -sj .data -dj .text
+ODFLAGS := -sj .data -dj .text -dj .text.start -dj .text.bios
 
 # Verilog
 VSRC := $(shell find src/ -type f -name '*.v')
@@ -35,21 +35,22 @@ TBFLAGS += --top-module $(TOP) --trace -cc -exe #--build
 TBSRC := $(wildcard tb/*.cpp) $(wildcard tb/*/*.cpp)
 
 BIN_DIR := bin
+BIN_DUMP_DIR := bin/dump
 BUILD_DIR := build
 
 # Firmware
-# SRC := $(wildcard firmware/OS/*.c)     $(wildcard firmware/OS/*.S)
-# SRC += $(wildcard firmware/OS/*/*.c)   $(wildcard firmware/OS/*/*.S) 
-# SRC += $(wildcard firmware/OS/*/*/*.c) $(wildcard firmware/OS/*/*/*.S) 
-# OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
-# LDSCRIPT = firmware/OS/kernel.ld
-SRC := firmware/Tests/startPipeline.S firmware/Tests/raystones.c
-SRC += $(wildcard firmware/Tests/libs/*.S) $(wildcard firmware/Tests/libs/*.c) 
+SRC := $(wildcard firmware/OS/*.c)     $(wildcard firmware/OS/*.S)
+SRC += $(wildcard firmware/OS/*/*.c)   $(wildcard firmware/OS/*/*.S) 
+SRC += $(wildcard firmware/OS/*/*/*.c) $(wildcard firmware/OS/*/*/*.S) 
 OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
-LDSCRIPT = firmware/Tests/ram.ld
+LDSCRIPT = firmware/OS/kernel.ld
+# SRC := firmware/Tests/startPipeline.S firmware/Tests/raystones.c
+# SRC += $(wildcard firmware/Tests/libs/*.S) $(wildcard firmware/Tests/libs/*.c) 
+# OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
+# LDSCRIPT = firmware/Tests/ram.ld
 
 # BIOS
-SRCBIOS := firmware/Tests/startPipeline.S firmware/Tests/LoadProg.c
+SRCBIOS := firmware/Tests/startPipeline.S firmware/Tests/libs/putchar.S firmware/Tests/LoadProg.c
 # SRCBIOS += $(wildcard firmware/Tests/libs/*.S) $(wildcard firmware/Tests/libs/*.c) 
 OBJBIOS := $(SRCBIOS:%=$(BUILD_DIR)/%.o)
 LDSCRIPTBIOS = firmware/Tests/bios.ld
@@ -77,13 +78,17 @@ $(BIN): $(BIOS)
 
 $(BIOS): $(OBJBIOS) $(LDSCRIPT) Makefile
 	@mkdir -p $(dir $@)
+	@mkdir -p $(BIN_DUMP_DIR)
 	$(LD) -T $(LDSCRIPTBIOS) $(OBJBIOS) -o $@ $(LDFLAGS)
-	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DIR)/objdumpBIOS.txt
+	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DUMP_DIR)/objdumpBIOS.txt
+	readelf -a $@ > $(BIN_DUMP_DIR)/readelfBIOS.txt
 
 $(FIRMWARE): $(OBJ) $(LDSCRIPT) Makefile
 	@mkdir -p $(dir $@)
+	@mkdir -p $(BIN_DUMP_DIR)
 	$(LD) -T $(LDSCRIPT) $(OBJ) -o $@ $(LDFLAGS)
-	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DIR)/objdumpFW.txt
+	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DUMP_DIR)/objdumpFW.txt
+	readelf -a $@ > $(BIN_DUMP_DIR)/readelfFW.txt
 
 $(BUILD_DIR)/%.S.o: %.S
 	@mkdir -p $(dir $@)

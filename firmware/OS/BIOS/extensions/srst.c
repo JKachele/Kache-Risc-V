@@ -14,7 +14,7 @@ struct sbiret srst(long arg0, long arg1, long arg2, long arg3, long arg4,
         struct sbiret ret = {0};
         switch (fid) {
                 case 0x0:
-                        asm volatile ("ebreak\n");
+                        __asm__ volatile ("ebreak\n");
                         break;
                 default:
                         ret.error = SBI_ERR_NOT_SUPPORTED;

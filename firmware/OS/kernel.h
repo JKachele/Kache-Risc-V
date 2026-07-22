@@ -13,21 +13,21 @@
 #define PANIC(fmt, ...)                                                                 \
         do {                                                                            \
                 printf("PANIC: %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);   \
-                asm volatile("ebreak\n");                                               \
+                __asm__ volatile("ebreak\n");                                           \
                 while (1) {}                                                            \
         } while (0)
 
 #define READ_CSR(reg)                                                                   \
         ({                                                                              \
          unsigned long __tmp;                                                           \
-         asm volatile("csrr %0, " #reg : "=r"(__tmp));                                  \
+         __asm__ volatile("csrr %0, " #reg : "=r"(__tmp));                              \
          __tmp;                                                                         \
          })
 
 #define WRITE_CSR(reg, value)                                                           \
         do {                                                                            \
                 uint32_t __tmp = (value);                                               \
-                asm volatile("csrw " #reg ", %0" ::"r"(__tmp));                         \
+                __asm__ volatile("csrw " #reg ", %0" ::"r"(__tmp));                     \
         } while (0)
 
 #define PROCS_MAX 8
@@ -37,7 +37,7 @@
 
 struct process {
         int pid;        // Process ID
-        int state;      // Process state (PROC_UNUSED or PROC_RUNNING)
+        int state;      // Process state (PROC_UNUSED or PROC_RUNNABLE)
         vaddr_t sp;     // Stack pointer
         u8 stack[8192]; // Kernel stack
 };

@@ -10,6 +10,9 @@ module Processor(
         input  wire        clk_i,
         input  wire        reset_i,
         input  wire [31:0] rvec_i,
+        // Interupts
+        input  wire        timerIRQ_i,
+        input  wire [63:0] csrTime_i,
         // Memory
         output wire        ICacheStrb_o,
         output wire        ICacheCancel_o,
@@ -55,9 +58,11 @@ wire [2:0]  csrFRM;
 wire [63:0] csrMStatus;
 wire [63:0] csrMedeleg;
 wire [31:0] csrMideleg;
+wire [31:0] csrMie;
 wire [31:0] csrMtvec;
 wire [31:0] csrMepc;
 wire [31:0] csrMCause;
+wire [31:0] csrMip;
 wire [31:0] csrStvec;
 wire [31:0] csrSepc;
 wire [31:0] csrSCause;
@@ -84,20 +89,24 @@ RegisterFile registers(
 CSR_RegFile csr(
         .clk_i(clk_i),
         .reset_i(reset_i),
+        .timerIRQ_i(timerIRQ_i),
         .csrWAddr_i(csrWAddr),
         .csrWEnable_i(csrWEnable),
         .csrWData_i(csrWData),
         .csrRAddr_i(csrRAddr),
         .csrRData_o(csrRData),
         .csrInstStep_i(csrInstStep),
+        .csrTime_i(csrTime_i),
         .csrFFlagsSet_i(csrFFlagsSet),
         .csrFRM_o(csrFRM),
         .csrMStatus_o(csrMStatus),
         .csrMedeleg_o(csrMedeleg),
         .csrMideleg_o(csrMideleg),
+        .csrMie_o(csrMie),
         .csrMtvec_o(csrMtvec),
         .csrMepc_o(csrMepc),
         .csrMCause_o(csrMCause),
+        .csrMip_o(csrMip),
         .csrStvec_o(csrStvec),
         .csrSepc_o(csrSepc),
         .csrSCause_o(csrSCause),
@@ -245,9 +254,12 @@ DecodeUnit #(
         .D_isPrivileged_o(D_isPrivileged),
         .csrMStatus_i(csrMStatus),
         .csrMedeleg_i(csrMedeleg),
+        .csrMideleg_i(csrMideleg),
+        .csrMie_i(csrMie),
         .csrMtvec_i(csrMtvec),
         .csrMepc_i(csrMepc),
         .csrMCause_i(csrMCause),
+        .csrMip_i(csrMip),
         .csrStvec_i(csrStvec),
         .csrSepc_i(csrSepc),
         .csrSCause_i(csrSCause),

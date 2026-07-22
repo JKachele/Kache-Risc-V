@@ -18,7 +18,7 @@ long sbi_console_putchar(int ch) {
 
 // EID #0x08
 void sbi_shutdown(void) {
-        asm volatile ("ebreak\n");
+        __asm__ volatile ("ebreak\n");
 }
 
 

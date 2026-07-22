@@ -11,7 +11,8 @@ module RiscV_Top (
         input  wire reset_i,
 
         // Interupts
-        input  wire TimerIRQ_i,
+        input  wire        timerIRQ_i,
+        input  wire [63:0] csrTime_i,
 
         // AXI4 Memory Interface
         output reg  [31:0]  m_axi_awaddr_o,
@@ -97,6 +98,8 @@ Processor CPU(
         .clk_i(clk_i),
         .reset_i(reset_i),
         .rvec_i(rvec),
+        .timerIRQ_i(timerIRQ_i),
+        .csrTime_i(csrTime_i),
         .ICacheStrb_o(ICacheStrb),
         .ICacheCancel_o(ICacheCancel),
         .ICacheAddr_o(ICacheAddr),

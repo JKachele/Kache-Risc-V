@@ -47,7 +47,8 @@ wire clk_timer; // 1.5625 MHz   - Timer Clock MTIME register
 wire reset;     // Active High Reset
 
 // Interupts
-wire TimerIRQ;
+wire        timerIRQ;
+wire [63:0] csrTime;
 
 // IO
 wire [31:0] IO_addr;
@@ -88,7 +89,8 @@ wire        axi_rready;
 RiscV_Top riscv(
         .clk_i(clk_25),
         .reset_i(reset),
-        .TimerIRQ_i(TimerIRQ),
+        .timerIRQ_i(timerIRQ),
+        .csrTime_i(csrTime),
         .m_axi_awaddr_o(axi_awaddr),
         .m_axi_awlen_o(axi_awlen),
         .m_axi_awid_o(axi_awid),
@@ -132,7 +134,8 @@ IO io(
         .IO_wstrb_i(IO_wstrb),
         .IO_rData_o(IO_rData),
         .IO_validReady_o(IO_validReady),
-        .TimerIRQ_o(TimerIRQ),
+        .timerIRQ_o(timerIRQ),
+        .csrTime_o(csrTime),
         .spiClk_o(qspi_sck),
         .spiCs_o(qspi_cs),
         .spiMosi_io(qspi_mosi),

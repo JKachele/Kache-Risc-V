@@ -41,15 +41,16 @@ endmodule
 module ClockworksA7 (
         input  wire clkref_i,
         input  wire RESET,
-        output wire clkBuf_o, // 100 MHZ
-        output wire clk0_o,   // 200 MHZ
-        output wire clk1_o,   // 25 MHZ
+        output wire clk0_o,   // 100 MHZ
+        output wire clk1_o,   // 200 MHZ
+        output wire clk2_o,   // 25 MHZ
         output wire resetn
 );
 
 wire clkref_buf;
 wire clk_out0;
 wire clk_out1;
+wire clk_out2;
 
 wire clkfbout;
 wire clkfbout_buf;
@@ -72,15 +73,20 @@ PLLE2_ADV #(
         .CLKFBOUT_MULT        (10),
         .CLKFBOUT_PHASE       (0.000),
 
-        // 200 MHZ
-        .CLKOUT0_DIVIDE       (5),
+        // 100 MHZ
+        .CLKOUT0_DIVIDE       (10),
         .CLKOUT0_PHASE        (0.000),
         .CLKOUT0_DUTY_CYCLE   (0.500),
 
-        // 25 MHZ
-        .CLKOUT1_DIVIDE       (40),
+        // 200 MHZ
+        .CLKOUT1_DIVIDE       (5),
         .CLKOUT1_PHASE        (0.000),
         .CLKOUT1_DUTY_CYCLE   (0.500),
+
+        // 25 MHZ
+        .CLKOUT2_DIVIDE       (40),
+        .CLKOUT2_PHASE        (0.000),
+        .CLKOUT2_DUTY_CYCLE   (0.500),
 
         .CLKIN1_PERIOD        (10.000)
 ) plle2_adv_inst (
@@ -88,6 +94,7 @@ PLLE2_ADV #(
         .CLKFBOUT            (clkfbout),
         .CLKOUT0             (clk_out0),
         .CLKOUT1             (clk_out1),
+        .CLKOUT2             (clk_out2),
         // Input clock control
         .CLKFBIN             (clkfbout_buf),
         .CLKIN1              (clkref_buf),
@@ -115,14 +122,8 @@ BUFG clkf_buf (
         .I (clkfbout)
 );
 
-BUFG clkout0_buf (
-        .O   (clk0_o),
-        .I   (clk_out0)
-);
-BUFG clkout1_buf (
-        .O   (clk1_o),
-        .I   (clk_out1)
-);
-assign clkBuf_o = clkref_buf;
+assign clk0_o = clk_out0;
+assign clk1_o = clk_out1;
+assign clk2_o = clk_out2;
 
 endmodule

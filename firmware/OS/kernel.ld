@@ -1,29 +1,24 @@
 ENTRY(_start)
 
 SECTIONS {
-        .text.bios : {
-                . = ALIGN(2);
+        .text.bios : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 KEEP(*(.text.bios));
         }
 
-        .rodata.bios : {
-                . = ALIGN(4);
+        .rodata.bios : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 *(.rodata.bios*)
                 *(.srodata.bios*)
         }
 
-        .data.bios : {
-                . = ALIGN(4);
+        .data.bios : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 *(.data.bios*)
         }
 
-        .sdata.bios : {
-                . = ALIGN(4);
+        .sdata.bios : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 *(.sdata.bios*)
         }
 
-        .bss.bios : {
-                . = ALIGN(4);
+        .bss.bios : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 __bss_bios = .;
                 *(.bss.bios*)
                 *(.sbss.bios*)
@@ -32,30 +27,25 @@ SECTIONS {
         . += 8 * 1024; /* 8KB */
         __stack_top_bios = .;
 
-        .text : {
-                . = ALIGN(2);
+        .text : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 *(.text .text.*);
         }
 
-        .rodata : {
-                . = ALIGN(4);
+        .rodata : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 *(.rodata*)
                 *(.srodata*)
         }
 
-        .data : {
-                . = ALIGN(4);
+        .data : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 *(.data*)
         }
 
-        .sdata : {
-                . = ALIGN(4);
+        .sdata : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 __global_pointer$ = .;
                 *(.sdata*)
         }
 
-        .bss : {
-                . = ALIGN(4);
+        .bss : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 __bss = .;
                 *(.bss*)
                 *(.sbss*)
@@ -65,7 +55,7 @@ SECTIONS {
         . += 8 * 1024; /* 8KB */
         __stack_top = .;
 
-        . = ALIGN(4096);
+        . = ALIGN(CONSTANT(MAXPAGESIZE));
         __free_ram = .;
         . += 128 * 1024; /*128KB */
         __free_ram_end = .;
