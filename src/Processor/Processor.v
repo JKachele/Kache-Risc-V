@@ -89,7 +89,7 @@ RegisterFile registers(
 CSR_RegFile csr(
         .clk_i(clk_i),
         .reset_i(reset_i),
-        .timerIRQ_i(timerIRQ_i),
+        .mtimeIRQ_i(timerIRQ_i),
         .csrWAddr_i(csrWAddr),
         .csrWEnable_i(csrWEnable),
         .csrWData_i(csrWData),

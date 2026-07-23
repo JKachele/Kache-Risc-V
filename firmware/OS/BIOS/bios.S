@@ -45,7 +45,7 @@ machine:
         li      t0, MTIME
         lw      a0, 0(t0)
         lw      a1, 4(t0)
-        li      t1, 0x2000
+        li      t1, 0x8000
         add     a0, a0, t1
         sltu    t2, a0, t1
         add     a1, a1, t2
@@ -56,7 +56,7 @@ machine:
         sw      a0, 0(t0)
 
         // Enable M-Mode Timer Interupts
-        li      t4, 0xA0
+        li      t4, 0x80
         csrs    mie, t4
 
         # Return to boot function in s-mode

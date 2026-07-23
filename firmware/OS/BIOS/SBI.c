@@ -27,7 +27,7 @@ void timer_handler(void) {
                         "li     t0, 0x80000008\n"
                         "lw     a0, 0(t0)\n"
                         "lw     a1, 4(t0)\n"
-                        "li     t1, 0x2000\n"
+                        "li     t1, 0x8000\n"
                         "add    a0, a0, t1\n"
                         "sltu   t2, a0, t1\n"
                         "add    a1, a1, t2\n"
