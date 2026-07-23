@@ -63,19 +63,10 @@ assign IO_rData_o =
 assign IO_validReady_o = isFlash ? SPI_valid : 1'b1;
 
 /*-------------------------------- Memory Mapped Registers --------------------------------*/
-/* verilator lint_off MULTIDRIVEN */
-(* ram_style = "block" *) reg [63:0] mtime [0:1]; // mtime[0] = mtime, mtime[1] = mtimecmp
-initial mtime[0] = 64'b0;
-initial mtime[1] = 64'hFFFF_FFFF_FFFF_FFFF; // Set to max to avoid interupts before it is set
-
 wire isMTime = isMMReg & (IO_addr_i[27:3] == 25'h0) & (IO_rstrb_i | |IO_wstrb_i);
 wire isMTimecmp = isMMReg & (IO_addr_i[27:3] == 25'h1) & (IO_rstrb_i | |IO_wstrb_i);
 reg  isMTime_r;
 reg  isMTimecmp_r;
-
-reg  [63:0] mtimeRData;
-reg  [63:0] mtimecmpRData;
-wire [63:0] mmRegData = isMTime_r ? mtimeRData : mtimecmpRData;
 
 always @(posedge clk_i) begin
         if (reset_i) begin
@@ -87,45 +78,130 @@ always @(posedge clk_i) begin
         end
 end
 
-// Registers used to declare an interupt
-reg  [63:0] mtimeData;
-reg  [63:0] mtimecmpData;
-assign timerIRQ_o = (mtimeData >= mtimecmpData) ? 1'b1 : 1'b0;
-assign csrTime_o = mtimeData;
+reg [63:0] MTIME;
+reg [63:0] MTIMECMP;
+
+reg  [63:0] mtimeRData;
+reg  [63:0] mtimecmpRData;
+wire [63:0] mmRegData = isMTime_r ? mtimeRData : mtimecmpRData;
+
+reg [63:0] mtimeWrite;          // (sys clk)   New timer value to be written
+reg [7:0]  mtimeWrReq;          // (sys clk)   Request to write the new value
+reg        mtimeWrReq_prev;     // (timer clk) Used by timer to detect edges
+reg        mtimeWrAck;          // (timer clk) Write has been acknowledged by timer
+
+assign timerIRQ_o = (MTIME >= MTIMECMP) ? 1'b1 : 1'b0;
+assign csrTime_o = MTIME;
 
 integer i;
 always @(posedge clk_i) begin
         if (reset_i) begin
-                for (i = 0; i < 8; i = i+1) begin
-                        mtime[0][i*8 +: 8] <= 8'h00;
-                        mtime[1][i*8 +: 8] <= 8'hFF;
-                end
+                MTIMECMP <= 64'b0;
         end else if (isMTime) begin
-                for (i = 0; i < 8; i = i+1) begin
-                        if (IO_wstrb_i[i]) begin
-                                mtime[0][i*8 +: 8] <= IO_wData_i[i*8 +: 8];
-                        end
+                if (|IO_wstrb_i) begin
+                        mtimeWrite <= IO_wData_i;
+                        mtimeWrReq <= IO_wstrb_i;
                 end
                 if (IO_rstrb_i) begin
-                        mtimeRData <= mtime[0];
+                        mtimeRData <= MTIME;
                 end
         end else if (isMTimecmp) begin
                 for (i = 0; i < 8; i = i+1) begin
                         if (IO_wstrb_i[i]) begin
-                                mtime[1][i*8 +: 8] <= IO_wData_i[i*8 +: 8];
+                                MTIMECMP[i*8 +: 8] <= IO_wData_i[i*8 +: 8];
                         end
                 end
                 if (IO_rstrb_i) begin
-                        mtimecmpRData <= mtime[1];
+                        mtimecmpRData <= MTIMECMP;
                 end
         end
-        mtimeData    <= mtime[0];
-        mtimecmpData <= mtime[1];
+        if (mtimeWrAck)
+                mtimeWrReq <= 8'b0;
 end
 
+integer j;
 always @(posedge timerClk_i) begin
-        mtime[0] <= mtime[0] + 1;
+        if (reset_i) begin
+                MTIME <= 64'b0;
+        end else if (|mtimeWrReq != mtimeWrReq_prev) begin
+                for (j = 0; j < 8; j = j+1) begin
+                        if (mtimeWrReq[j]) begin
+                                MTIME[i*8 +: 8] <= mtimeWrite[i*8 +: 8];
+                        end
+                end
+                mtimeWrAck <= 1'b1;
+        end else begin
+                MTIME <= MTIME + 1;
+        end
+
+        mtimeWrReq_prev <= |mtimeWrReq;
+        if (~(|mtimeWrReq))
+                mtimeWrAck <= 1'b0;
 end
+
+/* verilator lint_off MULTIDRIVEN */
+// (* ram_style = "block" *) reg [63:0] mtime [0:1]; // mtime[0] = mtime, mtime[1] = mtimecmp
+// initial mtime[0] = 64'b0;
+// initial mtime[1] = 64'hFFFF_FFFF_FFFF_FFFF; // Set to max to avoid interupts before it is set
+//
+// wire isMTime = isMMReg & (IO_addr_i[27:3] == 25'h0) & (IO_rstrb_i | |IO_wstrb_i);
+// wire isMTimecmp = isMMReg & (IO_addr_i[27:3] == 25'h1) & (IO_rstrb_i | |IO_wstrb_i);
+// reg  isMTime_r;
+// reg  isMTimecmp_r;
+//
+// reg  [63:0] mtimeRData;
+// reg  [63:0] mtimecmpRData;
+// wire [63:0] mmRegData = isMTime_r ? mtimeRData : mtimecmpRData;
+//
+// always @(posedge clk_i) begin
+//         if (reset_i) begin
+//                 isMTime_r    <= 1'b0;
+//                 isMTimecmp_r <= 1'b0;
+//         end else if (IO_rstrb_i) begin
+//                 isMTime_r    <= isMTime;
+//                 isMTimecmp_r <= isMTimecmp;
+//         end
+// end
+//
+// // Registers used to declare an interupt
+// reg  [63:0] mtimeData;
+// reg  [63:0] mtimecmpData;
+// assign timerIRQ_o = (mtimeData >= mtimecmpData) ? 1'b1 : 1'b0;
+// assign csrTime_o = mtimeData;
+//
+// integer i;
+// always @(posedge clk_i) begin
+//         if (reset_i) begin
+//                 for (i = 0; i < 8; i = i+1) begin
+//                         mtime[0][i*8 +: 8] <= 8'h00;
+//                         mtime[1][i*8 +: 8] <= 8'hFF;
+//                 end
+//         end else if (isMTime) begin
+//                 for (i = 0; i < 8; i = i+1) begin
+//                         if (IO_wstrb_i[i]) begin
+//                                 mtime[0][i*8 +: 8] <= IO_wData_i[i*8 +: 8];
+//                         end
+//                 end
+//                 if (IO_rstrb_i) begin
+//                         mtimeRData <= mtime[0];
+//                 end
+//         end else if (isMTimecmp) begin
+//                 for (i = 0; i < 8; i = i+1) begin
+//                         if (IO_wstrb_i[i]) begin
+//                                 mtime[1][i*8 +: 8] <= IO_wData_i[i*8 +: 8];
+//                         end
+//                 end
+//                 if (IO_rstrb_i) begin
+//                         mtimecmpRData <= mtime[1];
+//                 end
+//         end
+//         mtimeData    <= mtime[0];
+//         mtimecmpData <= mtime[1];
+// end
+//
+// always @(posedge timerClk_i) begin
+//         mtime[0] <= mtime[0] + 1;
+// end
 
 /* verilator lint_on MULTIDRIVEN */
 /*-------------------------------- QSPI Flash --------------------------------*/

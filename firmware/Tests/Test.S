@@ -7,6 +7,7 @@ main:
         sw t2, 0(t0)
         lw t2, 4(t1)
         sw t2, 4(t0)
+        fence
         nop
         li a0, 0
         li a1, 0

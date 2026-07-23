@@ -40,10 +40,10 @@ module SOC (
 );
 
 /*verilator public_flat_rw_on*/
-wire clk_100;   // 100 MHz      - Buffered System Clock for DDR3 MIG
-wire clk_200;   // 200 MHz      - Reference Clock for DDR3 MIG
-wire clk_25;    // 25 MHz       - System Clock for RiscV and IO
-wire clk_timer; // 1.5625 MHz   - Timer Clock MTIME register
+wire clk_100;   // 100 MHz - Buffered System Clock for DDR3 MIG
+wire clk_200;   // 200 MHz - Reference Clock for DDR3 MIG
+wire clk_25;    // 25 MHz  - System Clock for RiscV and IO
+wire clk_timer; // 10 MHz  - Timer Clock MTIME register
 wire reset;     // Active High Reset
 
 // Interupts
@@ -198,18 +198,18 @@ IO io(
 `endif
 
 // Timer Clock: 1.5625 MHz
-reg [5:0] clk_div;
+reg [3:0] clk_div;
 always @(posedge CLK100MHZ) begin
         if (reset) begin
-                clk_div <= 6'b0;
+                clk_div <= 4'b0;
         end else begin
                 clk_div <= clk_div + 1;
         end
 end
 `ifdef BENCH
-assign clk_timer = clk_div[3];
+assign clk_timer = clk_div[1];
 `else
-assign clk_timer = clk_div[5];
+assign clk_timer = clk_div[3];
 `endif
 
 `ifdef BENCH
@@ -225,9 +225,10 @@ Clockworks #(
 ClockworksA7 cw (
         .clkref_i(CLK100MHZ),
         .RESET(RESET),
-        .clkBuf_o(clk_100),
-        .clk0_o(clk_200),
-        .clk1_o(clk_25),
+        .clk0_o(clk_100),
+        .clk1_o(clk_200),
+        .clk2_o(clk_25),
+        .clk3_o(clk_timer),
         .resetn(reset)
 );
 `endif

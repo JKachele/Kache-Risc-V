@@ -85,9 +85,30 @@ wire [ 3:0] ddr_axi_rid;
 wire        ddr_axi_rvalid;
 wire        ddr_axi_rready;
 
+
+// Misc wires
+wire        init_calib_complete;
+wire        mmcm_locked;
+wire        app_sr_active;
+wire        app_ref_ack;
+wire        app_zq_ack;
+wire        app_sr_req;
+wire        app_ref_req;
+wire        app_zq_req;
+wire        w_sys_reset;
+wire [11:0] w_device_temp;
+wire ddr_axi_clk;
+
+// Convert from active low to active high reset,
+// *and* hold the system in reset until the memory comes up.
+reg ddr_rst;
+initial ddr_rst = 1'b1;
+always @(posedge ddr_axi_clk)
+        ddr_rst <= w_sys_reset || (!init_calib_complete) || (!mmcm_locked);
+
 axi_clock_converter_0 axi_cdc(
         .s_axi_aclk(clk25_i),
-        .s_axi_aresetn(RESET),
+        .s_axi_aresetn(reset_i),
 
         .s_axi_awid(s_axi_awid),
         .s_axi_awaddr(s_axi_awaddr),
@@ -129,7 +150,7 @@ axi_clock_converter_0 axi_cdc(
         .s_axi_rvalid(s_axi_rvalid),
         .s_axi_rready(s_axi_rready),
 
-        .m_axi_aclk(ddr_axi_aclk),
+        .m_axi_aclk(ddr_axi_clk),
         .m_axi_aresetn(ddr_rst),
 
         .m_axi_awid(ddr_axi_awid),
@@ -173,49 +194,29 @@ axi_clock_converter_0 axi_cdc(
         .m_axi_rready(ddr_axi_rready)
 );
 
-// Misc wires
-wire        init_calib_complete;
-wire        mmcm_locked;
-wire        app_sr_active;
-wire        app_ref_ack;
-wire        app_zq_ack;
-wire        app_sr_req;
-wire        app_ref_req;
-wire        app_zq_req;
-wire        w_sys_reset;
-wire [11:0] w_device_temp;
-
-wire ddr_axi_clk;
-
-// Convert from active low to active high reset,
-// *and* hold the system in reset until the memory comes up.
-reg ddr_rst;
-initial ddr_rst = 1'b1;
-always @(posedge ddr_axi_clk)
-        ddr_rst <= w_sys_reset || (!init_calib_complete) || (!mmcm_locked);
 
 mig_axis mig_sdram (
         // DDR Pins
-        .ddr3_ck_p(ddr_ck_p_o),
-        .ddr3_ck_n(ddr_ck_n_o),
-        .ddr3_reset_n(ddr_reset_n_o),
-        .ddr3_cke(ddr_cke_o),
-        .ddr3_cs_n(ddr_cs_n_o),
-        .ddr3_ras_n(ddr_ras_n_o),
-        .ddr3_we_n(ddr_we_n_o),
-        .ddr3_cas_n(ddr_cas_n_o),
-        .ddr3_ba(ddr_ba_o),
-        .ddr3_addr(ddr_addr_o),
-        .ddr3_odt(ddr_odt_o),
-        .ddr3_dqs_p(ddr_dqs_p_io),
-        .ddr3_dqs_n(ddr_dqs_n_io),
-        .ddr3_dq(ddr_data_io),
-        .ddr3_dm(ddr_dm_o),
+        .ddr3_ck_p(ddr3_ck_p),
+        .ddr3_ck_n(ddr3_ck_n),
+        .ddr3_reset_n(ddr3_reset_n),
+        .ddr3_cke(ddr3_cke),
+        .ddr3_cs_n(ddr3_cs_n),
+        .ddr3_ras_n(ddr3_ras_n),
+        .ddr3_we_n(ddr3_we_n),
+        .ddr3_cas_n(ddr3_cas_n),
+        .ddr3_ba(ddr3_ba),
+        .ddr3_addr(ddr3_addr),
+        .ddr3_odt(ddr3_odt),
+        .ddr3_dqs_p(ddr3_dqs_p),
+        .ddr3_dqs_n(ddr3_dqs_n),
+        .ddr3_dq(ddr3_dq),
+        .ddr3_dm(ddr3_dm),
 
         // Misc
         .sys_clk_i(clk100_i),
         .clk_ref_i(clk200_i),
-        .ui_clk(clkOut_o),
+        .ui_clk(ddr_axi_clk),
         .ui_clk_sync_rst(w_sys_reset),
         .mmcm_locked(mmcm_locked),
         .aresetn(1'b1),
@@ -255,7 +256,7 @@ mig_axis mig_sdram (
         .s_axi_bvalid(ddr_axi_bvalid),
         // Read Address
         .s_axi_arid(ddr_axi_arid),
-        .s_axi_araddr(ddr_axi_araddr_i[27:0]),
+        .s_axi_araddr(ddr_axi_araddr[27:0]),
         .s_axi_arlen(ddr_axi_arlen),
         .s_axi_arsize(3'b010), // 4-byte burst size
         .s_axi_arburst(2'b01), // Incremental burst
@@ -275,4 +276,3 @@ mig_axis mig_sdram (
 );
 
 endmodule
-
