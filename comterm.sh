@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 DEVICE=/dev/ttyUSB1   # replace by the terminal used by your device
 BAUDS=8000000
 

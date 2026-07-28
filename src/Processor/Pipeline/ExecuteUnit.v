@@ -250,7 +250,7 @@ wire [31:0] E_addr =
         DE_isStore_i ? E_rs1[31:0] + DE_Simm_i : E_rs1[31:0] + DE_Iimm_i;
 
 assign DMemRAddr_o = E_addr;
-assign DMemRStrb_o = (DE_isAMO_i | DE_isLoad_i); // & ~E_stall_i;
+assign DMemRStrb_o = (DE_isAMO_i | DE_isLoad_i);
 
 wire [31:0] E_aluOut_32 = DE_isRV32M_i ? E_aluOutM :
                           DE_isCSR_i   ? E_csrOut  :
