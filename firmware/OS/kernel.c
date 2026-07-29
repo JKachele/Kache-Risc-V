@@ -15,6 +15,7 @@ extern char __bss_end[];
 extern char __stack_top[];
 extern char __free_ram[];
 extern char __free_ram_end[];
+extern char __kernel_base[];
 
 extern void kernel_entry(void);
 extern void switch_context(u32 *prev_sp, u32 *next_sp);
@@ -73,6 +74,25 @@ paddr_t alloc_pages(u32 n) {
         return paddr;
 }
 
+void map_page(u32 *table1, u32 vaddr, paddr_t paddr, u32 flags) {
+        if (!is_aligned(vaddr, PAGE_SIZE))
+                PANIC("unaligned vaddr %x", vaddr);
+        if (!is_aligned(paddr, PAGE_SIZE))
+                PANIC("unaligned paddr %x", paddr);
+
+        u32 vpn1 = (vaddr >> 22) & 0x3FF;
+        if ((table1[vpn1] & PAGE_V) == 0) {
+                // Creates 2nd level page table if it doesn't exist and maps to 1st level entry
+                u32 pt_paddr = alloc_pages(1);
+                table1[vpn1] = ((pt_paddr / PAGE_SIZE) << 10) | PAGE_V;
+        }
+
+        // Set up 2nd level page table entry to map the physical page
+        u32 vpn0 = (vaddr >> 12) & 0x3FF;
+        u32 *table0 = (u32*)((table1[vpn1] >> 10) * PAGE_SIZE);
+        table0[vpn0] = ((paddr / PAGE_SIZE) << 10) | flags | PAGE_V;
+}
+
 struct process *create_process(u32 pc) {
         // Find unused process control block
         struct process *proc = NULL;
@@ -93,10 +113,18 @@ struct process *create_process(u32 pc) {
                 *--sp = 0;
         *--sp = pc;
 
+        // map kernel pages
+        u32 *page_table = (u32*)alloc_pages(1);
+        for (paddr_t paddr = (paddr_t)__kernel_base;
+                        paddr < (paddr_t)__free_ram_end; paddr += PAGE_SIZE) {
+                map_page(page_table, paddr, paddr, PAGE_R | PAGE_W | PAGE_X);
+        }
+
         // Initialize process fields
         proc->pid = i + 1;
         proc->state = PROC_RUNNABLE;
         proc->sp = (vaddr_t)sp;
+        proc->page_table = page_table;
         return proc;
 }
 
@@ -115,8 +143,12 @@ void yield(void) {
                 return;
 
         __asm__ volatile(
+                        "sfence.vma\n"
+                        "csrw satp, %[satp]\n"
+                        "sfence.vma\n"
                         "csrw sscratch, %[sscratch]\n"
-                        :: [sscratch] "r" ((u32) &next->stack[sizeof(next->stack)])
+                        :: [satp] "r" (SATP_SV32 | ((u32)next->page_table / PAGE_SIZE)),
+                        [sscratch] "r" ((u32) &next->stack[sizeof(next->stack)])
                         );
 
         // Context switch

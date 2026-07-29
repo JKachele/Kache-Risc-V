@@ -12,6 +12,7 @@ module ICache (
 
         input  wire [31:0]  addr_i,
         input  wire         rden_i,
+        input  wire         mmu_valid_i,
         input  wire         cancel_i,
         output wire [31:0]  data_o,
         output wire         valid_o,
@@ -90,11 +91,11 @@ always @(*) begin
         endcase
 end
 
-assign valid_o   = cancel_i | (C_curState == IDLE & C_hit);
+assign valid_o   = cancel_i | (C_curState == IDLE & C_hit & mmu_valid_i) | ~rden_i;
 assign data_o    = C_offsetData;
 assign cmp_o     = C_hit0 ? cmp0[index][offset[4:1]] : cmp1[index][offset[4:1]];
 assign mAddr_o   = {tag, index, 5'b0};
-assign mRden_o   = C_curState == IDLE & ~C_hit & rden_i & ~cancel_i;
+assign mRden_o   = C_curState == IDLE & ~C_hit & rden_i & mmu_valid_i & ~cancel_i;
 
 // When loading data into cache, Check if each 16-bit block could be a compressed instruction
 wire [15:0] mCmp = {~&mData_i[241:240], ~&mData_i[225:224], ~&mData_i[209:208], ~&mData_i[193:192],
@@ -119,7 +120,7 @@ always @(posedge clk_i) begin
         end else begin
                 case (C_curState)
                         IDLE: begin
-                                if (~rden_i | cancel_i) begin
+                                if (~rden_i | ~mmu_valid_i | cancel_i) begin
                                         // Do nothing
                                 end
                                 // Check Way 0

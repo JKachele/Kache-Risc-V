@@ -10,36 +10,28 @@ module MMU (
         input  wire        clk_i,
         input  wire        reset_i,
 
+        // TLB Flush Signal
+        input  wire        flush_i,
+
         // I-Cache Interface
-        input  wire [19:0] i_vpn_i,
-        input  wire [8:0]  i_asid_i,
+        input  wire [31:0] i_vaddr_i,
+        input  wire [31:0] i_satp_i,
         input  wire        i_rden_i,
-        input  wire        i_flush_i,
         input  wire [1:0]  i_priv_i,
-        input  wire        i_instr_i,
-        input  wire        i_write_i,
-        input  wire        i_mxr_i,
         input  wire        i_sum_i,
-        input  wire        i_vmEnable_i,
-        input  wire [21:0] i_ptppn_i,
         input  wire        i_cancel_i,
-        output wire [21:0] i_ppn_o,
+        output wire [33:0] i_paddr_o,
         output wire        i_valid_o,
 
         // D-Cache Interface
-        input  wire [19:0] d_vpn_i,
-        input  wire [8:0]  d_asid_i,
+        input  wire [31:0] d_vaddr_i,
+        input  wire [31:0] d_satp_i,
         input  wire        d_rden_i,
-        input  wire        d_flush_i,
         input  wire [1:0]  d_priv_i,
-        input  wire        d_instr_i,
         input  wire        d_write_i,
         input  wire        d_mxr_i,
         input  wire        d_sum_i,
-        input  wire        d_vmEnable_i,
-        input  wire [21:0] d_ptppn_i,
-        input  wire        d_cancel_i,
-        output wire [21:0] d_ppn_o,
+        output wire [33:0] d_paddr_o,
         output wire        d_valid_o,
 
         // Data Mem Interface
@@ -50,6 +42,16 @@ module MMU (
         input  wire [63:0] DMemRData_i,
         input  wire        DMemValidReady_i
 );
+
+// Convert virtual address to virtual page number
+wire [19:0] i_vpn = i_vaddr_i[31:12];
+wire [19:0] d_vpn = d_vaddr_i[31:12];
+
+// Convert physical page number to physical address
+wire [21:0] i_ppn;
+wire [21:0] d_ppn;
+assign i_paddr_o = {i_ppn, i_vaddr_i[11:0]};
+assign d_paddr_o = {d_ppn, d_vaddr_i[11:0]};
 
 // i-tlb - ptw interface
 wire [19:0]  iptw_vpn;
@@ -83,19 +85,17 @@ TLB itlb(
         .clk_i(clk_i),
         .reset_i(reset_i),
 
-        .vpn_i(i_vpn_i),
-        .asid_i(i_asid_i),
+        .vpn_i(i_vpn),
+        .satp_i(i_satp_i),
         .rden_i(i_rden_i),
-        .flush_i(i_flush_i),
+        .flush_i(flush_i),
         .priv_i(i_priv_i),
-        .instr_i(i_instr_i),
-        .write_i(i_write_i),
-        .mxr_i(i_mxr_i),
+        .instr_i(1'b1), // Always instruction fetch for i-tlb
+        .write_i(1'b0), // i-cache never writes to memory
+        .mxr_i(1'b0),   // i-cache doesn't care about MXR
         .sum_i(i_sum_i),
-        .vmEnable_i(i_vmEnable_i),
-        .ptppn_i(i_ptppn_i),
         .cancel_i(i_cancel_i),
-        .ppn_o(i_ppn_o),
+        .ppn_o(i_ppn),
         .valid_o(i_valid_o),
 
         .ptw_vpn_o(iptw_vpn),
@@ -116,19 +116,17 @@ TLB dtlb(
         .clk_i(clk_i),
         .reset_i(reset_i),
 
-        .vpn_i(d_vpn_i),
-        .asid_i(d_asid_i),
+        .vpn_i(d_vpn),
+        .satp_i(d_satp_i),
         .rden_i(d_rden_i),
-        .flush_i(d_flush_i),
+        .flush_i(flush_i),
         .priv_i(d_priv_i),
-        .instr_i(d_instr_i),
+        .instr_i(1'b0), // Always data access for d-tlb
         .write_i(d_write_i),
         .mxr_i(d_mxr_i),
         .sum_i(d_sum_i),
-        .vmEnable_i(d_vmEnable_i),
-        .ptppn_i(d_ptppn_i),
-        .cancel_i(d_cancel_i),
-        .ppn_o(d_ppn_o),
+        .cancel_i(1'b0), // d-cache never cancels
+        .ppn_o(d_ppn),
         .valid_o(d_valid_o),
 
         .ptw_vpn_o(dptw_vpn),

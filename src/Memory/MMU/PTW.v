@@ -103,12 +103,13 @@ PTW_ARB arb(
 );
 
 /*-------------------------------- Page Table Walker --------------------------------*/
-localparam IDLE     = 3'b000;
-localparam REQ      = 3'b001;
-localparam READ_PT  = 3'b010;
-localparam WRITE_PT = 3'b011;
-localparam DONE     = 3'b100;
-localparam FAULT    = 3'b101;
+localparam IDLE      = 3'b000;
+localparam REQ       = 3'b001;
+localparam READ_PT   = 3'b010;
+localparam CHECK_PTE = 3'b011;
+localparam WRITE_PT  = 3'b100;
+localparam DONE      = 3'b101;
+localparam FAULT     = 3'b110;
 
 assign ptw_valid = (ptw_state == DONE);
 assign ptw_fault = (ptw_state == FAULT);
@@ -155,49 +156,50 @@ always @(posedge clk_i) begin
         end else if (ptw_state == READ_PT) begin
                 if (DMemValidReady_i) begin
                         DMemRden  <= 1'b0;
-                        if (~pte_valid) begin
+                        ptw_state <= CHECK_PTE;
+                end
+        end else if (ptw_state == CHECK_PTE) begin
+                if (~pte_valid) begin
+                        ptw_state <= FAULT;
+                end else if (pte_leaf) begin
+                        // Misaligned Mega Page
+                        if (pt_level & |pte_ppn[9:0]) begin
                                 ptw_state <= FAULT;
-                        end else if (pte_leaf) begin
-                                // Misaligned Mega Page
-                                if (pt_level & |pte_ppn[9:0]) begin
-                                        ptw_state <= FAULT;
-                                end
-                                // Check Privilege and Access Rights
-                                else if (~pte_priv_allow | ~pte_rwx_allow) begin
-                                        ptw_state <= FAULT;
-                                end
-                                // Set accessed and Dirty bits if needed
-                                else if (~pte[6] | (~pte[7] & ptw_write)) begin
-                                        pteWData <= pte | {24'b0, ptw_write, 1'b1, 6'b0};
-                                        pteWren <= 1'b1;
-                                        ptw_state <= WRITE_PT;
-                                end
-                                // Mega Page
-                                else if (pt_level) begin
-                                        ptw_ppn <= {pte_ppn[21:10], ptw_vpn[9:0]};
-                                        ptw_flags <= {1'b1, pte[7:0]};
-                                        ptw_state <= DONE;
-                                end
-                                // Normal Page
-                                else begin
-                                        ptw_ppn <= pte_ppn;
-                                        ptw_flags <= {1'b0, pte[7:0]};
-                                        ptw_state <= DONE;
-                                end
+                        end
+                        // Check Privilege and Access Rights
+                        else if (~pte_priv_allow | ~pte_rwx_allow) begin
+                                ptw_state <= FAULT;
+                        end
+                        // Set accessed and Dirty bits if needed
+                        else if (~pte[6] | (~pte[7] & ptw_write)) begin
+                                pteWData <= pte | {24'b0, ptw_write, 1'b1, 6'b0};
+                                pteWren <= 1'b1;
+                                ptw_state <= WRITE_PT;
+                        end
+                        // Mega Page
+                        else if (pt_level) begin
+                                ptw_ppn <= {pte_ppn[21:10], ptw_vpn[9:0]};
+                                ptw_flags <= {1'b1, pte[7:0]};
+                                ptw_state <= DONE;
+                        end
+                        // Normal Page
+                        else begin
+                                ptw_ppn <= pte_ppn;
+                                ptw_flags <= {1'b0, pte[7:0]};
+                                ptw_state <= DONE;
+                        end
+                end else begin
+                        if (pt_level) begin
+                                pt_ppn <= pte_ppn;
+                                pt_level <= 1'b0;
+                                ptw_state <= REQ;
                         end else begin
-                                if (pt_level) begin
-                                        pt_ppn <= pte_ppn;
-                                        pt_level <= 1'b0;
-                                        ptw_state <= REQ;
-                                end else begin
-                                        ptw_state <= FAULT;
-                                end
+                                ptw_state <= FAULT;
                         end
                 end
         end else if (ptw_state == WRITE_PT) begin
                 if (DMemValidReady_i) begin
                         pteWren <= 1'b0;
-                        DMemRden  <= 1'b1;
                         ptw_state <= REQ;
                 end
         end else if (ptw_state == DONE) begin

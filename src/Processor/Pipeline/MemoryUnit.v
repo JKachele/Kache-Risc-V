@@ -12,24 +12,30 @@ module MemoryUnit (
         // Pipeline Control Signals
         output wire        M_busy_o,
         // Memory/IO Interface
-        input  wire [63:0] DMemRData_i,
-        output wire [31:0] DMemWAddr_o,
-        output wire        DMemFlush_o,
-        output wire [63:0] DMemWData_o,
-        output wire [7:0]  DMemWMask_o,
-        input  wire        DMemValidReady_i,
+        output wire        tlb_flush_o,
+        input  wire [63:0] DC_rData_i,
+        output wire [31:0] DC_wAddr_o,
+        output wire        DC_flush_o,
+        output wire [63:0] DC_wData_o,
+        output wire [7:0]  DC_wMask_o,
+        output wire [31:0] DC_wSatp_o,
+        output wire [1:0]  DC_wPriv_o,
+        output wire        DC_wMxr_o,
+        output wire        DC_wSum_o,
+        input  wire        DC_validReady_i,
         // CSR Interface
-        output wire [11:0] csrWAddr_o,
-        output wire [31:0] csrWData_o,
-        output wire        csrWEnable_o,
+        input  wire [31:0] csrSatp_i,
+        input  wire [63:0] csrMStatus_i,
         output wire        csrInstStep_o,
         // Execute Unit Interface
         input  wire        EM_nop_i,
+        input  wire [1:0]  EM_priv_i,
         input  wire        EM_isLoad_i,
         input  wire        EM_isStore_i,
         input  wire        EM_isCSR_i,
         input  wire        EM_isAMO_i,
         input  wire        EM_isFENCE_i,
+        input  wire        EM_isSFENCEVMA_i,
         input  wire [5:0]  EM_rdId_i,
         input  wire [5:0]  EM_rs1Id_i,
         input  wire [5:0]  EM_rs2Id_i,
@@ -39,7 +45,7 @@ module MemoryUnit (
         input  wire [6:0]  EM_funct7_i,
         input  wire [63:0] EM_Eresult_i,
         input  wire [31:0] EM_addr_i,
-        input  wire [31:0] EM_CSRdata_i,
+        input  wire [31:0] EM_csrData_i,
         input  wire        EM_wbEnable_i,
         // Writeback Unit Interface
         output reg  [5:0]  MW_rdId_o,
@@ -51,7 +57,7 @@ wire M_isB = (EM_funct3_i[1:0] == 2'b00);
 wire M_isH = (EM_funct3_i[1:0] == 2'b01);
 wire M_isW = (EM_funct3_i[1:0] == 2'b10);
 
-wire [31:0] M_memWord = EM_addr_i[2] ? DMemRData_i[63:32] : DMemRData_i[31:0];
+wire [31:0] M_memWord = EM_addr_i[2] ? DC_rData_i[63:32] : DC_rData_i[31:0];
 wire [15:0] M_memHalf = EM_addr_i[1] ? M_memWord[31:16]   : M_memWord[15:0];
 wire [7:0]  M_memByte = EM_addr_i[0] ? M_memHalf[15:8]    : M_memHalf[7:0];
 
@@ -104,8 +110,9 @@ always @(*) begin
         endcase
 end
 
-/*-----------------------Cache Flush----------------------*/
-assign DMemFlush_o = EM_isFENCE_i & (EM_funct3_i == 3'b0);
+/*-----------------------Cache/TLB Flush----------------------*/
+assign DC_flush_o = EM_isFENCE_i & (EM_funct3_i == 3'b0);
+assign tlb_flush_o = EM_isSFENCEVMA_i;
 
 /*----------------------STORE---------------------*/
 reg [63:0] M_storeData;
@@ -175,14 +182,18 @@ always @(*) begin
         end
 end
 
-assign DMemWAddr_o = EM_addr_i;
-assign DMemWData_o = M_storeData;
-assign DMemWMask_o = {8{M_storeEnable}} & M_storeMask;
+assign DC_wAddr_o = EM_addr_i;
+assign DC_wData_o = M_storeData;
+assign DC_wMask_o = {8{M_storeEnable}} & M_storeMask;
+assign DC_wSatp_o = csrSatp_i;
+assign DC_wPriv_o = EM_priv_i;
+assign DC_wMxr_o  = csrMStatus_i[19];
+assign DC_wSum_o  = csrMStatus_i[18];
 
 /*----------------------LOAD----------------------*/
 
 // Only stall memory unit if cache miss while writing.
-assign M_busy_o = ~DMemValidReady_i & ~EM_isLoad_i;
+assign M_busy_o = ~DC_validReady_i & ~EM_isLoad_i;
 
 // Sign expansion
 // Based on funct3[2]: 0->sign expand, 1->unsigned
@@ -199,15 +210,11 @@ always @(*) begin
                 M_Mdata = {32'hFFFFFFFF, M_memWord};
         else
                 // M_Mdata = EM_Mdata_i;
-                M_Mdata = DMemRData_i;
+                M_Mdata = DC_rData_i;
 end
 
 
 /*-----------------------CSR----------------------*/
-assign csrWAddr_o   = EM_isCSR_i ? EM_csrId_i : {12{1'bZ}};
-assign csrWData_o   = EM_isCSR_i ? EM_Eresult_i[31:0] : {32{1'bZ}};
-assign csrWEnable_o = EM_isCSR_i;
-
 // Step up instruction counter if not a NOP and not stalled
 assign csrInstStep_o  = ~MW_nop & ~M_busy_o;
 
@@ -215,7 +222,7 @@ assign csrInstStep_o  = ~MW_nop & ~M_busy_o;
 wire [63:0] M_wbData =
         M_isSC                     ? {63'h7FFFFFFF80000000, M_scWriteable} :
         (EM_isLoad_i | EM_isAMO_i) ? M_Mdata :
-        EM_isCSR_i                 ? {32'hFFFFFFFF, EM_CSRdata_i} : EM_Eresult_i;
+        EM_isCSR_i                 ? {32'hFFFFFFFF, EM_csrData_i} : EM_Eresult_i;
 
 reg MW_nop;
 always @(posedge clk_i) begin

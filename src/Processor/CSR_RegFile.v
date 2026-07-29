@@ -38,6 +38,7 @@ module CSR_RegFile (
         output wire [31:0] csrStvec_o,
         output wire [31:0] csrSepc_o,
         output wire [31:0] csrSCause_o,
+        output wire [31:0] csrSatp_o,
         // Set Trap CSRs
         input  wire [6:0]  csrMStatusSet_i, // {MPP[1:0], MPIE, MIE, SPP, SPIE, SIE}
         input  wire [31:0] csrMepcSet_i,
@@ -188,6 +189,7 @@ assign csrMip_o     = CSR_mip;
 assign csrStvec_o   = CSR_stvec;
 assign csrSepc_o    = CSR_sepc;
 assign csrSCause_o  = CSR_scause;
+assign csrSatp_o    = CSR_satp;
 
 // CSR Write
 always @(posedge clk_i) begin

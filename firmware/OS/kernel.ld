@@ -27,6 +27,9 @@ SECTIONS {
         . += 8 * 1024; /* 8KB */
         __stack_top_bios = .;
 
+        . = ALIGN(CONSTANT(MAXPAGESIZE));
+        __kernel_base = .;
+
         .text : ALIGN(CONSTANT(MAXPAGESIZE)) {
                 *(.text .text.*);
         }

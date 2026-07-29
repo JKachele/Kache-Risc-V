@@ -20,11 +20,15 @@ module DecodeUnit #(
         input  wire        E_stall_i,
         input  wire        M_busy_i,
         input  wire        E_takeBranch_i,
+        output wire        D_satpWrite_o,
         output wire        D_predictPC_o,
         output wire [31:0] D_PCprediction_o,
         output wire        dataHazard_o,
         output wire        D_isPrivileged_o,
+        output wire [1:0]  D_privilege_o,
         // CSR Interface
+        output wire [11:0] csrRAddr_o,
+        input  wire [31:0] csrRData_i,
         input  wire [63:0] csrMStatus_i,
         input  wire [63:0] csrMedeleg_i,
         input  wire [31:0] csrMideleg_i,
@@ -52,6 +56,7 @@ module DecodeUnit #(
         output reg  [31:0] DE_instr_o,
         output reg         DE_isRV32C_o,
         output reg         DE_nop_o,
+        output reg  [1:0]  DE_priv_o,
         output reg         DE_isLUI_o,
         output reg         DE_isAUIPC_o,
         output reg         DE_isJAL_o,
@@ -63,6 +68,7 @@ module DecodeUnit #(
         output reg         DE_isALUR_o,
         output reg         DE_isFENCE_o,
         output reg         DE_isSYS_o,
+        output reg         DE_isSFENCEVMA_o,
         output reg         DE_isEBREAK_o,
         output reg         DE_isCSR_o,
         output reg         DE_isAMO_o,
@@ -72,6 +78,7 @@ module DecodeUnit #(
         output reg  [5:0]  DE_rs2Id_o,
         output reg  [5:0]  DE_rs3Id_o,
         output reg  [11:0] DE_csrId_o,
+        output reg  [31:0] DE_csrData_o,
         output reg  [2:0]  DE_funct3_o,
         output reg  [7:0]  DE_funct3_is_o,
         output reg  [6:0]  DE_funct7_o,
@@ -199,12 +206,13 @@ wire [31:0] D_Jimm =
         {{12{D_instr[31]}}, D_instr[19:12],D_instr[20],D_instr[30:21],1'b0};
 
 // Privileged Instructions
-wire D_isPrv    = D_isSYS & (D_funct3 == 3'b000);
-wire D_isECALL  = D_isPrv & (D_instr[22:20] == 3'b000) & ~D_instr[25];
-wire D_isEBREAK = D_isPrv & (D_instr[22:20] == 3'b001) & ~D_instr[25];
-wire D_isMRET   = D_isPrv &  D_instr[21] & (D_instr[30:28] == 3'b011) & ~D_instr[25];
-wire D_isSRET   = D_isPrv &  D_instr[21] & (D_instr[30:28] == 3'b001) & ~D_instr[25];
-wire D_isWFI    = D_isPrv & (D_instr[22:20] == 3'b101) & ~D_instr[25];
+wire D_isPrv       = D_isSYS & (D_funct3 == 3'b000);
+wire D_isECALL     = D_isPrv & (D_instr[22:20] == 3'b000) & ~D_instr[25];
+wire D_isEBREAK    = D_isPrv & (D_instr[22:20] == 3'b001) & ~D_instr[25];
+wire D_isMRET      = D_isPrv &  D_instr[21] & (D_instr[30:28] == 3'b011) & ~D_instr[25];
+wire D_isSRET      = D_isPrv &  D_instr[21] & (D_instr[30:28] == 3'b001) & ~D_instr[25];
+wire D_isWFI       = D_isPrv & (D_instr[22:20] == 3'b101) & ~D_instr[25];
+wire D_isSFENCEVMA = D_isPrv & ~D_instr[21] & (D_instr[30:28] == 3'b001) &  D_instr[25];
 
 wire D_isCSR = D_isSYS & (D_funct3[1:0] != 2'b00);
 wire [11:0] D_csrId = D_instr[31:20];
@@ -306,11 +314,18 @@ wire       D_isCSRWrite = D_isCSR & |D_rs1Id;     // Is rs1 is not 0, then is CS
 wire D_isIllegalCSR = (D_isCSR & ((D_csrRO & D_isCSRWrite) | (D_csrPriv > DD_privilege)));
 wire D_isIllegal = (D_isUNIMP | D_isIllegalCSR);
 
+/*------------------CSR Read-----------------*/
+assign csrRAddr_o = D_isCSR ? D_csrId : {12{1'bZ}};
+
+// Writing to CSR 0x180 (satp) needs to stall the fetch unit so it can use the updted satp csr
+assign D_satpWrite_o = D_isCSRWrite & (D_csrId == 12'h180);
+
 /*------------------Trap Handlers-----------------*/
 localparam US = 2'b00, SU = 2'b01, MA = 2'b11;
 
 // Privilage is machine on startup
 reg [1:0] DD_privilege = MA;
+assign D_privilege_o = DD_privilege;
 
 // Interupts
 wire D_isMTIP = csrMip_i[7] & csrMie_i[7];
@@ -392,10 +407,10 @@ assign D_predictPC_o = !FD_nop_i && // !D_isUNIMP &&
         (D_isBranch && D_predictBranch));
 
 assign D_PCprediction_o =
-        D_isJALR  ? RAS_0           :
         D_isTrap  ? D_trapJumpAddr  :
         D_isMRET  ? D_MRetJumpAddr  :
         D_isSRET  ? D_SRetJumpAddr  :
+        D_isJALR  ? RAS_0           :
         (FD_PC_i + (D_isJAL ? D_Jimm : D_Bimm));
 
 
@@ -403,10 +418,10 @@ assign D_PCprediction_o =
 wire rs1Hazard = D_readsRs1 && (D_rs1Id == DE_rdId_o);
 wire rs2Hazard = D_readsRs2 && (D_rs2Id == DE_rdId_o);
 
-assign dataHazard_o = !FD_nop_i &&
-        ((DE_isLoad_o || DE_isAMO_o || DE_isCSR_o) && (rs1Hazard || rs2Hazard)) ||
-        (D_isLoadOrAMO && (DE_isStore_o || DE_isAMO_o)) ||
-        ((D_isCSR || D_isPrivileged) && (DE_isCSR_o && DE_rs1Id_o != 6'b0));
+assign dataHazard_o = ~FD_nop_i &
+        ((DE_isLoad_o | DE_isAMO_o | DE_isCSR_o) & (rs1Hazard | rs2Hazard)) |
+        (D_isLoadOrAMO & (DE_isStore_o | DE_isAMO_o | DE_isFENCE_o | DE_isSFENCEVMA_o)) |
+        ((D_isCSR | D_isPrivileged) & (DE_isCSR_o & (DE_rs1Id_o != 6'b0)));
 assign D_isPrivileged_o = D_isPrivileged;
 
 wire D_isNOP = E_flush_i | FD_nop_i | D_isWFI;
@@ -416,28 +431,31 @@ always @(posedge clk_i) begin
                 DE_instr_o <= D_isNOP ? NOP : D_instr;
                 DE_isRV32C_o <= FD_isRV32C_i;
                 DE_nop_o <= D_isNOP;
+                DE_priv_o <= DD_privilege;
 
-                DE_isLUI_o    <= D_isLUI;
-                DE_isAUIPC_o  <= D_isAUIPC;
-                DE_isJAL_o    <= D_isJAL;
-                DE_isJALR_o   <= D_isJALR;
-                DE_isBranch_o <= D_isBranch;
-                DE_isLoad_o   <= D_isLoad;
-                DE_isStore_o  <= D_isStore;
-                DE_isALUI_o   <= D_isALUI;
-                DE_isALUR_o   <= D_isALUR;
-                DE_isFENCE_o  <= D_isFENCE;
-                DE_isSYS_o    <= D_isSYS;
-                DE_isEBREAK_o <= D_isEBREAK;
-                DE_isCSR_o    <= D_isCSR;
-                DE_isAMO_o    <= D_isAMO;
-                DE_isFPU_o    <= D_isFPU;
+                DE_isLUI_o        <= D_isLUI;
+                DE_isAUIPC_o      <= D_isAUIPC;
+                DE_isJAL_o        <= D_isJAL;
+                DE_isJALR_o       <= D_isJALR;
+                DE_isBranch_o     <= D_isBranch;
+                DE_isLoad_o       <= D_isLoad;
+                DE_isStore_o      <= D_isStore;
+                DE_isALUI_o       <= D_isALUI;
+                DE_isALUR_o       <= D_isALUR;
+                DE_isFENCE_o      <= D_isFENCE;
+                DE_isSYS_o        <= D_isSYS;
+                DE_isSFENCEVMA_o  <= D_isSFENCEVMA;
+                DE_isEBREAK_o     <= D_isEBREAK;
+                DE_isCSR_o        <= D_isCSR;
+                DE_isAMO_o        <= D_isAMO;
+                DE_isFPU_o        <= D_isFPU;
 
-                DE_rdId_o  <= D_rdId;
-                DE_rs1Id_o <= D_rs1Id;
-                DE_rs2Id_o <= D_rs2Id;
-                DE_rs3Id_o <= D_rs3Id;
-                DE_csrId_o <= D_csrId;
+                DE_rdId_o    <= D_rdId;
+                DE_rs1Id_o   <= D_rs1Id;
+                DE_rs2Id_o   <= D_rs2Id;
+                DE_rs3Id_o   <= D_rs3Id;
+                DE_csrId_o   <= D_csrId;
+                DE_csrData_o <= csrRData_i;
 
                 DE_funct3_o <= D_funct3;
                 DE_funct3_is_o <= 8'b00000001 << D_instr[14:12];
@@ -460,54 +478,56 @@ always @(posedge clk_i) begin
         end
 
         if (reset_i || ((E_flush_i || FD_nop_i || D_isInterupt) && !M_busy_i)) begin
-                DE_instr_o    <= NOP;
-                DE_nop_o      <= 1'b1;
-                DE_isLUI_o    <= 1'b0;
-                DE_isAUIPC_o  <= 1'b0;
-                DE_isJAL_o    <= 1'b0;
-                DE_isJALR_o   <= 1'b0;
-                DE_isBranch_o <= 1'b0;
-                DE_isLoad_o   <= 1'b0;
-                DE_isStore_o  <= 1'b0;
-                DE_isALUI_o   <= 1'b0;
-                DE_isALUR_o   <= 1'b0;
-                DE_isFENCE_o  <= 1'b0;
-                DE_isSYS_o    <= 1'b0;
-                DE_isEBREAK_o <= 1'b0;
-                DE_isCSR_o    <= 1'b0;
-                DE_isAMO_o    <= 1'b0;
-                DE_isFPU_o    <= 1'b0;
-                DE_isRV32M_o  <= 1'b0;
-                DE_isMUL_o    <= 1'b0;
-                DE_isDIV_o    <= 1'b0;
-                DE_wbEnable_o <= 1'b0;
+                DE_instr_o        <= NOP;
+                DE_nop_o          <= 1'b1;
+                DE_isLUI_o        <= 1'b0;
+                DE_isAUIPC_o      <= 1'b0;
+                DE_isJAL_o        <= 1'b0;
+                DE_isJALR_o       <= 1'b0;
+                DE_isBranch_o     <= 1'b0;
+                DE_isLoad_o       <= 1'b0;
+                DE_isStore_o      <= 1'b0;
+                DE_isALUI_o       <= 1'b0;
+                DE_isALUR_o       <= 1'b0;
+                DE_isFENCE_o      <= 1'b0;
+                DE_isSYS_o        <= 1'b0;
+                DE_isSFENCEVMA_o  <= 1'b0;
+                DE_isEBREAK_o     <= 1'b0;
+                DE_isCSR_o        <= 1'b0;
+                DE_isAMO_o        <= 1'b0;
+                DE_isFPU_o        <= 1'b0;
+                DE_isRV32M_o      <= 1'b0;
+                DE_isMUL_o        <= 1'b0;
+                DE_isDIV_o        <= 1'b0;
+                DE_wbEnable_o     <= 1'b0;
         end
 end
 
 initial begin
         for (i = 0; i < BHT_SIZE; i = i+1)
                 BHT[i] = 0;
-        DE_instr_o    = NOP;
-        DE_nop_o      = 1'b1;
-        DE_isLUI_o    = 1'b0;
-        DE_isAUIPC_o  = 1'b0;
-        DE_isJAL_o    = 1'b0;
-        DE_isJALR_o   = 1'b0;
-        DE_isBranch_o = 1'b0;
-        DE_isLoad_o   = 1'b0;
-        DE_isStore_o  = 1'b0;
-        DE_isALUI_o   = 1'b0;
-        DE_isALUR_o   = 1'b0;
-        DE_isFENCE_o  = 1'b0;
-        DE_isSYS_o    = 1'b0;
-        DE_isEBREAK_o = 1'b0;
-        DE_isCSR_o    = 1'b0;
-        DE_isAMO_o    = 1'b0;
-        DE_isFPU_o    = 1'b0;
-        DE_isRV32M_o  = 1'b0;
-        DE_isMUL_o    = 1'b0;
-        DE_isDIV_o    = 1'b0;
-        DE_wbEnable_o = 1'b0;
+        DE_instr_o        = NOP;
+        DE_nop_o          = 1'b1;
+        DE_isLUI_o        = 1'b0;
+        DE_isAUIPC_o      = 1'b0;
+        DE_isJAL_o        = 1'b0;
+        DE_isJALR_o       = 1'b0;
+        DE_isBranch_o     = 1'b0;
+        DE_isLoad_o       = 1'b0;
+        DE_isStore_o      = 1'b0;
+        DE_isALUI_o       = 1'b0;
+        DE_isALUR_o       = 1'b0;
+        DE_isFENCE_o      = 1'b0;
+        DE_isSYS_o        = 1'b0;
+        DE_isSFENCEVMA_o  = 1'b0;
+        DE_isEBREAK_o     = 1'b0;
+        DE_isCSR_o        = 1'b0;
+        DE_isAMO_o        = 1'b0;
+        DE_isFPU_o        = 1'b0;
+        DE_isRV32M_o      = 1'b0;
+        DE_isMUL_o        = 1'b0;
+        DE_isDIV_o        = 1'b0;
+        DE_wbEnable_o     = 1'b0;
 end
 
 endmodule

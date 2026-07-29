@@ -14,25 +14,45 @@ module Processor(
         input  wire        timerIRQ_i,
         input  wire [63:0] csrTime_i,
         // Memory
-        output wire        ICacheStrb_o,
-        output wire        ICacheCancel_o,
-        output wire [31:0] ICacheAddr_o,
-        input  wire [31:0] ICacheData_i,
-        input  wire        ICacheValid_i,
-        input  wire        ICacheCmp_i,
+        output wire        tlb_flush_o,
+        output wire        IC_strb_o,
+        output wire        IC_cancel_o,
+        output wire [31:0] IC_addr_o,
+        output wire [31:0] IC_satp_o,
+        output wire [1:0]  IC_priv_o,
+        output wire        IC_sum_o,
+        input  wire [31:0] IC_data_i,
+        input  wire        IC_valid_i,
+        input  wire        IC_cmp_i,
 
-        output wire [31:0] DMemAddr_o,
-        output wire        DMemFlush_o,
-        output wire        DMemRStrb_o,
-        output wire [63:0] DMemWData_o,
-        output wire [7:0]  DMemWMask_o,
-        input  wire [63:0] DMemRData_i,
-        input  wire        DMemValidReady_i
+        output wire [31:0] DC_addr_o,
+        output wire        DC_flush_o,
+        output wire        DC_rStrb_o,
+        output wire [63:0] DC_wData_o,
+        output wire [7:0]  DC_wMask_o,
+        output wire [31:0] DC_satp_o,
+        output wire [1:0]  DC_priv_o,
+        output wire        DC_mxr_o,
+        output wire        DC_sum_o,
+        input  wire [63:0] DC_rData_i,
+        input  wire        DC_validReady_i
 );
 
-wire [31:0] DMemRAddr;
-wire [31:0] DMemWAddr;
-assign DMemAddr_o = DMemRStrb_o ? DMemRAddr : DMemWAddr;
+wire [31:0] DC_rAddr;
+wire [31:0] DC_rSatp;
+wire [1:0]  DC_rPriv;
+wire        DC_rMxr;
+wire        DC_rSum;
+wire [31:0] DC_wAddr;
+wire [31:0] DC_wSatp;
+wire [1:0]  DC_wPriv;
+wire        DC_wMxr;
+wire        DC_wSum;
+assign DC_addr_o = DC_rStrb_o ? DC_rAddr : DC_wAddr;
+assign DC_satp_o = DC_rStrb_o ? DC_rSatp : DC_wSatp;
+assign DC_priv_o = DC_rStrb_o ? DC_rPriv : DC_wPriv;
+assign DC_mxr_o = DC_rStrb_o ? DC_rMxr : DC_wMxr;
+assign DC_sum_o = DC_rStrb_o ? DC_rSum : DC_wSum;
 
 /******************************************************************************
  ----------------------------------Registers-----------------------------------
@@ -66,6 +86,7 @@ wire [31:0] csrMip;
 wire [31:0] csrStvec;
 wire [31:0] csrSepc;
 wire [31:0] csrSCause;
+wire [31:0] csrSatp;
 wire [6:0]  csrMStatusSet; // {MPP[1:0], MPIE, MIE, SPP, SPIE, SIE}
 wire [31:0] csrMepcSet;
 wire [31:0] csrMCauseSet;
@@ -110,6 +131,7 @@ CSR_RegFile csr(
         .csrStvec_o(csrStvec),
         .csrSepc_o(csrSepc),
         .csrSCause_o(csrSCause),
+        .csrSatp_o(csrSatp),
         .csrMStatusSet_i(csrMStatusSet),
         .csrMepcSet_i(csrMepcSet),
         .csrMCauseSet_i(csrMCauseSet),
@@ -134,6 +156,9 @@ wire dataHazard;
 wire D_isPrivileged;
 wire D_predictPC;
 wire [31:0] D_PCprediction;
+wire D_satpWrite;
+wire E_satpWrite;
+wire [31:0] E_satpUpdate;
 /*verilator public_off*/
 
 ControlUnit control(
@@ -160,6 +185,7 @@ wire [31:0] FD_PC;
 wire [31:0] FD_instr;
 wire        FD_isRV32C;
 wire        FD_nop;
+wire [1:0]  D_privilege;
 FetchUnit fetch(
         .clk_i(clk_i),
         .reset_i(reset_i),
@@ -171,12 +197,21 @@ FetchUnit fetch(
         .D_PCprediction_i(D_PCprediction),
         .E_correctPC_i(E_correctPC),
         .E_PCcorrection_i(E_PCcorrection),
-        .ICacheStrb_o(ICacheStrb_o),
-        .ICacheCancel_o(ICacheCancel_o),
-        .ICacheAddr_o(ICacheAddr_o),
-        .ICacheData_i(ICacheData_i),
-        .ICacheValid_i(ICacheValid_i),
-        .ICacheCmp_i(ICacheCmp_i),
+        .D_privilege_i(D_privilege),
+        .D_satpWrite_i(D_satpWrite),
+        .E_satpWrite_i(E_satpWrite),
+        .E_satpUpdate_i(E_satpUpdate),
+        .csrSatp_i(csrSatp),
+        .csrMStatus_i(csrMStatus),
+        .IC_Strb_o(IC_strb_o),
+        .IC_Cancel_o(IC_cancel_o),
+        .IC_Addr_o(IC_addr_o),
+        .IC_satp_o(IC_satp_o),
+        .IC_priv_o(IC_priv_o),
+        .IC_sum_o(IC_sum_o),
+        .IC_Data_i(IC_data_i),
+        .IC_Valid_i(IC_valid_i),
+        .IC_Cmp_i(IC_cmp_i),
         .FD_PC_o(FD_PC),
         .FD_instr_o(FD_instr),
         .FD_isRV32C_o(FD_isRV32C),
@@ -189,6 +224,7 @@ wire [31:0] DE_PC;
 wire [31:0] DE_instr;
 wire        DE_isRV32C;
 wire        DE_nop;
+wire [1:0]  DE_priv;
 
 wire        DE_isLUI;
 wire        DE_isAUIPC;
@@ -201,6 +237,7 @@ wire        DE_isALUI;
 wire        DE_isALUR;
 wire        DE_isFENCE;
 wire        DE_isSYS;
+wire        DE_isSFENCEVMA;
 wire        DE_isEBREAK;
 wire        DE_isCSR;
 wire        DE_isAMO;
@@ -211,6 +248,7 @@ wire [5:0]  DE_rs1Id;
 wire [5:0]  DE_rs2Id;
 wire [5:0]  DE_rs3Id;
 wire [11:0] DE_csrId;
+wire [31:0] DE_csrData;
 
 wire [2:0]  DE_funct3;
 wire [7:0]  DE_funct3_is;
@@ -248,10 +286,14 @@ DecodeUnit #(
         .E_stall_i(E_stall),
         .M_busy_i(M_busy),
         .E_takeBranch_i(E_takeBranch),
+        .D_satpWrite_o(D_satpWrite),
         .D_predictPC_o(D_predictPC),
         .D_PCprediction_o(D_PCprediction),
         .dataHazard_o(dataHazard),
         .D_isPrivileged_o(D_isPrivileged),
+        .D_privilege_o(D_privilege),
+        .csrRAddr_o(csrRAddr),
+        .csrRData_i(csrRData),
         .csrMStatus_i(csrMStatus),
         .csrMedeleg_i(csrMedeleg),
         .csrMideleg_i(csrMideleg),
@@ -277,6 +319,7 @@ DecodeUnit #(
         .DE_instr_o(DE_instr),
         .DE_isRV32C_o(DE_isRV32C),
         .DE_nop_o(DE_nop),
+        .DE_priv_o(DE_priv),
         .DE_isLUI_o(DE_isLUI),
         .DE_isAUIPC_o(DE_isAUIPC),
         .DE_isJAL_o(DE_isJAL),
@@ -288,6 +331,7 @@ DecodeUnit #(
         .DE_isALUR_o(DE_isALUR),
         .DE_isFENCE_o(DE_isFENCE),
         .DE_isSYS_o(DE_isSYS),
+        .DE_isSFENCEVMA_o(DE_isSFENCEVMA),
         .DE_isEBREAK_o(DE_isEBREAK),
         .DE_isCSR_o(DE_isCSR),
         .DE_isAMO_o(DE_isAMO),
@@ -297,6 +341,7 @@ DecodeUnit #(
         .DE_rs2Id_o(DE_rs2Id),
         .DE_rs3Id_o(DE_rs3Id),
         .DE_csrId_o(DE_csrId),
+        .DE_csrData_o(DE_csrData),
         .DE_funct3_o(DE_funct3),
         .DE_funct3_is_o(DE_funct3_is),
         .DE_funct7_o(DE_funct7),
@@ -317,12 +362,14 @@ DecodeUnit #(
  ---------------------------------EXECUTE UNIT--------------------------------*
  ******************************************************************************/
 wire        EM_nop;
+wire [1:0]  EM_priv;
 wire        EM_isLoad;
 wire        EM_isStore;
 wire        EM_isCSR;
 wire        EM_isCSRWrite;
 wire        EM_isAMO;
 wire        EM_isFENCE;
+wire        EM_isSFENCEVMA;
 wire [5:0]  EM_rdId;
 wire [5:0]  EM_rs1Id;
 wire [5:0]  EM_rs2Id;
@@ -334,7 +381,7 @@ wire [6:0]  EM_funct7;
 wire [63:0] EM_Eresult;
 wire [31:0] EM_addr;
 wire [63:0] EM_Mdata;
-wire [31:0] EM_CSRdata;
+wire [31:0] EM_csrData;
 wire        EM_wbEnable;
 
 /*verilator public_flat_rw_on*/
@@ -358,6 +405,8 @@ ExecuteUnit execute(
         .E_PCcorrection_o(E_PCcorrection),
         .EF_correctPC_o(EF_correctPC),
         .EF_PCcorrection_o(EF_PCcorrection),
+        .E_satpWrite_o(E_satpWrite),
+        .E_satpUpdate_o(E_satpUpdate),
         .aluBusy_o(aluBusy),
         .rs1Id_o(rs1Id),
         .rs2Id_o(rs2Id),
@@ -365,13 +414,20 @@ ExecuteUnit execute(
         .rs1Data_i(rs1Data),
         .rs2Data_i(rs2Data),
         .rs3Data_i(rs3Data),
-        .csrRAddr_o(csrRAddr),
-        .csrRData_i(csrRData),
+        .csrWAddr_o(csrWAddr),
+        .csrWData_o(csrWData),
+        .csrWEnable_o(csrWEnable),
         .csrFFlagsSet_o(csrFFlagsSet),
         .csrFRM_i(csrFRM),
-        .DMemRStrb_o(DMemRStrb_o),
-        .DMemRAddr_o(DMemRAddr),
-        .DMemValidReady_i(DMemValidReady_i),
+        .csrSatp_i(csrSatp),
+        .csrMStatus_i(csrMStatus),
+        .DC_rStrb_o(DC_rStrb_o),
+        .DC_rAddr_o(DC_rAddr),
+        .DC_rSatp_o(DC_rSatp),
+        .DC_rPriv_o(DC_rPriv),
+        .DC_rMxr_o(DC_rMxr),
+        .DC_rSum_o(DC_rSum),
+        .DC_validReady_i(DC_validReady_i),
         .MW_wbEnable_i(MW_wbEnable),
         .MW_rdId_i(MW_rdId),
         .MW_wbData_i(MW_wbData),
@@ -379,6 +435,7 @@ ExecuteUnit execute(
         .DE_instr_i(DE_instr),
         .DE_isRV32C_i(DE_isRV32C),
         .DE_nop_i(DE_nop),
+        .DE_priv_i(DE_priv),
         .DE_isLUI_i(DE_isLUI),
         .DE_isAUIPC_i(DE_isAUIPC),
         .DE_isJAL_i(DE_isJAL),
@@ -390,6 +447,7 @@ ExecuteUnit execute(
         .DE_isALUR_i(DE_isALUR),
         .DE_isFENCE_i(DE_isFENCE),
         .DE_isSYS_i(DE_isSYS),
+        .DE_isSFENCEVMA_i(DE_isSFENCEVMA),
         .DE_isEBREAK_i(DE_isEBREAK),
         .DE_isCSR_i(DE_isCSR),
         .DE_isAMO_i(DE_isAMO),
@@ -399,6 +457,7 @@ ExecuteUnit execute(
         .DE_rs2Id_i(DE_rs2Id),
         .DE_rs3Id_i(DE_rs3Id),
         .DE_csrId_i(DE_csrId),
+        .DE_csrData_i(DE_csrData),
         .DE_funct3_i(DE_funct3),
         .DE_funct3_is_i(DE_funct3_is),
         .DE_funct7_i(DE_funct7),
@@ -413,12 +472,14 @@ ExecuteUnit execute(
         .DE_predictBranch_i(DE_predictBranch),
         .DE_predictRA_i(DE_predictRA),
         .EM_nop_o(EM_nop),
+        .EM_priv_o(EM_priv),
         .EM_isLoad_o(EM_isLoad),
         .EM_isStore_o(EM_isStore),
         .EM_isCSR_o(EM_isCSR),
         .EM_isCSRWrite_o(EM_isCSRWrite),
         .EM_isAMO_o(EM_isAMO),
         .EM_isFENCE_o(EM_isFENCE),
+        .EM_isSFENCEVMA_o(EM_isSFENCEVMA),
         .EM_rdId_o(EM_rdId),
         .EM_rs1Id_o(EM_rs1Id),
         .EM_rs2Id_o(EM_rs2Id),
@@ -428,7 +489,7 @@ ExecuteUnit execute(
         .EM_funct7_o(EM_funct7),
         .EM_Eresult_o(EM_Eresult),
         .EM_addr_o(EM_addr),
-        .EM_CSRdata_o(EM_CSRdata),
+        .EM_csrData_o(EM_csrData),
         .EM_wbEnable_o(EM_wbEnable)
 );
 
@@ -445,22 +506,28 @@ MemoryUnit memory(
         .clk_i(clk_i),
         .reset_i(reset_i),
         .M_busy_o(M_busy),
-        .DMemRData_i(DMemRData_i),
-        .DMemWAddr_o(DMemWAddr),
-        .DMemFlush_o(DMemFlush_o),
-        .DMemWData_o(DMemWData_o),
-        .DMemWMask_o(DMemWMask_o),
-        .DMemValidReady_i(DMemValidReady_i),
-        .csrWAddr_o(csrWAddr),
-        .csrWData_o(csrWData),
-        .csrWEnable_o(csrWEnable),
+        .tlb_flush_o(tlb_flush_o),
+        .DC_rData_i(DC_rData_i),
+        .DC_wAddr_o(DC_wAddr),
+        .DC_flush_o(DC_flush_o),
+        .DC_wData_o(DC_wData_o),
+        .DC_wMask_o(DC_wMask_o),
+        .DC_wSatp_o(DC_wSatp),
+        .DC_wPriv_o(DC_wPriv),
+        .DC_wMxr_o(DC_wMxr),
+        .DC_wSum_o(DC_wSum),
+        .DC_validReady_i(DC_validReady_i),
+        .csrSatp_i(csrSatp),
+        .csrMStatus_i(csrMStatus),
         .csrInstStep_o(csrInstStep),
         .EM_nop_i(EM_nop),
+        .EM_priv_i(EM_priv),
         .EM_isLoad_i(EM_isLoad),
         .EM_isStore_i(EM_isStore),
         .EM_isCSR_i(EM_isCSR),
         .EM_isAMO_i(EM_isAMO),
         .EM_isFENCE_i(EM_isFENCE),
+        .EM_isSFENCEVMA_i(EM_isSFENCEVMA),
         .EM_rdId_i(EM_rdId),
         .EM_rs1Id_i(EM_rs1Id),
         .EM_rs2Id_i(EM_rs2Id),
@@ -470,7 +537,7 @@ MemoryUnit memory(
         .EM_funct7_i(EM_funct7),
         .EM_Eresult_i(EM_Eresult),
         .EM_addr_i(EM_addr),
-        .EM_CSRdata_i(EM_CSRdata),
+        .EM_csrData_i(EM_csrData),
         .EM_wbEnable_i(EM_wbEnable),
         .MW_rdId_o(MW_rdId),
         .MW_wbData_o(MW_wbData),

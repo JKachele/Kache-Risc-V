@@ -13,6 +13,7 @@ module DataMem (
         // CPU Interface
         input  wire [31:0]  cpu_addr_i,
         input  wire         cpu_flush_i,
+        input  wire         cpu_mmu_valid_i,
         input  wire         cpu_rden_i,
         input  wire [63:0]  cpu_wdata_i,
         input  wire [7:0]   cpu_wren_i,
@@ -42,16 +43,45 @@ module DataMem (
         input  wire [63:0] IO_rData_i,
         input  wire        IO_validReady_i
 );
-
-wire [31:0]  DM_addr  = cpu_addr_i;
-wire         DM_flush = cpu_flush_i;
-wire         DM_rden  = cpu_rden_i;
-wire [63:0]  DM_wdata = cpu_wdata_i;
-wire [7:0]   DM_wren  = cpu_wren_i;
+wire       cpu_rden = cpu_mmu_valid_i & cpu_rden_i;
+wire [7:0] cpu_wren = cpu_mmu_valid_i ? cpu_wren_i : 8'b0;
+wire       cpu_validReady;
+assign cpu_validReady_o = cpu_mmu_valid_i & cpu_validReady;
+/*-------------------------------- Arbiter --------------------------------*/
+wire [31:0]  DM_addr;
+wire         DM_flush;
+wire         DM_rden;
+wire [63:0]  DM_wdata;
+wire [7:0]   DM_wren;
 wire [63:0]  DM_rdata;
 wire         DM_validReady;
-assign cpu_rdata_o = DM_rdata;
-assign cpu_validReady_o = DM_validReady;
+
+DMemArb arbiter(
+        .clk_i(clk_i),
+        .reset_i(reset_i),
+        .cpu_addr_i(cpu_addr_i),
+        .cpu_flush_i(cpu_flush_i),
+        .cpu_rden_i(cpu_rden),
+        .cpu_wdata_i(cpu_wdata_i),
+        .cpu_wren_i(cpu_wren),
+        .cpu_rdata_o(cpu_rdata_o),
+        .cpu_validReady_o(cpu_validReady),
+
+        .mmu_addr_i(mmu_addr_i),
+        .mmu_rden_i(mmu_rden_i),
+        .mmu_wdata_i(mmu_wdata_i),
+        .mmu_wren_i(mmu_wren_i),
+        .mmu_rdata_o(mmu_rdata_o),
+        .mmu_validReady_o(mmu_validReady_o),
+
+        .dmem_addr_o(DM_addr),
+        .dmem_flush_o(DM_flush),
+        .dmem_rden_o(DM_rden),
+        .dmem_wdata_o(DM_wdata),
+        .dmem_wren_o(DM_wren),
+        .dmem_rdata_i(DM_rdata),
+        .dmem_validReady_i(DM_validReady)
+);
 
 wire isIO = DM_addr[31];
 

@@ -19,6 +19,8 @@ module ExecuteUnit (
         output wire [31:0] E_PCcorrection_o,
         output reg         EF_correctPC_o,
         output reg  [31:0] EF_PCcorrection_o,
+        output wire        E_satpWrite_o,
+        output wire [31:0] E_satpUpdate_o,
         output wire        aluBusy_o,
         // Register File Interface
         output wire [5:0]  rs1Id_o,
@@ -28,14 +30,21 @@ module ExecuteUnit (
         input  wire [63:0] rs2Data_i,
         input  wire [63:0] rs3Data_i,
         // CSR Interface
-        output wire [11:0] csrRAddr_o,
-        input  wire [31:0] csrRData_i,
+        output wire [11:0] csrWAddr_o,
+        output wire [31:0] csrWData_o,
+        output wire        csrWEnable_o,
         output wire [4:0]  csrFFlagsSet_o,
         input  wire [2:0]  csrFRM_i,
+        input  wire [31:0] csrSatp_i,
+        input  wire [63:0] csrMStatus_i,
         // Memory Interface
-        output wire        DMemRStrb_o,
-        output wire [31:0] DMemRAddr_o,
-        input  wire        DMemValidReady_i,
+        output wire        DC_rStrb_o,
+        output wire [31:0] DC_rAddr_o,
+        output wire [31:0] DC_rSatp_o,
+        output wire [1:0]  DC_rPriv_o,
+        output wire        DC_rMxr_o,
+        output wire        DC_rSum_o,
+        input  wire        DC_validReady_i,
         // Register Forwarding
         input  wire        MW_wbEnable_i,
         input  wire [5:0]  MW_rdId_i,
@@ -45,6 +54,7 @@ module ExecuteUnit (
         input  wire [31:0] DE_instr_i,
         input  wire        DE_isRV32C_i,
         input  wire        DE_nop_i,
+        input  wire [1:0]  DE_priv_i,
         input  wire        DE_isLUI_i,
         input  wire        DE_isAUIPC_i,
         input  wire        DE_isJAL_i,
@@ -56,6 +66,7 @@ module ExecuteUnit (
         input  wire        DE_isALUR_i,
         input  wire        DE_isFENCE_i,
         input  wire        DE_isSYS_i,
+        input  wire        DE_isSFENCEVMA_i,
         input  wire        DE_isEBREAK_i,
         input  wire        DE_isCSR_i,
         input  wire        DE_isAMO_i,
@@ -65,6 +76,7 @@ module ExecuteUnit (
         input  wire [5:0]  DE_rs2Id_i,
         input  wire [5:0]  DE_rs3Id_i,
         input  wire [11:0] DE_csrId_i,
+        input  wire [31:0] DE_csrData_i,
         input  wire [2:0]  DE_funct3_i,
         input  wire [7:0]  DE_funct3_is_i,
         input  wire [6:0]  DE_funct7_i,
@@ -80,12 +92,14 @@ module ExecuteUnit (
         input  wire [31:0] DE_predictRA_i,
         // Memory Unit Interface
         output reg         EM_nop_o,
+        output wire [1:0]  EM_priv_o,
         output reg         EM_isLoad_o,
         output reg         EM_isStore_o,
         output reg         EM_isCSR_o,
         output reg         EM_isCSRWrite_o,
         output reg         EM_isAMO_o,
         output reg         EM_isFENCE_o,
+        output reg         EM_isSFENCEVMA_o,
         output reg  [5:0]  EM_rdId_o,
         output reg  [5:0]  EM_rs1Id_o,
         output reg  [5:0]  EM_rs2Id_o,
@@ -95,7 +109,7 @@ module ExecuteUnit (
         output reg  [6:0]  EM_funct7_o,
         output reg  [63:0] EM_Eresult_o,
         output reg  [31:0] EM_addr_o,
-        output reg  [31:0] EM_CSRdata_o,
+        output reg  [31:0] EM_csrData_o,
         output reg         EM_wbEnable_o
 );
 localparam NOP = 32'b0000000_00000_00000_000_00000_0110011;
@@ -126,7 +140,7 @@ wire [63:0] E_rs3 = EMfwd_rs3 ? EM_Eresult_o :
 
 /*---------------ADD/SUBTRACT/SHIFT---------------*/
 wire [31:0] E_aluIn1 =
-        DE_isCSR_i ? csrRData_i  : E_rs1[31:0];
+        DE_isCSR_i ? DE_csrData_i  : E_rs1[31:0];
 wire [31:0] E_aluIn2 =
         (DE_isALUR_i | DE_isBranch_i) ? E_rs2[31:0] :
         (DE_isCSR_i ? (DE_funct3_i[2] ? {26'b0, DE_rs1Id_i} : E_rs1[31:0]) : DE_Iimm_i);
@@ -235,13 +249,18 @@ wire [31:0] E_aluOutM =
         (  E_divsel == 3'b111 ? -EE_dividend       : 32'b0) ; // REM Negative
 
 /*-----------------------CSR----------------------*/
-assign csrRAddr_o = DE_isCSR_i ? DE_csrId_i : {12{1'bZ}};
-
 wire [31:0] E_csrClear = E_aluIn1 & ~E_aluIn2;
 wire [31:0] E_csrOut =
         (DE_funct3_i[1:0] == 2'b01) ? E_aluIn2   : // CSR Read/Write
         (DE_funct3_i[1:0] == 2'b10) ? E_aluOR    : // CSR Read/Set
                                       E_csrClear ; // CSR Read/Clear
+
+assign csrWAddr_o   = DE_isCSR_i ? DE_csrId_i : {12{1'bZ}};
+assign csrWData_o   = DE_isCSR_i ? E_csrOut : {32{1'bZ}};
+assign csrWEnable_o = DE_isCSR_i;
+
+assign E_satpWrite_o  = DE_isCSR_i & |DE_rs1Id_i & (DE_csrId_i == 12'h180);
+assign E_satpUpdate_o = E_csrOut;
 
 /*------------------Memory Reads------------------*/
 // Memory access address
@@ -249,8 +268,12 @@ wire [31:0] E_addr =
         DE_isAMO_i   ? E_rs1[31:0]             :
         DE_isStore_i ? E_rs1[31:0] + DE_Simm_i : E_rs1[31:0] + DE_Iimm_i;
 
-assign DMemRAddr_o = E_addr;
-assign DMemRStrb_o = (DE_isAMO_i | DE_isLoad_i);
+assign DC_rAddr_o = E_addr;
+assign DC_rStrb_o = (DE_isAMO_i | DE_isLoad_i);
+assign DC_rSatp_o = csrSatp_i;
+assign DC_rPriv_o = DE_priv_i;
+assign DC_rMxr_o  = csrMStatus_i[19];
+assign DC_rSum_o  = csrMStatus_i[18];
 
 wire [31:0] E_aluOut_32 = DE_isRV32M_i ? E_aluOutM :
                           DE_isCSR_i   ? E_csrOut  :
@@ -276,7 +299,7 @@ FPU fpu(
 
 wire [63:0] E_aluOut = DE_isFPU_i ? E_fpuOut : {32'hFFFFFFFF, E_aluOut_32};
 
-assign aluBusy_o = EE_divBusy | (DE_isDIV_i & !EE_divFinished) | E_fpuBusy | ~DMemValidReady_i;
+assign aluBusy_o = EE_divBusy | (DE_isDIV_i & !EE_divFinished) | E_fpuBusy | ~DC_validReady_i;
 
 /*------------------JUMP/BRANCH-------------------*/
 assign E_takeBranch_o =
@@ -315,6 +338,7 @@ wire [63:0] E_result =
 always @(posedge clk_i) begin
         if (!E_stall_i) begin
                 EM_nop_o <= DE_nop_i;
+                EM_priv_o <= DE_priv_i;
 
                 EM_isLoad_o <= DE_isLoad_i;
                 EM_isStore_o <= DE_isStore_i;
@@ -322,6 +346,7 @@ always @(posedge clk_i) begin
                 EM_isCSRWrite_o <= DE_isCSR_i && (DE_rs1Id_i != 6'b0);
                 EM_isAMO_o <= DE_isAMO_i;
                 EM_isFENCE_o <= DE_isFENCE_i;
+                EM_isSFENCEVMA_o  <= DE_isSFENCEVMA_i;
                 EM_rdId_o <= DE_rdId_i;
                 EM_rs1Id_o <= DE_rs1Id_i;
                 EM_rs2Id_o <= DE_rs2Id_i;
@@ -331,7 +356,7 @@ always @(posedge clk_i) begin
                 EM_rs2_o <= E_rs2;
                 EM_Eresult_o <= E_result;
                 EM_addr_o <= E_addr;
-                EM_CSRdata_o <= csrRData_i;
+                EM_csrData_o <= DE_csrData_i;
                 EM_wbEnable_o <= DE_wbEnable_i && (DE_rdId_i != 0);
 
                 EF_correctPC_o <= E_correctPC;
@@ -339,32 +364,34 @@ always @(posedge clk_i) begin
         end
 
         if (reset_i | M_flush_i) begin
-                EM_nop_o        <= 1'b1;
-                EM_isLoad_o     <= 1'b0;
-                EM_isStore_o    <= 1'b0;
-                EM_isCSR_o      <= 1'b0;
-                EM_isAMO_o      <= 1'b0;
-                EM_isFENCE_o    <= 1'b0;
-                EF_correctPC_o  <= 1'b0;
-                EM_addr_o       <= 32'b0;
-                EM_wbEnable_o   <= 1'b0;
-                EM_isCSRWrite_o <= 1'b0;
+                EM_nop_o          <= 1'b1;
+                EM_isLoad_o       <= 1'b0;
+                EM_isStore_o      <= 1'b0;
+                EM_isCSR_o        <= 1'b0;
+                EM_isAMO_o        <= 1'b0;
+                EM_isFENCE_o      <= 1'b0;
+                EM_isSFENCEVMA_o  <= 1'b0;
+                EF_correctPC_o    <= 1'b0;
+                EM_addr_o         <= 32'b0;
+                EM_wbEnable_o     <= 1'b0;
+                EM_isCSRWrite_o   <= 1'b0;
         end
 end
 
 assign HALT_o = (!reset_i && DE_isEBREAK_i);
 
 initial begin
-        EM_nop_o        = 1'b1;
-        EM_isLoad_o     = 1'b0;
-        EM_isStore_o    = 1'b0;
-        EM_isCSR_o      = 1'b0;
-        EM_isAMO_o      = 1'b0;
-        EM_isFENCE_o    = 1'b0;
-        EF_correctPC_o  = 1'b0;
-        EM_addr_o       = 32'b0;
-        EM_wbEnable_o   = 1'b0;
-        EM_isCSRWrite_o = 1'b0;
+        EM_nop_o          = 1'b1;
+        EM_isLoad_o       = 1'b0;
+        EM_isStore_o      = 1'b0;
+        EM_isCSR_o        = 1'b0;
+        EM_isAMO_o        = 1'b0;
+        EM_isFENCE_o      = 1'b0;
+        EM_isSFENCEVMA_o  = 1'b0;
+        EF_correctPC_o    = 1'b0;
+        EM_addr_o         = 32'b0;
+        EM_wbEnable_o     = 1'b0;
+        EM_isCSRWrite_o   = 1'b0;
 end
 
 endmodule

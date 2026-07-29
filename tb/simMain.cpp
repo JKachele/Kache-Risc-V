@@ -22,7 +22,7 @@
 #define ICacheHit               SOC__DOT__riscv__DOT__icache__DOT__C_hit
 #define ICacheSplit             SOC__DOT__riscv__DOT__CPU__DOT__fetch__DOT__ICacheSplit
 #define DCacheState             SOC__DOT__riscv__DOT__datamem__DOT__dcache__DOT__C_curState
-#define DCacheFlush             SOC__DOT__riscv__DOT__DCacheFlush
+#define DCacheFlush             SOC__DOT__riscv__DOT__DC_flush
 
 #define Reg_A0                  SOC__DOT__riscv__DOT__CPU__DOT__registers__DOT__reg_10
 #define Reg_A1                  SOC__DOT__riscv__DOT__CPU__DOT__registers__DOT__reg_11
@@ -127,12 +127,6 @@ public:
 
                 prevLEDS = m_core->LEDS;
                 prevCLK = m_core->rootp->SOC__DOT__clk_25;
-
-                if (m_core->rootp->SOC__DOT__riscv__DOT__DMemWMask != 0 &&
-                                m_core->rootp->SOC__DOT__riscv__DOT__DMemRStrb != 0) {
-                        printf("Read-write collision detected: ");
-                        printf("DE_pc = %x\n", m_core->rootp->SOC__DOT__riscv__DOT__CPU__DOT__DE_PC);
-                }
 
                 updateStats();
         }

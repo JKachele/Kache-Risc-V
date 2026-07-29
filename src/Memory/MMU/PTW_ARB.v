@@ -71,19 +71,6 @@ assign d_fault_o = dtlb_fault;
 
 always @(*) begin
         case (arb_sel)
-                IDLE: begin
-                        ptw_vpn_o     = 20'b0;
-                        ptw_priv_o    = 2'b0;
-                        ptw_instr_o   = 1'b0;
-                        ptw_write_o   = 1'b0;
-                        ptw_mxr_o     = 1'b0;
-                        ptw_sum_o     = 1'b0;
-                        ptw_ptppn_o   = 22'b0;
-                        i_ppn_o       = 22'b0;
-                        i_flags_o     = 9'b0;
-                        d_ppn_o       = 22'b0;
-                        d_flags_o     = 9'b0;
-                end
                 I_TLB: begin
                         ptw_vpn_o     = i_vpn_i;
                         ptw_priv_o    = i_priv_i;
@@ -94,6 +81,8 @@ always @(*) begin
                         ptw_ptppn_o   = i_ptppn_i;
                         i_ppn_o       = ptw_ppn_i;
                         i_flags_o     = ptw_flags_i;
+                        d_ppn_o       = 22'b0;
+                        d_flags_o     = 9'b0;
                 end
                 D_TLB: begin
                         ptw_vpn_o     = d_vpn_i;
@@ -105,6 +94,21 @@ always @(*) begin
                         ptw_ptppn_o   = d_ptppn_i;
                         d_ppn_o       = ptw_ppn_i;
                         d_flags_o     = ptw_flags_i;
+                        i_ppn_o       = 22'b0;
+                        i_flags_o     = 9'b0;
+                end
+                default: begin
+                        ptw_vpn_o     = 20'b0;
+                        ptw_priv_o    = 2'b0;
+                        ptw_instr_o   = 1'b0;
+                        ptw_write_o   = 1'b0;
+                        ptw_mxr_o     = 1'b0;
+                        ptw_sum_o     = 1'b0;
+                        ptw_ptppn_o   = 22'b0;
+                        i_ppn_o       = 22'b0;
+                        i_flags_o     = 9'b0;
+                        d_ppn_o       = 22'b0;
+                        d_flags_o     = 9'b0;
                 end
         endcase
 end

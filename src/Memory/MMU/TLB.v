@@ -12,7 +12,7 @@ module TLB (
 
         // Cache Interface
         input  wire [19:0] vpn_i,
-        input  wire [8:0]  asid_i,
+        input  wire [31:0] satp_i,
         input  wire        rden_i,
         input  wire        flush_i,
         input  wire [1:0]  priv_i,
@@ -20,8 +20,6 @@ module TLB (
         input  wire        write_i,
         input  wire        mxr_i, // Make eXecutable Readable
         input  wire        sum_i, // permit Supervisor User Memory access
-        input  wire        vmEnable_i,
-        input  wire [21:0] ptppn_i, // Page Table Root Physical Page Number
         input  wire        cancel_i,
         output wire [21:0] ppn_o,
         output wire        valid_o,
@@ -84,14 +82,18 @@ wire tlb_hit_k = |tlb_hits_k;
 wire tlb_hit_m = |tlb_hits_m;
 wire tlb_hit = |tlb_hits;
 
+wire        vmEnable = satp_i[31];
+wire [8:0]  asid     = satp_i[30:22];
+wire [21:0] ptppn    = satp_i[21:0];
+
 always @(*) begin: tlb_hit_logic
         for (integer i = 0; i < NENTRIES; i = i + 1) begin
                                 // Only need to check ASID if global bit is not set
-                tlb_hits_k[i] = ((tlb_entries[i][`ASID] == asid_i) || (tlb_entries[i][5])) &&
+                tlb_hits_k[i] = ((tlb_entries[i][`ASID] == asid) || (tlb_entries[i][5])) &&
                                 (tlb_entries[i][`VPN] == vpn_i) &&
                                 (tlb_entries[i][8] == 1'b0) && // Mega-page bit
                                 (tlb_entries[i][0] == 1'b1);   // Valid bit
-                tlb_hits_m[i] = ((tlb_entries[i][`ASID] == asid_i) || (tlb_entries[i][5])) &&
+                tlb_hits_m[i] = ((tlb_entries[i][`ASID] == asid) || (tlb_entries[i][5])) &&
                                 (tlb_entries[i][`VPN1] == vpn_i[19:10]) &&
                                 (tlb_entries[i][8] == 1'b1) && // Mega-page bit
                                 (tlb_entries[i][0] == 1'b1); // Valid bit
@@ -106,15 +108,17 @@ always @(*) begin: tlb_hit_index
         found = 0;
         for (integer i = 0; i < NENTRIES; i = i + 1) begin
                 if (tlb_hits[i]) begin
-                        hit_idx = i;
+                        hit_idx = i[IDX_SIZE-1:0];
                         found = 1;
                 end
         end
 end
 
+wire mmu_enabled = vmEnable && (priv_i != 2'b11);
+
 reg [21:0] ppn_r;
 always @(*) begin
-        if (~vmEnable_i || priv_i == 2'b11) begin
+        if (~mmu_enabled) begin
                 // Return vpn as ppn if virtual memory is disabled or in machine mode
                 ppn_r = {2'b0, vpn_i};
         end else if (tlb_cur_state != IDLE) begin
@@ -129,7 +133,18 @@ always @(*) begin
 end
 
 assign ppn_o = ppn_r;
-assign valid_o = cancel_i | (tlb_cur_state == IDLE & tlb_hit);
+assign valid_o = (~mmu_enabled | ~rden_i | cancel_i |
+        (tlb_cur_state == IDLE & tlb_hit)) & ~flush_edge;
+/*-------------------------------- Flush Logic --------------------------------*/
+reg prev_flush = 1'b0;
+wire flush_edge = flush_i & ~prev_flush;
+
+always @(posedge clk_i) begin
+        if (reset_i)
+                prev_flush <= 1'b0;
+        else
+                prev_flush <= flush_i;
+end
 
 /*-------------------------------- PTW Outputs --------------------------------*/
 assign ptw_vpn_o = vpn_i;
@@ -138,10 +153,10 @@ assign ptw_instr_o = instr_i;
 assign ptw_write_o = write_i;
 assign ptw_mxr_o = mxr_i;
 assign ptw_sum_o = sum_i;
-assign ptw_ptppn_o = ptppn_i;
+assign ptw_ptppn_o = ptppn;
 
 assign ptw_rden_o = (tlb_cur_state == IDLE) & rden_i & ~tlb_hit &
-        vmEnable_i & (priv_i != 2'b11) & ~cancel_i;
+        mmu_enabled & ~cancel_i;
 
 /*-------------------------------- State Machine --------------------------------*/
 localparam IDLE = 1'b0;
@@ -161,8 +176,14 @@ always @(posedge clk_i) begin: tlb_state_machine
                 lru2 <= 4'b0;
         end else begin
                 if (tlb_cur_state == IDLE) begin
-                        if (~rden_i | cancel_i) begin
+                        if (~rden_i | ~mmu_enabled | cancel_i) begin
                                 // Do nothing
+                        end
+                        else if (flush_edge) begin
+                                // Invalidate all entries on flush
+                                for (i = 0; i < NENTRIES; i = i + 1) begin
+                                        tlb_entries[i][0] <= 1'b0; // Clear valid bit
+                                end
                         end
                         // Update LRU and tlb flags on hit
                         else if (found) begin
@@ -191,7 +212,7 @@ always @(posedge clk_i) begin: tlb_state_machine
                         end
                 end else if (tlb_cur_state == MISS) begin
                         if (ptw_valid_i) begin
-                                tlb_entries[lru_idx][`ASID] <= asid_i;
+                                tlb_entries[lru_idx][`ASID] <= asid;
                                 tlb_entries[lru_idx][`VPN] <= vpn_i;
                                 tlb_entries[lru_idx][`PPN] <= ptw_ppn_i;
                                 tlb_entries[lru_idx][8:0] <= ptw_flags_i;

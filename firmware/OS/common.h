@@ -29,6 +29,9 @@ typedef _Bool bool;
 #define true 1
 #define false 0
 #define NULL ((void*)0)
+#define align_up(value, align) (1 + (value - 1) / align) * align
+#define is_aligned(value, align) ((value & (align - 1)) == 0)
+#define offsetof(type, member) __builtin_offsetof(type, member)
 #define va_list  __builtin_va_list
 #define va_start __builtin_va_start
 #define va_end   __builtin_va_end

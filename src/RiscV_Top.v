@@ -55,6 +55,18 @@ module RiscV_Top (
 /*verilator public_flat_rw_on*/
 wire [31:0] rvec = 32'h7000_0000;
 
+// MMU
+wire [33:0] immu_paddr;
+wire        immu_valid;
+wire [33:0] dmmu_paddr;
+wire        dmmu_valid;
+wire        tlb_flush;
+wire [31:0] mmu_mAddr;
+wire        mmu_mRden;
+wire [63:0] mmu_mWData;
+wire [7:0]  mmu_mWren;
+wire [63:0] mmu_mRData;
+wire        mmu_mValidReady;
 
 // Cache-Memory Interface
 wire         IC_mRden;
@@ -69,29 +81,28 @@ wire [255:0] DC_mRData;
 wire         DC_mValidReady;
 
 // Instruction Cache
-wire        ICacheStrb;
-wire        ICacheCancel;
-wire [31:0] ICacheAddr;
-wire [31:0] ICacheData;
-wire        ICacheValid;
-wire        ICacheCmp;
+wire        IC_strb;
+wire        IC_cancel;
+wire [31:0] IC_addr;
+wire [31:0] IC_satp;
+wire [1:0]  IC_priv;
+wire        IC_sum;
+wire [31:0] IC_data;
+wire        IC_valid;
+wire        IC_cmp;
 
 // Data Cache
-wire [31:0] DCacheAddr;
-wire        DCacheFlush;
-wire        DCacheRden;
-wire [63:0] DCacheWData;
-wire [7:0]  DCacheWren;
-wire [63:0] DCacheRData;
-wire        DCacheValidReady;
-
-//Memory
-wire [31:0] DMemAddr;
-wire        DMemRStrb;
-wire [63:0] DMemRData;
-wire [63:0] DMemWData;
-wire [7:0]  DMemWMask;
-wire        DMemValidReady;
+wire [31:0] DC_addr;
+wire        DC_flush;
+wire        DC_rden;
+wire [63:0] DC_wData;
+wire [7:0]  DC_wren;
+wire [31:0] DC_satp;
+wire [1:0]  DC_priv;
+wire        DC_mxr;
+wire        DC_sum;
+wire [63:0] DC_rData;
+wire        DC_validReady;
 /*verilator public_off*/
 
 Processor CPU(
@@ -100,30 +111,72 @@ Processor CPU(
         .rvec_i(rvec),
         .timerIRQ_i(timerIRQ_i),
         .csrTime_i(csrTime_i),
-        .ICacheStrb_o(ICacheStrb),
-        .ICacheCancel_o(ICacheCancel),
-        .ICacheAddr_o(ICacheAddr),
-        .ICacheData_i(ICacheData),
-        .ICacheValid_i(ICacheValid),
-        .ICacheCmp_i(ICacheCmp),
-        .DMemAddr_o(DCacheAddr),
-        .DMemFlush_o(DCacheFlush),
-        .DMemRStrb_o(DCacheRden),
-        .DMemWData_o(DCacheWData),
-        .DMemWMask_o(DCacheWren),
-        .DMemRData_i(DCacheRData),
-        .DMemValidReady_i(DCacheValidReady)
+        .tlb_flush_o(tlb_flush),
+        .IC_strb_o(IC_strb),
+        .IC_cancel_o(IC_cancel),
+        .IC_addr_o(IC_addr),
+        .IC_satp_o(IC_satp),
+        .IC_priv_o(IC_priv),
+        .IC_sum_o(IC_sum),
+        .IC_data_i(IC_data),
+        .IC_valid_i(IC_valid),
+        .IC_cmp_i(IC_cmp),
+        .DC_addr_o(DC_addr),
+        .DC_flush_o(DC_flush),
+        .DC_rStrb_o(DC_rden),
+        .DC_wData_o(DC_wData),
+        .DC_wMask_o(DC_wren),
+        .DC_satp_o(DC_satp),
+        .DC_priv_o(DC_priv),
+        .DC_mxr_o(DC_mxr),
+        .DC_sum_o(DC_sum),
+        .DC_rData_i(DC_rData),
+        .DC_validReady_i(DC_validReady)
+);
+
+MMU mmu(
+        .clk_i(clk_i),
+        .reset_i(reset_i),
+
+        .flush_i(tlb_flush),
+
+        .i_vaddr_i(IC_addr),
+        .i_satp_i(IC_satp),
+        .i_rden_i(IC_strb),
+        .i_priv_i(IC_priv),
+        .i_sum_i(IC_sum),
+        .i_cancel_i(IC_cancel),
+        .i_paddr_o(immu_paddr),
+        .i_valid_o(immu_valid),
+
+        .d_vaddr_i(DC_addr),
+        .d_satp_i(DC_satp),
+        .d_rden_i(DC_rden | (|DC_wren)),
+        .d_priv_i(DC_priv),
+        .d_write_i(|DC_wren),
+        .d_mxr_i(DC_mxr),
+        .d_sum_i(DC_sum),
+        .d_paddr_o(dmmu_paddr),
+        .d_valid_o(dmmu_valid),
+
+        .DMemAddr_o(mmu_mAddr),
+        .DMemRden_o(mmu_mRden),
+        .DMemWData_o(mmu_mWData),
+        .DMemWren_o(mmu_mWren),
+        .DMemRData_i(mmu_mRData),
+        .DMemValidReady_i(mmu_mValidReady)
 );
 
 ICache icache(
         .clk_i(clk_i),
         .reset_i(reset_i),
-        .addr_i(ICacheAddr),
-        .rden_i(ICacheStrb),
-        .cancel_i(ICacheCancel),
-        .data_o(ICacheData),
-        .valid_o(ICacheValid),
-        .cmp_o(ICacheCmp),
+        .addr_i(immu_paddr[31:0]),
+        .rden_i(IC_strb),
+        .mmu_valid_i(immu_valid),
+        .cancel_i(IC_cancel),
+        .data_o(IC_data),
+        .valid_o(IC_valid),
+        .cmp_o(IC_cmp),
         .mAddr_o(IC_mAddr),
         .mRden_o(IC_mRden),
         .mData_i(IC_mData),
@@ -133,19 +186,20 @@ ICache icache(
 DataMem datamem(
         .clk_i(clk_i),
         .reset_i(reset_i),
-        .cpu_addr_i(DCacheAddr),
-        .cpu_flush_i(DCacheFlush),
-        .cpu_rden_i(DCacheRden),
-        .cpu_wdata_i(DCacheWData),
-        .cpu_wren_i(DCacheWren),
-        .cpu_rdata_o(DCacheRData),
-        .cpu_validReady_o(DCacheValidReady),
-        .mmu_addr_i(32'b0),
-        .mmu_rden_i(1'b0),
-        .mmu_wdata_i(64'b0),
-        .mmu_wren_i(8'b0),
-        .mmu_rdata_o(),
-        .mmu_validReady_o(),
+        .cpu_addr_i(dmmu_paddr[31:0]),
+        .cpu_flush_i(DC_flush),
+        .cpu_mmu_valid_i(dmmu_valid),
+        .cpu_rden_i(DC_rden),
+        .cpu_wdata_i(DC_wData),
+        .cpu_wren_i(DC_wren & {8{dmmu_valid}}),
+        .cpu_rdata_o(DC_rData),
+        .cpu_validReady_o(DC_validReady),
+        .mmu_addr_i(mmu_mAddr),
+        .mmu_rden_i(mmu_mRden),
+        .mmu_wdata_i(mmu_mWData),
+        .mmu_wren_i(mmu_mWren),
+        .mmu_rdata_o(mmu_mRData),
+        .mmu_validReady_o(mmu_mValidReady),
         .mAddr_o(DC_mAddr),
         .mWData_o(DC_mWData),
         .mRden_o(DC_mRden),
