@@ -1,3 +1,8 @@
+# Extensionless Files
+*
+!/**/
+!*.*
+
 # Prerequisites
 *.d
 
@@ -38,6 +43,7 @@ bin/
 
 # Verilator Files
 obj_dir/
+*.vcd
 
 # Vivado Logs
 tcl/*
