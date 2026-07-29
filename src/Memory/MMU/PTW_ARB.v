@@ -56,13 +56,13 @@ localparam IDLE  = 2'b0;
 localparam I_TLB = 2'b01;
 localparam D_TLB = 2'b10;
 
-reg [1:0] arb_sel; // 0 = no requests, 1 = i-tlb, 2 = d-tlb
-reg itlb_req;
-reg dtlb_req;
-reg itlb_valid;
-reg dtlb_valid;
-reg itlb_fault;
-reg dtlb_fault;
+reg [1:0] arb_sel = 2'b0; // 0 = no requests, 1 = i-tlb, 2 = d-tlb
+reg itlb_req   = 1'b0;
+reg dtlb_req   = 1'b0;
+reg itlb_valid = 1'b0;
+reg dtlb_valid = 1'b0;
+reg itlb_fault = 1'b0;
+reg dtlb_fault = 1'b0;
 
 assign i_valid_o = itlb_valid;
 assign d_valid_o = dtlb_valid;

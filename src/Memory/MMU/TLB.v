@@ -64,9 +64,9 @@ localparam PPN_WIDTH = 22;
 `define PPN0  18:9
 
 reg [59:0] tlb_entries [0:NENTRIES-1];
-reg       lru0;
-reg [1:0] lru1;
-reg [3:0] lru2;
+reg       lru0 = 1'b0;
+reg [1:0] lru1 = 2'b0;
+reg [3:0] lru2 = 4'b0;
 /*              1       lru0           0
  *      1    lru1[1]  0          1  lru1[0]   0
  *   lru2[3]       lru2[2]     lru2[1]     lru2[0]
@@ -76,10 +76,10 @@ wire [IDX_SIZE-1:0] lru_idx = {lru0,
         lru0 ? (lru1[1] ? lru2[3] : lru2[2]) : (lru1[0] ? lru2[1] : lru2[0])};
 
 /*-------------------------------- Hit Logic --------------------------------*/
-reg [NENTRIES-1:0] tlb_hits_k; // Kilo-page hit
-reg [NENTRIES-1:0] tlb_hits_m; // Mega-page hit
+reg  [NENTRIES-1:0] tlb_hits_k; // Kilo-page hit
+reg  [NENTRIES-1:0] tlb_hits_m; // Mega-page hit
+wire [NENTRIES-1:0] tlb_hits = tlb_hits_k | tlb_hits_m;
 
-wire tlb_hits = tlb_hits_k | tlb_hits_m;
 wire tlb_hit_k = |tlb_hits_k;
 wire tlb_hit_m = |tlb_hits_m;
 wire tlb_hit = |tlb_hits;
@@ -114,7 +114,7 @@ end
 
 reg [21:0] ppn_r;
 always @(*) begin
-        if (~VMEnable_i || priv_i == 2'b11) begin
+        if (~vmEnable_i || priv_i == 2'b11) begin
                 // Return vpn as ppn if virtual memory is disabled or in machine mode
                 ppn_r = {2'b0, vpn_i};
         end else if (tlb_cur_state != IDLE) begin
@@ -152,10 +152,13 @@ reg tlb_cur_state = IDLE;
 always @(posedge clk_i) begin: tlb_state_machine
         integer i;
         if (reset_i) begin
+                tlb_cur_state <= IDLE;
                 for (i = 0; i < NENTRIES; i = i + 1) begin
                         tlb_entries[i] <= 60'b0;
                 end
-                tlb_cur_state <= IDLE;
+                lru0 <= 1'b0;
+                lru1 <= 2'b0;
+                lru2 <= 4'b0;
         end else begin
                 if (tlb_cur_state == IDLE) begin
                         if (~rden_i | cancel_i) begin

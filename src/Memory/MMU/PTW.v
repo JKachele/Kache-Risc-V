@@ -7,36 +7,36 @@
  ************************************************/
 
 module PTW (
-        input  wire         clk_i,
-        input  wire         reset_i,
+        input  wire        clk_i,
+        input  wire        reset_i,
 
         // i-tlb interface
-        input  wire [19:0]  i_vpn_i,
-        input  wire         i_rden_i,
-        input  wire [1:0]   i_priv_i,
-        input  wire         i_instr_i,
-        input  wire         i_write_i,
-        input  wire         i_mxr_i,
-        input  wire         i_sum_i,
-        input  wire [21:0]  i_ptppn_i,
-        output wire [21:0]  i_ppn_o,
-        output wire [8:0]   i_flags_o,
-        output wire         i_valid_o,
-        output wire         i_fault_o,
+        input  wire [19:0] i_vpn_i,
+        input  wire        i_rden_i,
+        input  wire [1:0]  i_priv_i,
+        input  wire        i_instr_i,
+        input  wire        i_write_i,
+        input  wire        i_mxr_i,
+        input  wire        i_sum_i,
+        input  wire [21:0] i_ptppn_i,
+        output wire [21:0] i_ppn_o,
+        output wire [8:0]  i_flags_o,
+        output wire        i_valid_o,
+        output wire        i_fault_o,
 
         // d-tlb interface
-        input  wire [19:0]  d_vpn_i,
-        input  wire         d_rden_i,
-        input  wire [1:0]   d_priv_i,
-        input  wire         d_instr_i,
-        input  wire         d_write_i,
-        input  wire         d_mxr_i,
-        input  wire         d_sum_i,
-        input  wire [21:0]  d_ptppn_i,
-        output wire [21:0]  d_ppn_o,
-        output wire [8:0]   d_flags_o,
-        output wire         d_valid_o,
-        output wire         d_fault_o,
+        input  wire [19:0] d_vpn_i,
+        input  wire        d_rden_i,
+        input  wire [1:0]  d_priv_i,
+        input  wire        d_instr_i,
+        input  wire        d_write_i,
+        input  wire        d_mxr_i,
+        input  wire        d_sum_i,
+        input  wire [21:0] d_ptppn_i,
+        output wire [21:0] d_ppn_o,
+        output wire [8:0]  d_flags_o,
+        output wire        d_valid_o,
+        output wire        d_fault_o,
 
         // Data Mem Interface
         output wire [31:0] DMemAddr_o,
@@ -113,11 +113,11 @@ localparam FAULT    = 3'b101;
 assign ptw_valid = (ptw_state == DONE);
 assign ptw_fault = (ptw_state == FAULT);
 
-reg [21:0] pt_ppn;
-reg        pt_level;
-reg        DMemRden;
-reg        pteWren;
-reg [31:0] pteWData;
+reg [21:0] pt_ppn   = 22'b0;
+reg        pt_level = 1'b1;
+reg        DMemRden = 1'b0;
+reg        pteWren  = 1'b0;
+reg [31:0] pteWData = 32'b0;
 assign DMemAddr_o = {pt_ppn[19:0], pt_level ? ptw_vpn[19:10] : ptw_vpn[9:0], 2'b00};
 assign DMemRden_o = DMemRden;
 assign DMemWData_o = DMemAddr_o[2] ? {pteWData, 32'b0} : {32'b0, pteWData};
@@ -141,6 +141,8 @@ always @(posedge clk_i) begin
                 DMemRden  <= 1'b0;
                 pteWren   <= 1'b0;
                 pteWData  <= 32'b0;
+                ptw_ppn   <= 22'b0;
+                ptw_flags <= 9'b0;
         end else if (ptw_state == IDLE) begin
                 if (ptw_rden) begin
                         pt_ppn <= ptw_ptppn;
