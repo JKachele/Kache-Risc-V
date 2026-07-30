@@ -10,10 +10,11 @@ _start:
         la gp, __global_pointer$
         li tp, 0
         .option pop
+        call zsbl_main
 
 machine:
-        # Set machine mode pointer to boot function
-        la      t0, boot
+        # Set machine mode pointer to entry to kernel
+        li      t0, 0x00000000
         csrw    mepc, t0
 
         # Set Machine mode Trap vector to m_trap

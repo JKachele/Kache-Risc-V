@@ -207,11 +207,16 @@ void kernel_main(void) {
         exit();
 }
 
-__attribute__ ((section (".text.boot")))
+__attribute__ ((section (".text.start")))
 __attribute__ ((naked))
-void boot(void) {
+void _start(void) {
         __asm__ volatile (
+                        ".option push\n"
+                        ".option norelax\n"
                         "mv sp, %[stack_top]\n"
+                        "la gp, __global_pointer$\n"
+                        "li tp, 0\n"
+                        ".option pop\n"
                         "j kernel_main\n"
                         :
                         : [stack_top] "r" (__stack_top)

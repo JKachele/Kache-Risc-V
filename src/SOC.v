@@ -197,17 +197,16 @@ IO io(
 // );
 `endif
 
-// Timer Clock: 1.5625 MHz
-reg [3:0] clk_div;
+reg [2:0] clk_div;
 always @(posedge CLK100MHZ) begin
         if (reset) begin
-                clk_div <= 4'b0;
+                clk_div <= 3'b0;
         end else begin
                 clk_div <= clk_div + 1;
         end
 end
 `ifdef BENCH
-assign clk_timer = clk_div[1];
+assign clk_timer = clk_div[2];
 `endif
 
 `ifdef BENCH

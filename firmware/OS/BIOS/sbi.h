@@ -74,6 +74,7 @@ struct trap_frame {
          u32 sp;
 } __attribute((packed));
 
+void print(const char *str);
 
 #endif
 

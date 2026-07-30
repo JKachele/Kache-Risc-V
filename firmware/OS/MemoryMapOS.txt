@@ -1,0 +1,6 @@
+0000_0000 - 0FFF_FFFF: DDR3 SDRAM (256MB) (RWX)
+7000_0000 - 7007_FFFF: BRAM (512KB) (RWX)
+        7000-0000: Reset-Vector
+                - BIOS/Bootloader
+9000_0000 - 90FF_FFFF: QSPI Flash (16MB) (R)
+        9040_0000: Kernel ELF file location

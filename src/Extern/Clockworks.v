@@ -44,7 +44,7 @@ module ClockworksA7 (
         output wire clk0_o,   // 100 MHZ
         output wire clk1_o,   // 200 MHZ
         output wire clk2_o,   // 25 MHZ
-        output wire clk3_o,   // 10 MHZ
+        output wire clk3_o,   // 3.125 MHZ
         output wire resetn
 );
 
@@ -72,13 +72,13 @@ PLLE2_ADV #(
         .COMPENSATION         ("ZHOLD"),
         .STARTUP_WAIT         ("FALSE"),
         .DIVCLK_DIVIDE        (1),
-        .CLKFBOUT_MULT        (10),
+        .CLKFBOUT_MULT        (2),
         .CLKFBOUT_PHASE       (0.000),
 
-        .CLKOUT0_DIVIDE       (10),  // 100 MHZ
-        .CLKOUT1_DIVIDE       (5),   // 200 MHZ
-        .CLKOUT2_DIVIDE       (40),  // 25 MHZ
-        .CLKOUT3_DIVIDE       (100), // 10 MHZ
+        .CLKOUT0_DIVIDE       (2),  // 100 MHZ
+        .CLKOUT1_DIVIDE       (1),  // 200 MHZ
+        .CLKOUT2_DIVIDE       (8),  // 25 MHZ
+        .CLKOUT3_DIVIDE       (64), // 3.125 MHZ
 
         .CLKOUT0_PHASE        (0.000),
         .CLKOUT1_PHASE        (0.000),

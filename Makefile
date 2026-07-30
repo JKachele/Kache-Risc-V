@@ -49,13 +49,24 @@ LDSCRIPT = firmware/OS/kernel.ld
 # OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
 # LDSCRIPT = firmware/Tests/ram.ld
 
-# BIOS
-SRCBIOS := firmware/Tests/startPipeline.S firmware/Tests/libs/putchar.S firmware/Tests/LoadProg.c
-# SRCBIOS += $(wildcard firmware/Tests/libs/*.S) $(wildcard firmware/Tests/libs/*.c) 
+# Application
+SRCAPP := $(shell find firmware/OS/apps/ -type f -name '*.c' -o -name '*.S')
+OBJAPP := $(SRCAPP:%=$(BUILD_DIR)/%.o)
+LDSCRIPTAPP = firmware/OS/apps/user.ld
+
+# Kernel
+SRCKERNEL := $(shell find firmware/OS/kernel/ -type f -name '*.c' -o -name '*.S')
+OBJKERNEL := $(SRCKERNEL:%=$(BUILD_DIR)/%.o)
+LDSCRIPTKERNEL = firmware/OS/kernel/kernel.ld
+
+# BIOS and Bootloader
+SRCBIOS := $(shell find firmware/OS/BIOS/ -type f -name '*.c' -o -name '*.S')
 OBJBIOS := $(SRCBIOS:%=$(BUILD_DIR)/%.o)
-LDSCRIPTBIOS = firmware/Tests/bios.ld
+LDSCRIPTBIOS = firmware/OS/BIOS/bios.ld
 
 FIRMWARE := $(BIN_DIR)/firmware.elf
+APP      := $(BIN_DIR)/app.elf
+KERNEL   := $(BIN_DIR)/kernel.elf
 BIOS     := $(BIN_DIR)/bios.elf
 BIN      := $(BIN_DIR)/bios.bin
 BRAM     := $(BIN_DIR)/BRAM.hex
@@ -65,7 +76,7 @@ BRAM     := $(BIN_DIR)/BRAM.hex
 hex:   CFLAGS += -DBENCH 
 sim:   CFLAGS += -DBENCH
 
-hex:    $(BRAM) $(FIRMWARE)
+hex:    $(BRAM) $(KERNEL) $(APP)
 
 $(BRAM): $(BIN)
 	# hexdump -ve '"%08x\n"' $< > $@
@@ -76,12 +87,26 @@ $(BRAM): $(BIN)
 $(BIN): $(BIOS)
 	$(OBJCOPY) $< -O binary $@
 
-$(BIOS): $(OBJBIOS) $(LDSCRIPT) Makefile
+$(BIOS): $(OBJBIOS) $(LDSCRIPTBIOS) Makefile
 	@mkdir -p $(dir $@)
 	@mkdir -p $(BIN_DUMP_DIR)
 	$(LD) -T $(LDSCRIPTBIOS) $(OBJBIOS) -o $@ $(LDFLAGS)
 	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DUMP_DIR)/objdumpBIOS.txt
 	readelf -a $@ > $(BIN_DUMP_DIR)/readelfBIOS.txt
+
+$(KERNEL): $(OBJKERNEL) $(LDSCRIPTKERNEL) Makefile
+	@mkdir -p $(dir $@)
+	@mkdir -p $(BIN_DUMP_DIR)
+	$(LD) -T $(LDSCRIPTKERNEL) $(OBJKERNEL) -o $@ $(LDFLAGS)
+	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DUMP_DIR)/objdumpKernel.txt
+	readelf -a $@ > $(BIN_DUMP_DIR)/readelfKernel.txt
+
+$(APP): $(OBJAPP) $(LDSCRIPTAPP) Makefile
+	@mkdir -p $(dir $@)
+	@mkdir -p $(BIN_DUMP_DIR)
+	$(LD) -T $(LDSCRIPTAPP) $(OBJAPP) -o $@ $(LDFLAGS)
+	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DUMP_DIR)/objdumpApp.txt
+	readelf -a $@ > $(BIN_DUMP_DIR)/readelfApp.txt
 
 $(FIRMWARE): $(OBJ) $(LDSCRIPT) Makefile
 	@mkdir -p $(dir $@)
@@ -98,7 +123,7 @@ $(BUILD_DIR)/%.c.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) -o $@ -c $< $(CFLAGS)
 
-sim: $(BRAM) $(FIRMWARE)
+sim: $(BRAM) $(KERNEL)
 	rm -rf ./obj_dir
 	$(TB) $(TBFLAGS) $(TBSRC) $(VSRC)
 	cd obj_dir; make -f V$(TOP).mk

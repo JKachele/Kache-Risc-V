@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
 
         tb->programLog = fopen("Program.txt", "w");
 
-        tb->m_flash->load(0x400000, "../bin/firmware.elf");
+        tb->m_flash->load(0x400000, "../bin/kernel.elf");
 
         UARTSIM *uart;
         unsigned clksPerBaud = 3;
