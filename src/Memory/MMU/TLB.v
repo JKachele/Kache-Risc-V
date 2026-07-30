@@ -86,8 +86,9 @@ wire        vmEnable = satp_i[31];
 wire [8:0]  asid     = satp_i[30:22];
 wire [21:0] ptppn    = satp_i[21:0];
 
+integer i;
 always @(*) begin: tlb_hit_logic
-        for (integer i = 0; i < NENTRIES; i = i + 1) begin
+        for (i = 0; i < NENTRIES; i = i + 1) begin
                                 // Only need to check ASID if global bit is not set
                 tlb_hits_k[i] = ((tlb_entries[i][`ASID] == asid) || (tlb_entries[i][5])) &&
                                 (tlb_entries[i][`VPN] == vpn_i) &&
@@ -103,12 +104,13 @@ end
 reg [IDX_SIZE-1:0] hit_idx;
 reg found;
 
+integer j;
 always @(*) begin: tlb_hit_index
         hit_idx = 0;
         found = 0;
-        for (integer i = 0; i < NENTRIES; i = i + 1) begin
-                if (tlb_hits[i]) begin
-                        hit_idx = i[IDX_SIZE-1:0];
+        for (j = 0; j < NENTRIES; j = j + 1) begin
+                if (tlb_hits[j]) begin
+                        hit_idx = j[IDX_SIZE-1:0];
                         found = 1;
                 end
         end

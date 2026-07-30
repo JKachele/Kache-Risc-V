@@ -208,8 +208,6 @@ always @(posedge CLK100MHZ) begin
 end
 `ifdef BENCH
 assign clk_timer = clk_div[1];
-`else
-assign clk_timer = clk_div[3];
 `endif
 
 `ifdef BENCH

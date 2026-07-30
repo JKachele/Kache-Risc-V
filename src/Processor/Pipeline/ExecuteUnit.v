@@ -92,7 +92,7 @@ module ExecuteUnit (
         input  wire [31:0] DE_predictRA_i,
         // Memory Unit Interface
         output reg         EM_nop_o,
-        output wire [1:0]  EM_priv_o,
+        output reg  [1:0]  EM_priv_o,
         output reg         EM_isLoad_o,
         output reg         EM_isStore_o,
         output reg         EM_isCSR_o,
