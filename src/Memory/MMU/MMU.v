@@ -13,6 +13,9 @@ module MMU (
         // TLB Flush Signal
         input  wire        flush_i,
 
+        // Page Fault
+        output wire [2:0]  fault_o, // [0] = instruction, [1] = load, [2] = store
+
         // I-Cache Interface
         input  wire [31:0] i_vaddr_i,
         input  wire [31:0] i_satp_i,
@@ -52,6 +55,11 @@ wire [21:0] i_ppn;
 wire [21:0] d_ppn;
 assign i_paddr_o = {i_ppn, i_vaddr_i[11:0]};
 assign d_paddr_o = {d_ppn, d_vaddr_i[11:0]};
+
+// Set fault output based on i-tlb and d-tlb faults
+wire i_fault;
+wire d_fault;
+assign fault_o = {d_fault & d_write_i, d_fault & ~d_write_i, i_fault};
 
 // i-tlb - ptw interface
 wire [19:0]  iptw_vpn;
@@ -97,6 +105,7 @@ TLB itlb(
         .cancel_i(i_cancel_i),
         .ppn_o(i_ppn),
         .valid_o(i_valid_o),
+        .fault_o(i_fault),
 
         .ptw_vpn_o(iptw_vpn),
         .ptw_rden_o(iptw_rden),
@@ -128,6 +137,7 @@ TLB dtlb(
         .cancel_i(1'b0), // d-cache never cancels
         .ppn_o(d_ppn),
         .valid_o(d_valid_o),
+        .fault_o(d_fault),
 
         .ptw_vpn_o(dptw_vpn),
         .ptw_rden_o(dptw_rden),

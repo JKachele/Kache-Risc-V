@@ -11,6 +11,10 @@
 #include "extensions/dbcn.h"
 #include "extensions/srst.h"
 
+typedef unsigned char bool;
+#define false 0
+#define true  1
+
 extern void _putchar(char c);
 
 void print(const char *str) {
@@ -19,6 +23,17 @@ void print(const char *str) {
                 str++;
         }
         return;
+}
+
+void print_int(int num) {
+        for ( int i = 7; i >= 0; i-- ) {
+                char c = (num >> (i * 4)) & 0xF;
+                if (c < 10) {
+                        _putchar(c + '0');
+                } else {
+                        _putchar(c - 10 + 'A');
+                }
+        }
 }
 
 void timer_handler(void) {
@@ -62,11 +77,13 @@ struct sbiret sbi_handler(long arg0, long arg1, long arg2, long arg3, long arg4,
         return ret;
 }
 
-void mtrap_handler(struct trap_frame *f, int cause) {
+unsigned int mtrap_handler(struct trap_frame *f, int cause, unsigned int mepc) {
         struct sbiret ret;
         switch (cause) {
                 case 0x02: // Illegal Instruction
-                        print("\nIllegal Instruction!\n");
+                        print("\nIllegal Instruction at 0x");
+                        print_int(mepc);
+                        print("\n");
                         sbi_shutdown();
                         break;
                 case 0x09: // S-Mode ecall
@@ -74,6 +91,7 @@ void mtrap_handler(struct trap_frame *f, int cause) {
                         ret = sbi_handler(f->a0, f->a1, f->a2, f->a3, f->a4, f->a5, f->a6, f->a7);
                         f->a0 = ret.error;
                         f->a1 = ret.uvalue;
+                        mepc += 4;
                         break;
                 case 0x8007: // M-Mode timer interupt
                         timer_handler();
@@ -83,5 +101,6 @@ void mtrap_handler(struct trap_frame *f, int cause) {
                         sbi_shutdown();
                         break;
         }
+        return mepc;
 }
 

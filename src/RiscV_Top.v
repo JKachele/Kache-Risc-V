@@ -56,6 +56,7 @@ module RiscV_Top (
 wire [31:0] rvec = 32'h7000_0000;
 
 // MMU
+wire [2:0]  page_fault;
 wire [33:0] immu_paddr;
 wire        immu_valid;
 wire [33:0] dmmu_paddr;
@@ -111,6 +112,7 @@ Processor CPU(
         .rvec_i(rvec),
         .timerIRQ_i(timerIRQ_i),
         .csrTime_i(csrTime_i),
+        .page_fault_i(page_fault),
         .tlb_flush_o(tlb_flush),
         .IC_strb_o(IC_strb),
         .IC_cancel_o(IC_cancel),
@@ -139,6 +141,8 @@ MMU mmu(
         .reset_i(reset_i),
 
         .flush_i(tlb_flush),
+
+        .fault_o(page_fault),
 
         .i_vaddr_i(IC_addr),
         .i_satp_i(IC_satp),
@@ -173,6 +177,7 @@ ICache icache(
         .addr_i(immu_paddr[31:0]),
         .rden_i(IC_strb),
         .mmu_valid_i(immu_valid),
+        .mmu_fault_i(page_fault[0]),
         .cancel_i(IC_cancel),
         .data_o(IC_data),
         .valid_o(IC_valid),
@@ -189,6 +194,7 @@ DataMem datamem(
         .cpu_addr_i(dmmu_paddr[31:0]),
         .cpu_flush_i(DC_flush),
         .cpu_mmu_valid_i(dmmu_valid),
+        .cpu_mmu_fault_i(page_fault[2:1]),
         .cpu_rden_i(DC_rden),
         .cpu_wdata_i(DC_wData),
         .cpu_wren_i(DC_wren & {8{dmmu_valid}}),

@@ -7,16 +7,35 @@
  ************************************************/
 
 #include "user.h"
+#include "../kernel/common.h"
 
 extern char __stack_top[];
 
-__attribute__((noreturn)) void exit(void) {
-        for (;;);
-        __builtin_unreachable();
+int syscall(long arg0, long arg1, long arg2, long arg3, long arg4,
+                       long arg5, long arg6, long sysno) {
+        register long a0 __asm__("a0") = arg0;
+        register long a1 __asm__("a1") = arg1;
+        register long a2 __asm__("a2") = arg2;
+        register long a3 __asm__("a3") = arg3;
+        register long a4 __asm__("a4") = arg4;
+        register long a5 __asm__("a5") = arg5;
+        register long a6 __asm__("a6") = arg6;
+        register long a7 __asm__("a7") = sysno;
+
+        __asm__ volatile (    "ecall\n"
+                        : "=r"(a0)
+                        : "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5), "r"(a6), "r"(a7)
+                        : "memory");
+
+        return a0;
+}
+
+void exit(void) {
+        syscall(0, 0, 0, 0, 0, 0, 0, SYS_EXIT);
 }
 
 void putchar(char c) {
-        // TODO
+        syscall((long)c, 0, 0, 0, 0, 0, 0, SYS_PUTCHAR);
 }
 
 __attribute__ ((section (".text.start")))

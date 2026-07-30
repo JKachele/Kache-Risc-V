@@ -13,6 +13,7 @@ module ICache (
         input  wire [31:0]  addr_i,
         input  wire         rden_i,
         input  wire         mmu_valid_i,
+        input  wire         mmu_fault_i,
         input  wire         cancel_i,
         output wire [31:0]  data_o,
         output wire         valid_o,
@@ -91,7 +92,7 @@ always @(*) begin
         endcase
 end
 
-assign valid_o   = cancel_i | (C_curState == IDLE & C_hit & mmu_valid_i) | ~rden_i;
+assign valid_o   = cancel_i | mmu_fault_i | (C_curState == IDLE & C_hit & mmu_valid_i) | ~rden_i;
 assign data_o    = C_offsetData;
 assign cmp_o     = C_hit0 ? cmp0[index][offset[4:1]] : cmp1[index][offset[4:1]];
 assign mAddr_o   = {tag, index, 5'b0};

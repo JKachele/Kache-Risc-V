@@ -222,7 +222,7 @@ int main(int argc, char **argv) {
         unsigned clksPerBaud = 3;
         uart = new UARTSIM(clksPerBaud);
 
-        // tb->opentrace("trace.vcd");
+        bool traceEnabled = false;
 
         tb->reset();
 
@@ -230,6 +230,10 @@ int main(int argc, char **argv) {
         while (!tb->done()) {
                 tb->tick();
                 (*uart)(tb->m_core->TXD);
+                if (!traceEnabled && tb->m_core->rootp->DE_pc == 0x00000010) {
+                        // tb->opentrace("trace.vcd");
+                        traceEnabled = true;
+                }
                 // tb->recordExecution();
         }
         tb->printStatusReport();

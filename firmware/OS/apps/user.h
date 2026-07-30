@@ -8,7 +8,8 @@
 #ifndef USER_H
 #define USER_H
 
-#include "common.h"
+#include "../kernel/common.h"
+#include "../kernel/libs/printf.h"
 
 __attribute__((noreturn)) void exit(void);
 void putchar(char c);

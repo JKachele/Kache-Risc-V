@@ -23,6 +23,7 @@ module TLB (
         input  wire        cancel_i,
         output wire [21:0] ppn_o,
         output wire        valid_o,
+        output wire        fault_o,
 
         // Page Table Walker Interface
         output wire [19:0] ptw_vpn_o,
@@ -137,6 +138,7 @@ end
 assign ppn_o = ppn_r;
 assign valid_o = (~mmu_enabled | ~rden_i | cancel_i |
         (tlb_cur_state == IDLE & tlb_hit)) & ~flush_edge;
+assign fault_o = (tlb_cur_state == MISS & ptw_fault_i);
 /*-------------------------------- Flush Logic --------------------------------*/
 reg prev_flush = 1'b0;
 wire flush_edge = flush_i & ~prev_flush;

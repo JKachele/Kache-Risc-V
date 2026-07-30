@@ -91,6 +91,7 @@ module ExecuteUnit (
         input  wire        DE_predictBranch_i,
         input  wire [31:0] DE_predictRA_i,
         // Memory Unit Interface
+        output reg  [31:0] EM_PC_o,
         output reg         EM_nop_o,
         output reg  [1:0]  EM_priv_o,
         output reg         EM_isLoad_o,
@@ -337,6 +338,7 @@ wire [63:0] E_result =
 
 always @(posedge clk_i) begin
         if (!E_stall_i) begin
+                EM_PC_o <= DE_PC_i;
                 EM_nop_o <= DE_nop_i;
                 EM_priv_o <= DE_priv_i;
 
@@ -364,6 +366,7 @@ always @(posedge clk_i) begin
         end
 
         if (reset_i | M_flush_i) begin
+                EM_PC_o           <= 32'b0;
                 EM_nop_o          <= 1'b1;
                 EM_isLoad_o       <= 1'b0;
                 EM_isStore_o      <= 1'b0;
@@ -381,6 +384,7 @@ end
 assign HALT_o = (!reset_i && DE_isEBREAK_i);
 
 initial begin
+        EM_PC_o           = 32'b0;
         EM_nop_o          = 1'b1;
         EM_isLoad_o       = 1'b0;
         EM_isStore_o      = 1'b0;

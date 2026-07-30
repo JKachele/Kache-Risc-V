@@ -20,12 +20,14 @@ module DecodeUnit #(
         input  wire        E_stall_i,
         input  wire        M_busy_i,
         input  wire        E_takeBranch_i,
+        input  wire [31:0] EM_PC_i,
         output wire        D_satpWrite_o,
         output wire        D_predictPC_o,
         output wire [31:0] D_PCprediction_o,
         output wire        dataHazard_o,
         output wire        D_isPrivileged_o,
         output wire [1:0]  D_privilege_o,
+        output wire        D_data_fault_o,
         // CSR Interface
         output wire [11:0] csrRAddr_o,
         input  wire [31:0] csrRData_i,
@@ -46,6 +48,8 @@ module DecodeUnit #(
         output wire [31:0] csrSepcSet_o,
         output wire [31:0] csrSCauseSet_o,
         output wire        csrTrapSetEn_o,
+        // MMU Fault exception signals
+        input  wire [2:0]  page_fault_i,
         // Fetch Unit Interface
         input  wire [31:0] FD_PC_i,
         input  wire [31:0] FD_instr_i,
@@ -334,7 +338,11 @@ wire D_isMInterupt = (csrMStatus_i[3] | csrMStatus_i[1]) & D_isMTIP;
 wire D_isSInterupt = csrMStatus_i[1] & D_isSTIP;
 wire D_isInterupt  = ~FD_nop_i & (D_isMInterupt | D_isSInterupt);
 
-wire D_isTrap = D_isInterupt | D_isECALL | D_isIllegal;
+// Exceptions
+wire D_isException = D_isECALL | D_isIllegal | |page_fault_i;
+assign D_data_fault_o = |page_fault_i[2:1];
+
+wire D_isTrap = D_isInterupt | D_isException;
 wire D_isPrivileged = D_isTrap | D_isMRET | D_isSRET;
 
 // Set PC, CSRs, and privilege level for traps
@@ -345,15 +353,25 @@ always @(*) begin
                         D_trapCause = 32'h8007;
                 else // if (D_isSTIP)
                         D_trapCause = 32'h8005;
-        end else if (D_isECALL) begin
-                if (DD_privilege == US)
-                        D_trapCause = 32'd8;
-                else if (DD_privilege == SU)
-                        D_trapCause = 32'd9;
-                else
-                        D_trapCause = 32'd11;
-        end else if (D_isIllegal) begin
-                D_trapCause = 32'd2;
+        end else if (D_isException) begin
+                if (D_isECALL) begin
+                        if (DD_privilege == US)
+                                D_trapCause = 32'd8;
+                        else if (DD_privilege == SU)
+                                D_trapCause = 32'd9;
+                        else
+                                D_trapCause = 32'd11;
+                end else if (D_isIllegal) begin
+                        D_trapCause = 32'd2;
+                end else if (|page_fault_i) begin
+                        if (page_fault_i[2])
+                                D_trapCause = 32'd15; // Store/AMO Page Fault
+                        else if (page_fault_i[1])
+                                D_trapCause = 32'd13; // Load Page Fault
+                        else // if (page_fault_i[0])
+                                D_trapCause = 32'd12; // Instruction Page Fault
+                end else
+                        D_trapCause = 32'd19; // Default to hardware error
         end else begin
                 D_trapCause = 32'd19; // Default to hardware error
         end
@@ -386,9 +404,13 @@ wire       D_sieSet    = D_isTrap  ? 1'b0 : (D_isSRET  ? csrMStatus_i[5] : csrMS
 
 assign csrMStatusSet_o = {D_mppSet, D_mpieSet, D_mieSet, D_sppSet, D_spieSet, D_sieSet};
 
-assign csrMepcSet_o    = D_isMTrap ? (D_isInterupt ? FD_PC_i : D_nextPC) : csrMepc_i;
+assign csrMepcSet_o    = D_isMTrap ?
+        (D_isInterupt ? FD_PC_i :
+        (D_data_fault_o ? EM_PC_i : FD_PC_i)) : csrMepc_i;
 assign csrMCauseSet_o  = D_isMTrap ? D_trapCause : csrMCause_i;
-assign csrSepcSet_o    = D_isSTrap ? (D_isInterupt ? FD_PC_i : D_nextPC) : csrSepc_i;
+assign csrSepcSet_o    = D_isSTrap ?
+        (D_isInterupt ? FD_PC_i :
+        (D_data_fault_o ? EM_PC_i : FD_PC_i)) : csrSepc_i;
 assign csrSCauseSet_o  = D_isSTrap ? D_trapCause : csrSCause_i;
 assign csrTrapSetEn_o  = D_stall_i ? 1'b0 : D_isPrivileged;
 
@@ -402,9 +424,9 @@ always @(posedge clk_i) begin
 end
 
 /*------------Branch Prediction Result------------*/
-assign D_predictPC_o = !FD_nop_i && // !D_isUNIMP &&
-        (D_isJAL || D_isJALR || D_isTrap || D_isMRET || D_isSRET ||
-        (D_isBranch && D_predictBranch));
+assign D_predictPC_o = (!FD_nop_i & // !D_isUNIMP &&
+        (D_isJAL | D_isJALR | D_isMRET | D_isSRET |
+        (D_isBranch & D_predictBranch))) | D_isTrap;
 
 assign D_PCprediction_o =
         D_isTrap  ? D_trapJumpAddr  :

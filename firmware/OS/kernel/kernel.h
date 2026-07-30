@@ -33,14 +33,24 @@
 #define PROCS_MAX 8
 #define PROC_UNUSED   0
 #define PROC_RUNNABLE 1
+#define SATP_SV32 (1u << 31)
+#define SSTATUS_SPIE (1 << 5)
+
+// Trap Causes
+#define SCAUSE_ECALL 8
 
 // Page Table Flags
-#define SATP_SV32 (1u << 31)
 #define PAGE_V    (1 << 0)
 #define PAGE_R    (1 << 1)
 #define PAGE_W    (1 << 2)
 #define PAGE_X    (1 << 3)
 #define PAGE_U    (1 << 4)
+#define PAGE_G    (1 << 5)
+#define PAGE_A    (1 << 6)
+#define PAGE_D    (1 << 7)
+
+// Base virtual address for user applications
+#define USER_BASE 0x01000000
 
 
 struct process {

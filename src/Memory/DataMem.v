@@ -14,6 +14,7 @@ module DataMem (
         input  wire [31:0]  cpu_addr_i,
         input  wire         cpu_flush_i,
         input  wire         cpu_mmu_valid_i,
+        input  wire [1:0]   cpu_mmu_fault_i,
         input  wire         cpu_rden_i,
         input  wire [63:0]  cpu_wdata_i,
         input  wire [7:0]   cpu_wren_i,
@@ -46,7 +47,7 @@ module DataMem (
 wire       cpu_rden = cpu_mmu_valid_i & cpu_rden_i;
 wire [7:0] cpu_wren = cpu_mmu_valid_i ? cpu_wren_i : 8'b0;
 wire       cpu_validReady;
-assign cpu_validReady_o = cpu_mmu_valid_i & cpu_validReady;
+assign cpu_validReady_o = (cpu_mmu_valid_i & cpu_validReady) | |cpu_mmu_fault_i;
 /*-------------------------------- Arbiter --------------------------------*/
 wire [31:0]  DM_addr;
 wire         DM_flush;

@@ -16,6 +16,8 @@ extern char __stack_top[];
 extern char __free_ram[];
 extern char __free_ram_end[];
 extern char __kernel_base[];
+extern char _binary_bin_app_bin_start[];
+extern char _binary_bin_app_bin_size[];
 
 extern void kernel_entry(void);
 extern void switch_context(u32 *prev_sp, u32 *next_sp);
@@ -55,11 +57,48 @@ void putstr(size_t strlen, char *c) {
         sbi_call(strlen, (long)c, 0, 0, 0, 0, 0, 0x4442434E);
 }
 
-void handle_trap(struct trapframe *t, int cause) {
+void handle_syscall(struct trap_frame *f) {
+        switch (f->a7) {
+        case SYS_PUTCHAR:
+                putchar(f->a0);
+                break;
+        case SYS_EXIT:
+                exit();
+                break;
+        default:
+                PANIC("unexpected syscall a7=%x\n", f->a7);
+                break;
+        }
+}
+
+void handle_trap(struct trap_frame *f) {
+        uint32_t scause = READ_CSR(scause);
         uint32_t stval = READ_CSR(stval);
         uint32_t user_pc = READ_CSR(sepc);
+        uint32_t instret = READ_CSR(instret);
 
-        PANIC("unexpected trap scause=0x%08x, stval=0x%08x, sepc=0x%08x\n", cause, stval, user_pc);
+        switch (scause) {
+        case SCAUSE_ECALL:
+                handle_syscall(f);
+                user_pc += 4;
+                break;
+        default:
+                printf("Trap occurred at instret=%d\n", instret);
+                PANIC("unexpected trap scause=0x%08x, stval=0x%08x, sepc=0x%08x\n",
+                                scause, stval, user_pc);
+                break;
+        }
+        WRITE_CSR(sepc, user_pc);
+}
+
+__attribute__ ((naked))
+void user_entry(void) {
+        __asm__ volatile (
+                        "csrw sepc, %[sepc]\n"
+                        "csrw sstatus, %[sstatus]\n"
+                        "sret\n"
+                        :: [sepc] "r" (USER_BASE), [sstatus] "r" (SSTATUS_SPIE)
+                        );
 }
 
 paddr_t alloc_pages(u32 n) {
@@ -93,7 +132,7 @@ void map_page(u32 *table1, u32 vaddr, paddr_t paddr, u32 flags) {
         table0[vpn0] = ((paddr / PAGE_SIZE) << 10) | flags | PAGE_V;
 }
 
-struct process *create_process(u32 pc) {
+struct process *create_process(const void *image, size_t image_size) {
         // Find unused process control block
         struct process *proc = NULL;
         int i;
@@ -111,13 +150,26 @@ struct process *create_process(u32 pc) {
         u32 *sp = (u32*)&proc->stack[sizeof(proc->stack)];
         for (int j = 0; j < 37; j++)
                 *--sp = 0;
-        *--sp = pc;
+        *--sp = (u32) user_entry;
 
-        // map kernel pages
+        // Map kernel pages
         u32 *page_table = (u32*)alloc_pages(1);
         for (paddr_t paddr = (paddr_t)__kernel_base;
                         paddr < (paddr_t)__free_ram_end; paddr += PAGE_SIZE) {
                 map_page(page_table, paddr, paddr, PAGE_R | PAGE_W | PAGE_X);
+        }
+
+        // Map user pages
+        for (u32 off = 0; off < image_size; off += PAGE_SIZE) {
+                paddr_t page = alloc_pages(1);
+
+                // If the image is smaller than a page, copy only the remaining bytes
+                size_t remaining = image_size - off;
+                size_t copy_size = PAGE_SIZE <= remaining ? PAGE_SIZE : remaining;
+
+                // Fill and map page
+                memcpy((void*)page, image + off, copy_size);
+                map_page(page_table, USER_BASE + off, page, PAGE_U | PAGE_R | PAGE_W | PAGE_X);
         }
 
         // Initialize process fields
@@ -186,6 +238,29 @@ void proc_b_entry(void) {
         exit();
 }
 
+void print_page_table(u32 *table, int level, u32 vpn) {
+        for (int i = 0; i < 1024; i++) {
+                if (table[i] & PAGE_V) {
+                        if (level < 1) {
+                                u32 *next_table = (u32*)((table[i] >> 10) * PAGE_SIZE);
+                                print_page_table(next_table, level + 1, i);
+                        } else {
+                                u32 paddr = (table[i] >> 10) * PAGE_SIZE;
+                                u32 vaddr = (vpn << 22) | (i << 12);
+                                char r = (table[i] & PAGE_R) ? 'R' : '-';
+                                char w = (table[i] & PAGE_W) ? 'W' : '-';
+                                char x = (table[i] & PAGE_X) ? 'X' : '-';
+                                char u = (table[i] & PAGE_U) ? 'U' : '-';
+                                char g = (table[i] & PAGE_G) ? 'G' : '-';
+                                char a = (table[i] & PAGE_A) ? 'A' : '-';
+                                char d = (table[i] & PAGE_D) ? 'D' : '-';
+                                printf("vaddr: 0x%08x -> paddr: 0x%08x [%c%c%c%c%c%c%c]\n",
+                                                vaddr, paddr, r, w, x, u, g, a, d);
+                        }
+                }
+        }
+}
+
 void kernel_main(void) {
         memset(__bss, 0, (size_t)__bss_end - (size_t)__bss);
         WRITE_CSR(stvec, (u32)kernel_entry);
@@ -194,12 +269,13 @@ void kernel_main(void) {
         printf("Booted!\n");
 
         // Create idle process
-        idle_proc = create_process((u32)NULL);
+        idle_proc = create_process(NULL, 0);
         idle_proc->pid = 0;
         current_proc = idle_proc;
 
-        proc_a = create_process((u32)proc_a_entry);
-        proc_b = create_process((u32)proc_b_entry);
+        struct process *shell = create_process(_binary_bin_app_bin_start,
+                        (size_t)_binary_bin_app_bin_size);
+        // print_page_table(shell->page_table, 0, 0);
 
         yield();
 

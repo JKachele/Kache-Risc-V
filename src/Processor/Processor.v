@@ -13,6 +13,7 @@ module Processor(
         // Interupts
         input  wire        timerIRQ_i,
         input  wire [63:0] csrTime_i,
+        input  wire [2:0]  page_fault_i,
         // Memory
         output wire        tlb_flush_o,
         output wire        IC_strb_o,
@@ -154,6 +155,7 @@ wire M_flush;
 wire F_busy;
 wire dataHazard;
 wire D_isPrivileged;
+wire D_data_fault;
 wire D_predictPC;
 wire [31:0] D_PCprediction;
 wire D_satpWrite;
@@ -166,6 +168,7 @@ ControlUnit control(
         .F_busy_i(F_busy),
         .dataHazard_i(dataHazard),
         .D_isPrivileged_i(D_isPrivileged),
+        .D_data_fault_i(D_data_fault),
         .EM_isCSRWrite_i(EM_isCSRWrite),
         .aluBusy_i(aluBusy),
         .M_busy_i(M_busy),
@@ -286,12 +289,14 @@ DecodeUnit #(
         .E_stall_i(E_stall),
         .M_busy_i(M_busy),
         .E_takeBranch_i(E_takeBranch),
+        .EM_PC_i(EM_PC),
         .D_satpWrite_o(D_satpWrite),
         .D_predictPC_o(D_predictPC),
         .D_PCprediction_o(D_PCprediction),
         .dataHazard_o(dataHazard),
         .D_isPrivileged_o(D_isPrivileged),
         .D_privilege_o(D_privilege),
+        .D_data_fault_o(D_data_fault),
         .csrRAddr_o(csrRAddr),
         .csrRData_i(csrRData),
         .csrMStatus_i(csrMStatus),
@@ -311,6 +316,7 @@ DecodeUnit #(
         .csrSepcSet_o(csrSepcSet),
         .csrSCauseSet_o(csrSCauseSet),
         .csrTrapSetEn_o(csrTrapSetEn),
+        .page_fault_i(page_fault_i),
         .FD_PC_i(FD_PC),
         .FD_instr_i(FD_instr),
         .FD_isRV32C_i(FD_isRV32C),
@@ -361,6 +367,7 @@ DecodeUnit #(
 /******************************************************************************
  ---------------------------------EXECUTE UNIT--------------------------------*
  ******************************************************************************/
+wire [31:0] EM_PC;
 wire        EM_nop;
 wire [1:0]  EM_priv;
 wire        EM_isLoad;
@@ -471,6 +478,7 @@ ExecuteUnit execute(
         .DE_wbEnable_i(DE_wbEnable),
         .DE_predictBranch_i(DE_predictBranch),
         .DE_predictRA_i(DE_predictRA),
+        .EM_PC_o(EM_PC),
         .EM_nop_o(EM_nop),
         .EM_priv_o(EM_priv),
         .EM_isLoad_o(EM_isLoad),

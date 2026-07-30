@@ -21,7 +21,7 @@ CFLAGS  := -g0 -O2 -march=$(RVARCH) -mabi=$(RVABI) -std=c99
 CFLAGS  += -Wno-builtin-declaration-mismatch -fno-pic -fno-stack-protector -w -nostdlib
 LDFLAGS := -O2 -S -m elf32lriscv -nostdlib
 LDFLAGS += -L$(RV_LIB_DIR) -lm $(GCC_LIB_DIR)/libgcc.a
-ODFLAGS := -sj .data -dj .text -dj .text.start -dj .text.bios
+ODFLAGS := -sj .data -sj .rodata -sj .sdata -dj .text -dj .text.start -dj .text.bios
 
 # Verilog
 VSRC := $(shell find src/ -type f -name '*.v')
@@ -31,7 +31,7 @@ XDC  := src/Extern/NexusA7.xdc
 # Simulation
 TB := verilator
 TBFLAGS := -DBENCH -Wno-fatal --pins-inout-enables
-TBFLAGS += --top-module $(TOP) --trace -cc -exe #--build
+TBFLAGS += --top-module $(TOP) --trace-vcd -cc -exe #--build
 TBSRC := $(wildcard tb/*.cpp) $(wildcard tb/*/*.cpp)
 
 BIN_DIR := bin
@@ -51,6 +51,7 @@ LDSCRIPT = firmware/OS/kernel.ld
 
 # Application
 SRCAPP := $(shell find firmware/OS/apps/ -type f -name '*.c' -o -name '*.S')
+SRCAPP += $(shell find firmware/OS/kernel/libs/ -type f -name '*.c' -o -name '*.S')
 OBJAPP := $(SRCAPP:%=$(BUILD_DIR)/%.o)
 LDSCRIPTAPP = firmware/OS/apps/user.ld
 
@@ -66,6 +67,7 @@ LDSCRIPTBIOS = firmware/OS/BIOS/bios.ld
 
 FIRMWARE := $(BIN_DIR)/firmware.elf
 APP      := $(BIN_DIR)/app.elf
+APPBIN   := $(BIN_DIR)/app.bin
 KERNEL   := $(BIN_DIR)/kernel.elf
 BIOS     := $(BIN_DIR)/bios.elf
 BIN      := $(BIN_DIR)/bios.bin
@@ -94,17 +96,20 @@ $(BIOS): $(OBJBIOS) $(LDSCRIPTBIOS) Makefile
 	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DUMP_DIR)/objdumpBIOS.txt
 	readelf -a $@ > $(BIN_DUMP_DIR)/readelfBIOS.txt
 
-$(KERNEL): $(OBJKERNEL) $(LDSCRIPTKERNEL) Makefile
+$(KERNEL): $(OBJKERNEL) $(LDSCRIPTKERNEL) $(APP) Makefile
 	@mkdir -p $(dir $@)
 	@mkdir -p $(BIN_DUMP_DIR)
-	$(LD) -T $(LDSCRIPTKERNEL) $(OBJKERNEL) -o $@ $(LDFLAGS)
+	$(LD) -T $(LDSCRIPTKERNEL) $(OBJKERNEL) $(APPBIN).o -o $@ $(LDFLAGS)
 	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DUMP_DIR)/objdumpKernel.txt
 	readelf -a $@ > $(BIN_DUMP_DIR)/readelfKernel.txt
+	$(OBJCOPY) $@ -O binary $(BIN_DIR)/kernel.bin
 
 $(APP): $(OBJAPP) $(LDSCRIPTAPP) Makefile
 	@mkdir -p $(dir $@)
 	@mkdir -p $(BIN_DUMP_DIR)
 	$(LD) -T $(LDSCRIPTAPP) $(OBJAPP) -o $@ $(LDFLAGS)
+	$(OBJCOPY) --set-section-flags .bss=alloc,contents -O binary $@ $(BIN_DIR)/app.bin
+	$(OBJCOPY) -Ibinary -Oelf32-littleriscv $(BIN_DIR)/app.bin $(BIN_DIR)/app.bin.o
 	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DUMP_DIR)/objdumpApp.txt
 	readelf -a $@ > $(BIN_DUMP_DIR)/readelfApp.txt
 

@@ -44,7 +44,7 @@ module ClockworksA7 (
         output wire clk0_o,   // 100 MHZ
         output wire clk1_o,   // 200 MHZ
         output wire clk2_o,   // 25 MHZ
-        output wire clk3_o,   // 3.125 MHZ
+        output wire clk3_o,   // 6.25 MHZ
         output wire resetn
 );
 
@@ -78,7 +78,7 @@ PLLE2_ADV #(
         .CLKOUT0_DIVIDE       (2),  // 100 MHZ
         .CLKOUT1_DIVIDE       (1),  // 200 MHZ
         .CLKOUT2_DIVIDE       (8),  // 25 MHZ
-        .CLKOUT3_DIVIDE       (64), // 3.125 MHZ
+        .CLKOUT3_DIVIDE       (32), // 6.25 MHZ
 
         .CLKOUT0_PHASE        (0.000),
         .CLKOUT1_PHASE        (0.000),

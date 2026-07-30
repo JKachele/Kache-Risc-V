@@ -6,12 +6,7 @@
 kernel_entry:
         # Get kernel stack of running process
         csrrw sp, sscratch, sp
-
-        # Check if stack is 0, If it is, We trapped from the supervisor mode, can use current stack
-        bnez sp, s_trap_start
-        csrrw sp, sscratch, sp
-s_trap_start:
-        addi sp, sp, -4 * 95
+        addi sp, sp, -4 * 96
 
         sw ra,    4 * 0(sp)
         sw gp,    4 * 1(sp)
@@ -44,53 +39,49 @@ s_trap_start:
         sw s10,   4 * 28(sp)
         sw s11,   4 * 29(sp)
 
-        fsd ft0,  4 * 30(sp)
-        fsd ft1,  4 * 32(sp)
-        fsd ft2,  4 * 34(sp)
-        fsd ft3,  4 * 36(sp)
-        fsd ft4,  4 * 38(sp)
-        fsd ft5,  4 * 40(sp)
-        fsd ft6,  4 * 42(sp)
-        fsd ft7,  4 * 44(sp)
-        fsd fs0,  4 * 46(sp)
-        fsd fs1,  4 * 48(sp)
-        fsd fa0,  4 * 50(sp)
-        fsd fa1,  4 * 52(sp)
-        fsd fa2,  4 * 54(sp)
-        fsd fa3,  4 * 56(sp)
-        fsd fa4,  4 * 58(sp)
-        fsd fa5,  4 * 60(sp)
-        fsd fa6,  4 * 62(sp)
-        fsd fa7,  4 * 64(sp)
-        fsd fs2,  4 * 66(sp)
-        fsd fs3,  4 * 68(sp)
-        fsd fs4,  4 * 70(sp)
-        fsd fs5,  4 * 72(sp)
-        fsd fs6,  4 * 74(sp)
-        fsd fs7,  4 * 76(sp)
-        fsd fs8,  4 * 78(sp)
-        fsd fs9,  4 * 80(sp)
-        fsd fs10, 4 * 82(sp)
-        fsd fs11, 4 * 84(sp)
-        fsd ft8,  4 * 86(sp)
-        fsd ft9,  4 * 88(sp)
-        fsd ft10, 4 * 90(sp)
-        fsd ft11, 4 * 92(sp)
+        fsd ft0,  4 * 31(sp)
+        fsd ft1,  4 * 33(sp)
+        fsd ft2,  4 * 35(sp)
+        fsd ft3,  4 * 37(sp)
+        fsd ft4,  4 * 39(sp)
+        fsd ft5,  4 * 41(sp)
+        fsd ft6,  4 * 43(sp)
+        fsd ft7,  4 * 45(sp)
+        fsd fs0,  4 * 47(sp)
+        fsd fs1,  4 * 49(sp)
+        fsd fa0,  4 * 51(sp)
+        fsd fa1,  4 * 53(sp)
+        fsd fa2,  4 * 55(sp)
+        fsd fa3,  4 * 57(sp)
+        fsd fa4,  4 * 59(sp)
+        fsd fa5,  4 * 61(sp)
+        fsd fa6,  4 * 63(sp)
+        fsd fa7,  4 * 65(sp)
+        fsd fs2,  4 * 67(sp)
+        fsd fs3,  4 * 69(sp)
+        fsd fs4,  4 * 71(sp)
+        fsd fs5,  4 * 73(sp)
+        fsd fs6,  4 * 75(sp)
+        fsd fs7,  4 * 77(sp)
+        fsd fs8,  4 * 79(sp)
+        fsd fs9,  4 * 81(sp)
+        fsd fs10, 4 * 83(sp)
+        fsd fs11, 4 * 85(sp)
+        fsd ft8,  4 * 87(sp)
+        fsd ft9,  4 * 89(sp)
+        fsd ft10, 4 * 91(sp)
+        fsd ft11, 4 * 93(sp)
 
         # Retrieve and save sp at time of execution
         csrr a0, sscratch
-        sw a0, 4 * 94(sp)
+        sw a0, 4 * 95(sp)
 
         # Reset kernel stack
-        addi a0, sp, 4 * 31
+        addi a0, sp, 4 * 96
         csrw sscratch, a0
 
         mv a0, sp
-        csrr a1, scause
         call handle_trap
-
-        lw a0, 4 * 94(sp)
-        csrw sscratch, a0
 
         lw ra,    4 * 0(sp)
         lw gp,    4 * 1(sp)
@@ -123,46 +114,39 @@ s_trap_start:
         lw s10,   4 * 28(sp)
         lw s11,   4 * 29(sp)
 
-        fld ft0,  4 * 30(sp)
-        fld ft1,  4 * 32(sp)
-        fld ft2,  4 * 34(sp)
-        fld ft3,  4 * 36(sp)
-        fld ft4,  4 * 38(sp)
-        fld ft5,  4 * 40(sp)
-        fld ft6,  4 * 42(sp)
-        fld ft7,  4 * 44(sp)
-        fld fs0,  4 * 46(sp)
-        fld fs1,  4 * 48(sp)
-        fld fa0,  4 * 50(sp)
-        fld fa1,  4 * 52(sp)
-        fld fa2,  4 * 54(sp)
-        fld fa3,  4 * 56(sp)
-        fld fa4,  4 * 58(sp)
-        fld fa5,  4 * 60(sp)
-        fld fa6,  4 * 62(sp)
-        fld fa7,  4 * 64(sp)
-        fld fs2,  4 * 66(sp)
-        fld fs3,  4 * 68(sp)
-        fld fs4,  4 * 70(sp)
-        fld fs5,  4 * 72(sp)
-        fld fs6,  4 * 74(sp)
-        fld fs7,  4 * 76(sp)
-        fld fs8,  4 * 78(sp)
-        fld fs9,  4 * 80(sp)
-        fld fs10, 4 * 82(sp)
-        fld fs11, 4 * 84(sp)
-        fld ft8,  4 * 86(sp)
-        fld ft9,  4 * 88(sp)
-        fld ft10, 4 * 90(sp)
-        fld ft11, 4 * 92(sp)
-
-        addi sp, sp, 4 * 95
-        csrrw sp, sscratch, sp
-
-        # If trapped from supervisor mode, switch back to kernel stack
-        bnez sp, s_trap_end
-        csrrw sp, sscratch, sp
-s_trap_end:
+        fld ft0,  4 * 31(sp)
+        fld ft1,  4 * 33(sp)
+        fld ft2,  4 * 35(sp)
+        fld ft3,  4 * 37(sp)
+        fld ft4,  4 * 39(sp)
+        fld ft5,  4 * 41(sp)
+        fld ft6,  4 * 43(sp)
+        fld ft7,  4 * 45(sp)
+        fld fs0,  4 * 47(sp)
+        fld fs1,  4 * 49(sp)
+        fld fa0,  4 * 51(sp)
+        fld fa1,  4 * 53(sp)
+        fld fa2,  4 * 55(sp)
+        fld fa3,  4 * 57(sp)
+        fld fa4,  4 * 59(sp)
+        fld fa5,  4 * 61(sp)
+        fld fa6,  4 * 63(sp)
+        fld fa7,  4 * 65(sp)
+        fld fs2,  4 * 67(sp)
+        fld fs3,  4 * 69(sp)
+        fld fs4,  4 * 71(sp)
+        fld fs5,  4 * 73(sp)
+        fld fs6,  4 * 75(sp)
+        fld fs7,  4 * 77(sp)
+        fld fs8,  4 * 79(sp)
+        fld fs9,  4 * 81(sp)
+        fld fs10, 4 * 83(sp)
+        fld fs11, 4 * 85(sp)
+        fld ft8,  4 * 87(sp)
+        fld ft9,  4 * 89(sp)
+        fld ft10, 4 * 91(sp)
+        fld ft11, 4 * 93(sp)
+        lw  sp,   4 * 95(sp)
         sret
 
 switch_context: # a0: prev_sp, a1: next_sp

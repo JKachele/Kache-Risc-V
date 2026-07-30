@@ -9,6 +9,6 @@
 #include "../user.h"
 
 int main(void) {
-        for (;;);
+        printf("Welcome to the Kache-Risc-V Shell!\n");
 }
 
