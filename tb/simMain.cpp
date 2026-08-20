@@ -1,4 +1,5 @@
-#include <stdio.h>
+#include <cstdio>
+#include <iostream>
 #include <vector>
 #include "VSOC.h"
 #include "VSOC___024root.h"
@@ -142,11 +143,11 @@ public:
 
         void printFReg(const char *name, IData reg) {
                 float  f = *(float*)&reg;
-                printf("%s: %x (%f)\n", name, reg, f);
+                printf("%s: %x (%f)\r\n", name, reg, f);
         }
 
         void printIReg(const char *name, IData reg) {
-                printf("%s: %x (%d)\n", name, reg, reg);
+                printf("%s: %x (%d)\r\n", name, reg, reg);
         }
 
         virtual bool done(void) {
@@ -171,20 +172,20 @@ public:
                 int nbDCache = nbLoad + nbStore;
                 int nbDCacheHit = nbDCache - nbDCacheMiss;
 
-                printf("\n----------------------------\n");
-                printf("Simulated processor's report\n");
-                printf("----------------------------\n");
-                printf("ICache hit   = %3.3f\%%\n", nbICacheHit*100.0/nbICache);
-                // printf("(%d Misses)\n",             nbICache - nbICacheHit);
-                printf("DCache hit   = %3.3f\%%\n", nbDCacheHit*100.0/nbDCache);
-                // printf("(%d Misses)\n",             nbDCacheMiss);
-                printf("ICache Split = %3.3f\%%\n", nbICacheSplit*100.0/nbICache);
-                printf("Branch hit   = %3.3f\%%\n", nbBranchHit*100.0/nbBranch);
-                printf("JALR   hit   = %3.3f\%%\n", nbJALRhit*100.0/nbJALR);
-                printf("Load hzrds   = %3.3f\%%\n", nbLoadHazard*100.0/nbLoad);
-                printf("Cycles       = %ld\n", cycle);
-                printf("Instret      = %ld\n", instret);
-                printf("CPI/IPC      = %3.3f/%3.3f\n",cpi, ipc);
+                printf("\r\n----------------------------\r\n");
+                printf("Simulated processor's report\r\n");
+                printf("----------------------------\r\n");
+                printf("ICache hit   = %3.3f\%%\r\n", nbICacheHit*100.0/nbICache);
+                // printf("(%d Misses)\r\n",             nbICache - nbICacheHit);
+                printf("DCache hit   = %3.3f\%%\r\n", nbDCacheHit*100.0/nbDCache);
+                // printf("(%d Misses)\r\n",             nbDCacheMiss);
+                printf("ICache Split = %3.3f\%%\r\n", nbICacheSplit*100.0/nbICache);
+                printf("Branch hit   = %3.3f\%%\r\n", nbBranchHit*100.0/nbBranch);
+                printf("JALR   hit   = %3.3f\%%\r\n", nbJALRhit*100.0/nbJALR);
+                printf("Load hzrds   = %3.3f\%%\r\n", nbLoadHazard*100.0/nbLoad);
+                printf("Cycles       = %ld\r\n", cycle);
+                printf("Instret      = %ld\r\n", instret);
+                printf("CPI/IPC      = %3.3f/%3.3f\r\n",cpi, ipc);
 
                 printf("Instr. mix = (");
                 printf("Branch:%3.3f\%% | ",            nbBranch*100.0/instret);
@@ -195,7 +196,7 @@ public:
                 printf("MUL/DIV/REM:%3.3f\%% | ",       nbMULDIV*100.0/instret);
                 printf("FPU:%3.3f\%% | ",               nbFPU*100.0/instret);
                 printf("AMO:%3.3f\%%",                  nbAMO*100.0/instret);
-                printf(")\n");
+                printf(")\r\n");
 
                 // printIReg("A0", rootp->Reg_A0);
                 // printIReg("A0", rootp->Reg_A1);
@@ -204,9 +205,10 @@ public:
 };
 
 int main(int argc, char **argv) {
-        printf("----------------------------\n");
-        printf("Beginning simulation...\n");
-        printf("----------------------------\n");
+        printf("----------------------------\r\n");
+        printf("Beginning simulation...\r\n");
+        printf("----------------------------\r\n");
+        std::cout << std::flush;
 
         // Initialize Verilators variables
         Verilated::commandArgs(argc, argv);
@@ -221,21 +223,29 @@ int main(int argc, char **argv) {
         UARTSIM *uart;
         unsigned clksPerBaud = 3;
         uart = new UARTSIM(clksPerBaud);
+        unsigned short uartPort = 54000;
+        if ((uart->create_socket(uartPort)) < 0) return -1;
 
         bool traceEnabled = false;
+        IData traceStart = 0x00000010;
 
+        tb->m_core->RXD = 1;
         tb->reset();
 
         int rxPrev = 1;
         while (!tb->done()) {
                 tb->tick();
-                (*uart)(tb->m_core->TXD);
-                if (!traceEnabled && tb->m_core->rootp->DE_pc == 0x00000010) {
-                        // tb->opentrace("trace.vcd");
+                tb->m_core->RXD = (*uart)(tb->m_core->TXD);
+#ifdef TRACE
+                if (!traceEnabled && tb->m_core->rootp->DE_pc == traceStart) {
+                        tb->opentrace("trace.vcd");
                         traceEnabled = true;
                 }
+#endif
                 // tb->recordExecution();
         }
+        uart->close_socket();
+
         tb->printStatusReport();
 
         fclose(tb->programLog);

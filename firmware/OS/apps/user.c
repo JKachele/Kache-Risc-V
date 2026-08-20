@@ -32,10 +32,15 @@ int syscall(long arg0, long arg1, long arg2, long arg3, long arg4,
 
 void exit(void) {
         syscall(0, 0, 0, 0, 0, 0, 0, SYS_EXIT);
+        for (;;); // Just in case!
 }
 
 void putchar(char c) {
         syscall((long)c, 0, 0, 0, 0, 0, 0, SYS_PUTCHAR);
+}
+
+int getchar(void) {
+        return syscall(0, 0, 0, 0, 0, 0, 0, SYS_GETCHAR);
 }
 
 __attribute__ ((section (".text.start")))

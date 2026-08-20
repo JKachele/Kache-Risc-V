@@ -140,6 +140,7 @@ IO io(
         .spiCs_o(qspi_cs),
         .spiMosi_io(qspi_mosi),
         .spiMiso_i(qspi_miso),
+        .rxd_i(RXD),
         .txd_o(TXD),
         .leds_o(LEDS)
 );

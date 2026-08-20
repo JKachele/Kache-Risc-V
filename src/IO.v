@@ -26,6 +26,7 @@ module IO (
         input  wire        spiMiso_i,
 
         // UART
+        input  wire        rxd_i,
         output wire        txd_o,
 
         // Basic IO
@@ -139,71 +140,6 @@ always @(posedge timerClk_i) begin
                 mtimeWrAck <= 1'b0;
 end
 
-/* verilator lint_off MULTIDRIVEN */
-// (* ram_style = "block" *) reg [63:0] mtime [0:1]; // mtime[0] = mtime, mtime[1] = mtimecmp
-// initial mtime[0] = 64'b0;
-// initial mtime[1] = 64'hFFFF_FFFF_FFFF_FFFF; // Set to max to avoid interupts before it is set
-//
-// wire isMTime = isMMReg & (IO_addr_i[27:3] == 25'h0) & (IO_rstrb_i | |IO_wstrb_i);
-// wire isMTimecmp = isMMReg & (IO_addr_i[27:3] == 25'h1) & (IO_rstrb_i | |IO_wstrb_i);
-// reg  isMTime_r;
-// reg  isMTimecmp_r;
-//
-// reg  [63:0] mtimeRData;
-// reg  [63:0] mtimecmpRData;
-// wire [63:0] mmRegData = isMTime_r ? mtimeRData : mtimecmpRData;
-//
-// always @(posedge clk_i) begin
-//         if (reset_i) begin
-//                 isMTime_r    <= 1'b0;
-//                 isMTimecmp_r <= 1'b0;
-//         end else if (IO_rstrb_i) begin
-//                 isMTime_r    <= isMTime;
-//                 isMTimecmp_r <= isMTimecmp;
-//         end
-// end
-//
-// // Registers used to declare an interupt
-// reg  [63:0] mtimeData;
-// reg  [63:0] mtimecmpData;
-// assign timerIRQ_o = (mtimeData >= mtimecmpData) ? 1'b1 : 1'b0;
-// assign csrTime_o = mtimeData;
-//
-// integer i;
-// always @(posedge clk_i) begin
-//         if (reset_i) begin
-//                 for (i = 0; i < 8; i = i+1) begin
-//                         mtime[0][i*8 +: 8] <= 8'h00;
-//                         mtime[1][i*8 +: 8] <= 8'hFF;
-//                 end
-//         end else if (isMTime) begin
-//                 for (i = 0; i < 8; i = i+1) begin
-//                         if (IO_wstrb_i[i]) begin
-//                                 mtime[0][i*8 +: 8] <= IO_wData_i[i*8 +: 8];
-//                         end
-//                 end
-//                 if (IO_rstrb_i) begin
-//                         mtimeRData <= mtime[0];
-//                 end
-//         end else if (isMTimecmp) begin
-//                 for (i = 0; i < 8; i = i+1) begin
-//                         if (IO_wstrb_i[i]) begin
-//                                 mtime[1][i*8 +: 8] <= IO_wData_i[i*8 +: 8];
-//                         end
-//                 end
-//                 if (IO_rstrb_i) begin
-//                         mtimecmpRData <= mtime[1];
-//                 end
-//         end
-//         mtimeData    <= mtime[0];
-//         mtimecmpData <= mtime[1];
-// end
-//
-// always @(posedge timerClk_i) begin
-//         mtime[0] <= mtime[0] + 1;
-// end
-
-/* verilator lint_on MULTIDRIVEN */
 /*-------------------------------- QSPI Flash --------------------------------*/
 wire flashRstrb = isFlash & IO_rstrb_i;
 
@@ -231,40 +167,33 @@ wire isUartData = isUART & ~IO_addr_i[2];
 wire isUartCtrl = isUART & IO_addr_i[2];
 
 wire uartWren = |IO_wstrb_i & isUartData;
+wire uartRden = IO_rstrb_i & isUartData;
 wire uartBusy;
-wire [31:0] uartRData = isUartData ? 32'b0 : {22'b0, uartBusy, 9'b0};
+wire uartRxReady;
+wire [7:0] uartRx;
 
-// 25MHz, 8M baud, 8-bit, no parity, 1 stop bit
-localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h000003};
+wire [31:0] uartCtrlData = {22'b0, uartBusy, uartRxReady, 8'b0};
+wire [31:0] uartRxData = {24'b0, uartRx};
+wire [31:0] uartRData = isUartData ? uartRxData : uartCtrlData;
 
-// 25MHz, 2M baud, 8-bit, no parity, 1 stop bit
-// localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h00000D};
+localparam UART_BAUD = 24'h000003; // 25MHz, 8M baud
+// localparam UART_BAUD = 24'h00000D; // 25MHz, 2M baud
+// localparam UART_BAUD = 24'h000364; // 100MHz, 115200 baud
 
-// 100MHz, 115200 baud, 8-bit, no parity, 1 stop bit
-// localparam UART_SETUP = {1'b0, 2'b00, 1'b0, 3'b000, 24'h000364};
-
-txuart TXUART (
-        .i_clk(clk_i),
-        .i_reset(reset_i),
-        .i_setup(UART_SETUP),
-        .i_break(0),
-        .i_wr(uartWren),
-        .i_data(IO_wData_i[7:0]),
-        .i_cts_n(0),
-        .o_uart_tx(txd_o),
-        .o_busy(uartBusy)
+uart #(
+        .ClkPerBaud(UART_BAUD)
+)UART(
+        .clk_i(clk_i),
+        .reset_i(reset_i),
+        .wren_i(uartWren),
+        .txData_i(IO_wData_i[7:0]),
+        .rden_i(uartRden),
+        .rxData_o(uartRx),
+        .txFull_o(uartBusy),
+        .rxReady_o(uartRxReady),
+        .rxd_i(rxd_i),
+        .txd_o(txd_o)
 );
-
-// `ifndef BENCH
-// `else
-//         assign uartBusy = 1'b0;
-//         always @(posedge clk_i) begin
-//                 if(uartWren) begin
-//                         $write("%c", IO_wData_i[7:0]);
-//                         $fflush(32'h8000_0001);
-//                 end
-//         end
-// `endif
 
 /*-------------------------------- Basic IO --------------------------------*/
 wire isLED = isBasic & (IO_addr_i[27:3] == 25'h1);

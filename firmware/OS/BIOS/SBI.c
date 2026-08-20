@@ -62,6 +62,9 @@ struct sbiret sbi_handler(long arg0, long arg1, long arg2, long arg3, long arg4,
                 case 0x01:
                         ret.error = sbi_console_putchar((char)arg0);
                         break;
+                case 0x02:
+                        ret.error = sbi_console_getchar();
+                        break;
                 case 0x08:
                         sbi_shutdown();
                         break;

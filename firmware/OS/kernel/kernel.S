@@ -1,9 +1,9 @@
-.global kernel_entry
+.global s_trap
 .global switch_context
 .section .text
 
 .align 2
-kernel_entry:
+s_trap:
         # Get kernel stack of running process
         csrrw sp, sscratch, sp
         addi sp, sp, -4 * 96

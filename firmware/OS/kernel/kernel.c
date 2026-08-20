@@ -19,7 +19,7 @@ extern char __kernel_base[];
 extern char _binary_bin_app_bin_start[];
 extern char _binary_bin_app_bin_size[];
 
-extern void kernel_entry(void);
+extern void s_trap(void);
 extern void switch_context(u32 *prev_sp, u32 *next_sp);
 
 struct process procs[PROCS_MAX];
@@ -45,8 +45,13 @@ struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
         return (struct sbiret) {.error = a0, .value = a1};
 }
 
-int putchar(int c) {
+void putchar(int c) {
         sbi_call(c, 0, 0, 0, 0, 0, 2, 0x4442434E);
+}
+
+long getchar(void) {
+        struct sbiret ret = sbi_call(0, 0, 0, 0, 0, 0, 0, 2);
+        return ret.error;
 }
 
 void exit(void) {
@@ -55,40 +60,6 @@ void exit(void) {
 
 void putstr(size_t strlen, char *c) {
         sbi_call(strlen, (long)c, 0, 0, 0, 0, 0, 0x4442434E);
-}
-
-void handle_syscall(struct trap_frame *f) {
-        switch (f->a7) {
-        case SYS_PUTCHAR:
-                putchar(f->a0);
-                break;
-        case SYS_EXIT:
-                exit();
-                break;
-        default:
-                PANIC("unexpected syscall a7=%x\n", f->a7);
-                break;
-        }
-}
-
-void handle_trap(struct trap_frame *f) {
-        uint32_t scause = READ_CSR(scause);
-        uint32_t stval = READ_CSR(stval);
-        uint32_t user_pc = READ_CSR(sepc);
-        uint32_t instret = READ_CSR(instret);
-
-        switch (scause) {
-        case SCAUSE_ECALL:
-                handle_syscall(f);
-                user_pc += 4;
-                break;
-        default:
-                printf("Trap occurred at instret=%d\n", instret);
-                PANIC("unexpected trap scause=0x%08x, stval=0x%08x, sepc=0x%08x\n",
-                                scause, stval, user_pc);
-                break;
-        }
-        WRITE_CSR(sepc, user_pc);
 }
 
 __attribute__ ((naked))
@@ -263,7 +234,7 @@ void print_page_table(u32 *table, int level, u32 vpn) {
 
 void kernel_main(void) {
         memset(__bss, 0, (size_t)__bss_end - (size_t)__bss);
-        WRITE_CSR(stvec, (u32)kernel_entry);
+        WRITE_CSR(stvec, (u32)s_trap);
 
         printf("Hello, World!\n");
         printf("Booted!\n");
@@ -281,6 +252,53 @@ void kernel_main(void) {
 
         PANIC("Switched to idle process");
         exit();
+}
+
+void handle_syscall(struct trap_frame *f) {
+        switch (f->a7) {
+        case SYS_PUTCHAR:
+                putchar(f->a0);
+                break;
+        case SYS_GETCHAR:
+                for (;;) {
+                        long ch = getchar();
+                        if (ch >= 0) {
+                                f->a0 = ch;
+                                break;
+                        }
+                        yield();
+                }
+                break;
+        case SYS_EXIT:
+                printf("process %d exited\n", current_proc->pid);
+                current_proc->state = PROC_EXITED;
+                yield();
+                PANIC("unreachable");
+                break;
+        default:
+                PANIC("unexpected syscall a7=%x\n", f->a7);
+                break;
+        }
+}
+
+void handle_trap(struct trap_frame *f) {
+        uint32_t scause = READ_CSR(scause);
+        uint32_t stval = READ_CSR(stval);
+        uint32_t user_pc = READ_CSR(sepc);
+        uint32_t instret = READ_CSR(instret);
+
+        switch (scause) {
+        case SCAUSE_ECALL:
+                handle_syscall(f);
+                user_pc += 4;
+                break;
+        default:
+                printf("Trap occurred at instret=%d\n", instret);
+                PANIC("unexpected trap scause=0x%08x, stval=0x%08x, sepc=0x%08x\n",
+                                scause, stval, user_pc);
+                break;
+        }
+        WRITE_CSR(sepc, user_pc);
 }
 
 __attribute__ ((section (".text.start")))

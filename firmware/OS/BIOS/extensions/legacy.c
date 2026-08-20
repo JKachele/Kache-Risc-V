@@ -9,11 +9,22 @@
 #include "legacy.h"
 
 extern void _putchar(char c);
+extern char _getchar();
+extern char _charavail();
 
 // EID #0x01
 long sbi_console_putchar(int ch) {
         _putchar(ch);
         return SBI_SUCCESS;
+}
+
+// EID #0x02
+long sbi_console_getchar() {
+        if (!_charavail()) {
+                return -1;
+        }
+        char c = _getchar();
+        return (long)c;
 }
 
 // EID #0x08

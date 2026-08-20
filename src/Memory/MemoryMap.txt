@@ -8,6 +8,8 @@
                 8000_0008: mtimecmp (RW)
         9000_0000 - 90FF_FFFF: QSPI Flash (16MB) (R)
         F000_0000 - FFFF_FFFF: Basic I/O and UART
-                F000_0000: UART Data (W)
+                F000_0000: UART Data (RW)
                 F000_0004: UART Control (R)
+                        [8]: UART RX FIFO Data Available
+                        [9]: UART TX FIFO Full
                 F000_0008: Arty White LEDs (W)

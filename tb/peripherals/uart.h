@@ -8,21 +8,32 @@
 #ifndef UART_H
 #define UART_H
 
-class UARTSIM {
-	typedef	enum {
-                UART_IDLE,
-                UART_RXD
-	} UART_STATE;
+#include <arpa/inet.h>
+#include <thread>
 
-        UART_STATE state;
+class UARTSIM {
         unsigned int  bauds;
-        unsigned int  baud_counter;
-        unsigned char last_rxd;
-        unsigned int  bit_counter;
-        unsigned char rx_data;
+
+        unsigned char tx_data[1024];
+        unsigned int  tx_data_wPtr;
+        unsigned int  tx_data_rPtr;
+
+        // TCP Socket
+        int listening_socket;
+        sockaddr_in listener_hint{};
+        sockaddr_in client_hint{};
+        int client_socket;
+
+        std::thread recv_thread;
+
+        void recv_tcp_data();
+        void uartRxd(const unsigned char rxd);
+        unsigned char uartTxd();
 public:
         UARTSIM(const unsigned int bauds);
-        void operator()(const unsigned char rxd);
+        int create_socket(const unsigned short port);
+        void close_socket();
+        unsigned char operator()(const unsigned char rxd);
 };
 
 #endif

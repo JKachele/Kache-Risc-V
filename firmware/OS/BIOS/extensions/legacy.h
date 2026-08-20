@@ -11,6 +11,7 @@
 #include "../sbi.h"
 
 long sbi_console_putchar(int ch);
+long sbi_console_getchar();
 void sbi_shutdown(void);
 
 #endif

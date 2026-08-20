@@ -75,8 +75,7 @@ BRAM     := $(BIN_DIR)/BRAM.hex
 
 .PHONY: hex sim lint build dirs clean 
 
-hex:   CFLAGS += -DBENCH 
-sim:   CFLAGS += -DBENCH
+hex sim simt:   CFLAGS += -DBENCH
 
 hex:    $(BRAM) $(KERNEL) $(APP)
 
@@ -132,7 +131,17 @@ sim: $(BRAM) $(KERNEL)
 	rm -rf ./obj_dir
 	$(TB) $(TBFLAGS) $(TBSRC) $(VSRC)
 	cd obj_dir; make -f V$(TOP).mk
-	cd obj_dir; ./V$(TOP) | tee ../$(BIN_DIR)/sim.log
+	cd obj_dir; ./V$(TOP) | tee ../$(BIN_DIR)/sim.log &
+	@sleep 1 # Wait for TCP Socket to be ready
+	@socat -,rawer TCP4:localhost:54000,connect-timeout=5
+
+simt: $(BRAM) $(KERNEL)
+	rm -rf ./obj_dir
+	$(TB) $(TBFLAGS) -CFLAGS -DTRACE $(TBSRC) $(VSRC)
+	cd obj_dir; make -f V$(TOP).mk
+	cd obj_dir; ./V$(TOP) | tee ../$(BIN_DIR)/sim.log &
+	@sleep 1
+	@socat - TCP4:localhost:54000,connect-timeout=5
 
 $(BIN_DIR):
 	mkdir -p $@

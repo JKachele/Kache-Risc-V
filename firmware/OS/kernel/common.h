@@ -40,6 +40,7 @@ typedef _Bool bool;
 #define DBL_MIN	2.2250738585072014e-308
 #define PAGE_SIZE 4096
 #define SYS_PUTCHAR 1
+#define SYS_GETCHAR 2
 #define SYS_EXIT 93
 
 void *memcpy(void *dst, const void *src, size_t n);
