@@ -180,35 +180,6 @@ void yield(void) {
         switch_context(&prev->sp, &next->sp);
 }
 
-void delay(void) {
-        for (int i = 0; i < 3000; i++)
-                __asm__ volatile ("nop\n");
-}
-
-struct process *proc_a;
-struct process *proc_b;
-
-void proc_a_entry(void) {
-        printf("Starting Process A\n");
-        for (;;) {
-                yield();
-                putchar('A');
-                delay();
-        }
-}
-
-void proc_b_entry(void) {
-        printf("Starting Process B\n");
-        for (int i = 0; i < 20; i++) {
-                yield();
-                putchar('B');
-                // if (i % 5 == 0)
-                //         printf("Time: %x\n", READ_CSR(time));
-                delay();
-        }
-        exit();
-}
-
 void print_page_table(u32 *table, int level, u32 vpn) {
         for (int i = 0; i < 1024; i++) {
                 if (table[i] & PAGE_V) {

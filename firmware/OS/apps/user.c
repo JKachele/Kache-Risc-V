@@ -43,6 +43,15 @@ int getchar(void) {
         return syscall(0, 0, 0, 0, 0, 0, 0, SYS_GETCHAR);
 }
 
+// Sometimes __errno is not linked, here is a dummy replacement.
+// Note that __errno is a function that returns a pointer to the
+// actual __errno (this is for multithreading). Made me bang my 
+// head to the wall
+int* __errno()  {
+   static int val = 0;
+   return &val;
+}
+
 __attribute__ ((section (".text.start")))
 __attribute__ ((naked))
 void _start(void) {

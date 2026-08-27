@@ -11,7 +11,7 @@ refresh_hw_device -update_hw_probes false [lindex [get_hw_devices xc7a100t_0] 0]
 create_hw_cfgmem -hw_device [get_hw_devices xc7a100t_0] -mem_dev [lindex [get_cfgmem_parts {s25fl128sxxxxxx0-spi-x1_x2_x4}] 0]
 
 write_cfgmem -force -format bin -size 16 \
-        -loaddata "up 0 ../bin/SOC.bin up 0x400000 ../bin/firmware.elf" -file ../bin/flash.bin
+        -loaddata "up 0 ../bin/SOC.bin up 0x400000 ../bin/kernel.elf" -file ../bin/flash.bin
 
 set_property PROGRAM.ADDRESS_RANGE  {use_file} [ get_property PROGRAM.HW_CFGMEM [lindex [get_hw_devices xc7a100t_0] 0]]
 set_property PROGRAM.FILES [list "../bin/flash.bin" ] [ get_property PROGRAM.HW_CFGMEM [lindex [get_hw_devices xc7a100t_0] 0]]

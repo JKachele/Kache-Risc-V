@@ -8,6 +8,38 @@
 
 #include "../user.h"
 
+uint64_t rdcycle() {
+        uint32_t low;
+        uint32_t high;
+
+        __asm__ volatile (
+                "L%=:\n\t"
+                "rdcycleh %0\n\t"
+                "rdcycle  %1\n\t"
+                "rdcycleh t0\n\t"
+                "bne %0, t0, L%=\n"
+                : "=r"(high), "=r"(low)
+        );
+
+        return ((uint64_t)high << 32) | low;
+}
+
+uint64_t rdinstret() {
+        uint32_t low;
+        uint32_t high;
+
+        __asm__ volatile (
+                "L%=:\n\t"
+                "rdinstreth %0\n\t"
+                "rdinstret  %1\n\t"
+                "rdinstreth t0\n\t"
+                "bne %0, t0, L%=\n"
+                : "=r"(high), "=r"(low)
+        );
+
+        return ((uint64_t)high << 32) | low;
+}
+
 int main(void) {
         printf("Welcome to the Kache-Risc-V Shell!\n");
 
@@ -34,6 +66,12 @@ prompt:
 
                 if (strcmp(cmdline, "hello") == 0) {
                         printf("Hello world from shell!\n");
+                } else if (strcmp(cmdline, "cycles") == 0) {
+                        uint64_t cycles = rdcycle();
+                        printf("Cycles: %llu\n", cycles);
+                } else if (strcmp(cmdline, "instret") == 0) {
+                        uint64_t instret = rdinstret();
+                        printf("Instret: %llu\n", instret);
                 } else if (strcmp(cmdline, "exit") == 0) {
                         printf("Exiting shell...\n");
                         exit();

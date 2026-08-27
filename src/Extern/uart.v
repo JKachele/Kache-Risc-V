@@ -7,7 +7,7 @@
  ************************************************/
 
 module uart #(
-        parameter [23:0]   ClkPerBaud
+        parameter [23:0]   ClkPerBaud = 24'h000003
 )(
         input  wire        clk_i,
         input  wire        reset_i,

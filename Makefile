@@ -50,7 +50,8 @@ LDSCRIPT = firmware/OS/kernel.ld
 # LDSCRIPT = firmware/Tests/ram.ld
 
 # Application
-SRCAPP := $(shell find firmware/OS/apps/ -type f -name '*.c' -o -name '*.S')
+SRCAPP := $(wildcard firmware/OS/apps/raystones/*.c)
+SRCAPP += $(wildcard firmware/OS/apps/*.c) $(wildcard firmware/OS/apps/*.S)
 SRCAPP += $(shell find firmware/OS/kernel/libs/ -type f -name '*.c' -o -name '*.S')
 OBJAPP := $(SRCAPP:%=$(BUILD_DIR)/%.o)
 LDSCRIPTAPP = firmware/OS/apps/user.ld
@@ -150,14 +151,14 @@ lint: clean $(BRAM)
 	cd tcl; vivado -mode batch -nolog -nojournal \
 		-source lint.tcl -tclargs $(VSRC) | tee lint.log
 
-build: clean $(BRAM) $(FIRMWARE)
+build: clean $(BRAM) $(KERNEL)
 	cd tcl; vivado -mode batch -nolog -nojournal \
 		-source build.tcl -tclargs $(VSRC) | tee build.log
 
 upload:
 	cd tcl; vivado -mode tcl -nolog -nojournal -source upload.tcl | tee upload.log
 
-store: $(FIRMWARE)
+store: $(BRAM) $(KERNEL)
 	cd tcl; vivado -mode tcl -nolog -nojournal -source store.tcl | tee store.log
 
 clean:
