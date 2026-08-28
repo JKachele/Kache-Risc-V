@@ -61,6 +61,7 @@ reg [31:0] CSR_fcsr = 0;    // 0x001 - 0x003 (fflags, frm, fcsr)
 // Machine Mode CSRs
 reg [31:0] CSR_mstatus  = 0;
 reg [31:0] CSR_mstatush = 0;
+reg [31:0] CSR_misa     = {2'b01, 4'b0, 26'b00000101000001000100101101}; // RV32G
 reg [63:0] CSR_medeleg  = 0;
 reg [31:0] CSR_mideleg  = 0;
 reg [31:0] CSR_mie      = 0;
@@ -110,6 +111,7 @@ localparam FCSR_MASK     = 32'h000000FF;
 
 localparam MSTATUS_ID    = 12'h300;
 localparam MSTATUSH_ID   = 12'h310;
+localparam MISA_ID       = 12'h301;
 localparam MEDELEG_ID    = 12'h302;
 localparam MEDELEGH_ID   = 12'h312;
 localparam MIDELEG_ID    = 12'h303;
@@ -141,39 +143,40 @@ always @(*) begin
         rData = 32'b0;
 
         case (csrRAddr_i)
-                CYCLE_ID:     rData = CSR_cycle[31:0];
-                CYCLEH_ID:    rData = CSR_cycle[63:32];
-                TIME_ID:      rData = CSR_time[31:0];
-                TIMEH_ID:     rData = CSR_time[63:32];
-                INSTRET_ID:   rData = CSR_instret[31:0];
-                INSTRETH_ID:  rData = CSR_instret[63:32];
-                FFLAGS_ID:    rData = {27'b0, csrWData_i[4:0]};
-                FRM_ID:       rData = {29'b0, csrWData_i[7:5]};
-                FCSR_ID:      rData = {24'b0, csrWData_i[7:0]};
+                CYCLE_ID:      rData = CSR_cycle[31:0];
+                CYCLEH_ID:     rData = CSR_cycle[63:32];
+                TIME_ID:       rData = CSR_time[31:0];
+                TIMEH_ID:      rData = CSR_time[63:32];
+                INSTRET_ID:    rData = CSR_instret[31:0];
+                INSTRETH_ID:   rData = CSR_instret[63:32];
+                FFLAGS_ID:     rData = {27'b0, csrWData_i[4:0]};
+                FRM_ID:        rData = {29'b0, csrWData_i[7:5]};
+                FCSR_ID:       rData = {24'b0, csrWData_i[7:0]};
 
-                MSTATUS_ID:   rData = CSR_mstatus  & MSTATUS_MASK;
-                MSTATUSH_ID:  rData = CSR_mstatush & MSTATUSH_MASK;
-                MEDELEG_ID:   rData = CSR_medeleg[31:0];
-                MEDELEGH_ID:  rData = CSR_medeleg[63:32];
-                MIDELEG_ID:   rData = CSR_mideleg;
-                MIE_ID:       rData = CSR_mie;
-                MTVEC_ID:     rData = CSR_mtvec;
-                MSCRATCH_ID:  rData = CSR_mscratch;
-                MEPC_ID:      rData = CSR_mepc;
-                MCAUSE_ID:    rData = CSR_mcause;
-                MIP_ID:       rData = CSR_mip;
+                MSTATUS_ID:    rData = CSR_mstatus  & MSTATUS_MASK;
+                MSTATUSH_ID:   rData = CSR_mstatush & MSTATUSH_MASK;
+                MISA_ID:       rData = CSR_misa;
+                MEDELEG_ID:    rData = CSR_medeleg[31:0];
+                MEDELEGH_ID:   rData = CSR_medeleg[63:32];
+                MIDELEG_ID:    rData = CSR_mideleg;
+                MIE_ID:        rData = CSR_mie;
+                MTVEC_ID:      rData = CSR_mtvec;
+                MSCRATCH_ID:   rData = CSR_mscratch;
+                MEPC_ID:       rData = CSR_mepc;
+                MCAUSE_ID:     rData = CSR_mcause;
+                MIP_ID:        rData = CSR_mip;
 
-                SSTATUS_ID:   rData = CSR_mstatus & SSTATUS_MASK;
-                SIE_ID:       rData = CSR_mie & SIRQ_MASK;
-                STVEC_ID:     rData = CSR_stvec;
-                SSCRATCH_ID:  rData = CSR_sscratch;
-                SEPC_ID:      rData = CSR_sepc;
-                SCAUSE_ID:    rData = CSR_scause;
-                SIP_ID:       rData = CSR_mip & SIRQ_MASK;
-                STIMECMP_ID:  rData = CSR_stimecmp[31:0];
-                STIMECMPH_ID: rData = CSR_stimecmp[63:32];
-                SATP_ID:      rData = CSR_satp;
-                default:      rData = 32'b0;
+                SSTATUS_ID:    rData = CSR_mstatus & SSTATUS_MASK;
+                SIE_ID:        rData = CSR_mie & SIRQ_MASK;
+                STVEC_ID:      rData = CSR_stvec;
+                SSCRATCH_ID:   rData = CSR_sscratch;
+                SEPC_ID:       rData = CSR_sepc;
+                SCAUSE_ID:     rData = CSR_scause;
+                SIP_ID:        rData = CSR_mip & SIRQ_MASK;
+                STIMECMP_ID:   rData = CSR_stimecmp[31:0];
+                STIMECMPH_ID:  rData = CSR_stimecmp[63:32];
+                SATP_ID:       rData = CSR_satp;
+                default:       rData = 32'b0;
         endcase
 end
 assign csrRData_o   = rData;
@@ -197,6 +200,7 @@ always @(posedge clk_i) begin
                 CSR_fcsr           <= 32'b0;
                 CSR_mstatus        <= 32'b0;
                 CSR_mstatush       <= 32'b0;
+                CSR_misa           <= 32'h4014112D; // RV32G
                 CSR_medeleg        <= 64'b0;
                 CSR_mideleg        <= 32'b0;
                 CSR_mie            <= 32'b0;
@@ -231,6 +235,7 @@ always @(posedge clk_i) begin
 
                         MSTATUS_ID:   CSR_mstatus  <= csrWData_i & MSTATUS_MASK;
                         MSTATUSH_ID:  CSR_mstatush <= csrWData_i & MSTATUSH_MASK;
+                        MISA_ID:      CSR_misa     <= csrWData_i;
                         MEDELEG_ID:   CSR_medeleg  <= {CSR_medeleg[63:32], csrWData_i};
                         MEDELEGH_ID:  CSR_medeleg  <= {csrWData_i, CSR_medeleg[31:0]};
                         MIDELEG_ID:   CSR_mideleg  <= csrWData_i;

@@ -227,7 +227,7 @@ int main(int argc, char **argv) {
         if ((uart->create_socket(uartPort)) < 0) return -1;
 
         bool traceEnabled = false;
-        IData traceStart = 0x00000010;
+        IData traceStart = 0x70000030;
 
         tb->m_core->RXD = 1;
         tb->reset();

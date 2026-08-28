@@ -27,6 +27,7 @@ class UARTSIM {
         std::thread recv_thread;
 
         void recv_tcp_data();
+        void sendchar(const unsigned char c);
         void uartRxd(const unsigned char rxd);
         unsigned char uartTxd();
 public:

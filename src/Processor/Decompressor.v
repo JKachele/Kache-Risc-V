@@ -10,6 +10,7 @@ module Decompressor (
         input  wire [31:0] compressed_i,
         output wire [31:0] decompressed_o
 );
+/*verilator tracing_off*/
 
 wire [15:0] c = compressed_i[15:0];
 reg  [31:0] dcmp;

@@ -13,17 +13,23 @@ End goal is to run Linux or a custom OS
     - (D) Double-Precision floating point support
     - (C) Compressed instruction support
     - (Zicsr) Control and Status Register support
-- Partial Machine Level ISA
-    - Supports ecall exceptions and privilaged instructions
-- Uses FPGA Block Memory programed during synthesys
+- Full Supervisor/User Level ISA
+    - Sv32 Virtual-Memory System
+- 16Kb L1 Instruction Cache
+    - 4-way Set Associative
+    - Read Only
+    - Virtually Indexed Physically Tagged
+- 16Kb L1 Data Cache
+    - 4-way Set Associative
+    - Write back / Write allocate
+    - Physically Indexed Physically Tagged
+- Uses FPGA Block Memory programed during synthesys for BIOS and Bootloader
+- SPI Flash stores Kernel and user programs
 - UART for I/O
 
 #### Planed Features
-- Full Machine and Supervisor Mode ISA support
 - Add support for DDR3 memory on the Arty-A7
-- Cached memory
-- External storage (SPI Flash / Micro SD) for loading programs
-- Virtual memory / MMU
+- External storage (Micro SD) for loading programs
 
 #### Other Potential Feautres
 - Multicore Support

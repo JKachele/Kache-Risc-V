@@ -21,6 +21,7 @@ module FPU (
         output wire        busy_o,
         output wire [63:0] fpuOut_o
 );
+/*verilator tracing_off*/
 `ifdef BENCH
         `include "src/Processor/FPU/FClassFlags.vh"
 `else

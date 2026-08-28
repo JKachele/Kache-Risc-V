@@ -123,6 +123,13 @@ void UARTSIM::close_socket() {
         recv_thread.join();
 }
 
+void UARTSIM::sendchar(const unsigned char c) {
+        if (send(client_socket, &c, 1, 0) < 0) {
+                std::cerr << "Error sending data to client\n";
+                exit(1);
+        }
+}
+
 void UARTSIM::uartRxd(const unsigned char rxd) {
         static bool isReceiving = false;
         static unsigned int  baud_counter = 0;
@@ -146,11 +153,11 @@ void UARTSIM::uartRxd(const unsigned char rxd) {
                                 // Send crlf to client for newline characters
                                 if (rx_data == '\n' || rx_data == '\r') {
                                         rx_data = '\r';
-                                        send(client_socket, &rx_data, 1, 0);
+                                        sendchar(rx_data);
                                         rx_data = '\n';
-                                        send(client_socket, &rx_data, 1, 0);
+                                        sendchar(rx_data);
                                 } else {
-                                        send(client_socket, &rx_data, 1, 0);
+                                        sendchar(rx_data);
                                 }
                                 isReceiving = false;
                         } else {

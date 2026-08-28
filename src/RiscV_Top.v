@@ -174,7 +174,8 @@ MMU mmu(
 ICache icache(
         .clk_i(clk_i),
         .reset_i(reset_i),
-        .addr_i(immu_paddr[31:0]),
+        .index_offset_i(IC_addr[11:0]),
+        .tag_i(immu_paddr[31:12]),
         .rden_i(IC_strb),
         .mmu_valid_i(immu_valid),
         .mmu_fault_i(page_fault[0]),

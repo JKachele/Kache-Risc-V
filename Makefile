@@ -38,19 +38,8 @@ BIN_DIR := bin
 BIN_DUMP_DIR := bin/dump
 BUILD_DIR := build
 
-# Firmware
-SRC := $(wildcard firmware/OS/*.c)     $(wildcard firmware/OS/*.S)
-SRC += $(wildcard firmware/OS/*/*.c)   $(wildcard firmware/OS/*/*.S) 
-SRC += $(wildcard firmware/OS/*/*/*.c) $(wildcard firmware/OS/*/*/*.S) 
-OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
-LDSCRIPT = firmware/OS/kernel.ld
-# SRC := firmware/Tests/startPipeline.S firmware/Tests/raystones.c
-# SRC += $(wildcard firmware/Tests/libs/*.S) $(wildcard firmware/Tests/libs/*.c) 
-# OBJ := $(SRC:%=$(BUILD_DIR)/%.o)
-# LDSCRIPT = firmware/Tests/ram.ld
-
 # Application
-SRCAPP := $(wildcard firmware/OS/apps/raystones/*.c)
+SRCAPP := $(wildcard firmware/OS/apps/Shell/*.c)
 SRCAPP += $(wildcard firmware/OS/apps/*.c) $(wildcard firmware/OS/apps/*.S)
 SRCAPP += $(shell find firmware/OS/kernel/libs/ -type f -name '*.c' -o -name '*.S')
 OBJAPP := $(SRCAPP:%=$(BUILD_DIR)/%.o)
@@ -66,7 +55,6 @@ SRCBIOS := $(shell find firmware/OS/BIOS/ -type f -name '*.c' -o -name '*.S')
 OBJBIOS := $(SRCBIOS:%=$(BUILD_DIR)/%.o)
 LDSCRIPTBIOS = firmware/OS/BIOS/bios.ld
 
-FIRMWARE := $(BIN_DIR)/firmware.elf
 APP      := $(BIN_DIR)/app.elf
 APPBIN   := $(BIN_DIR)/app.bin
 KERNEL   := $(BIN_DIR)/kernel.elf
@@ -113,13 +101,6 @@ $(APP): $(OBJAPP) $(LDSCRIPTAPP) Makefile
 	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DUMP_DIR)/objdumpApp.txt
 	readelf -a $@ > $(BIN_DUMP_DIR)/readelfApp.txt
 
-$(FIRMWARE): $(OBJ) $(LDSCRIPT) Makefile
-	@mkdir -p $(dir $@)
-	@mkdir -p $(BIN_DUMP_DIR)
-	$(LD) -T $(LDSCRIPT) $(OBJ) -o $@ $(LDFLAGS)
-	$(OBJDUMP) $(ODFLAGS) $@ > $(BIN_DUMP_DIR)/objdumpFW.txt
-	readelf -a $@ > $(BIN_DUMP_DIR)/readelfFW.txt
-
 $(BUILD_DIR)/%.S.o: %.S
 	@mkdir -p $(dir $@)
 	$(CC) -o $@ -c $< $(CFLAGS)
@@ -132,7 +113,7 @@ sim: $(BRAM) $(KERNEL)
 	rm -rf ./obj_dir
 	$(TB) $(TBFLAGS) $(TBSRC) $(VSRC)
 	cd obj_dir; make -f V$(TOP).mk
-	cd obj_dir; ./V$(TOP) | tee ../$(BIN_DIR)/sim.log &
+	cd obj_dir; ./V$(TOP) | tee ../$(BIN_DIR)/sim.log & echo "PID: $$!"
 	@sleep 1 # Wait for TCP Socket to be ready
 	@socat -,rawer TCP4:localhost:54000,connect-timeout=5
 
@@ -140,9 +121,10 @@ simt: $(BRAM) $(KERNEL)
 	rm -rf ./obj_dir
 	$(TB) $(TBFLAGS) -CFLAGS -DTRACE $(TBSRC) $(VSRC)
 	cd obj_dir; make -f V$(TOP).mk
-	cd obj_dir; ./V$(TOP) | tee ../$(BIN_DIR)/sim.log &
+	cd obj_dir; ./V$(TOP) | tee ../$(BIN_DIR)/sim.log & echo "PID: $$!"
 	@sleep 1
-	@socat - TCP4:localhost:54000,connect-timeout=5
+	@socat -,rawer TCP4:localhost:54000,connect-timeout=5
+	vcd2fst obj_dir/trace.vcd obj_dir/trace.fst
 
 $(BIN_DIR):
 	mkdir -p $@

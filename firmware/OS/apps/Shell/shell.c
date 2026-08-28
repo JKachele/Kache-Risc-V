@@ -50,15 +50,23 @@ prompt:
                 char cmdline[128];
                 for (int i = 0;; i++) {
                         char c = getchar();
+
+                        if (c == 0x7f) {
+                                if (i > 0) {
+                                        i -= 2;
+                                        printf("\b \b"); // Erase last character
+                                }
+                                continue;
+                        } else if (c == '\r' || c == '\n') {
+                                cmdline[i] = '\0';
+                                printf("\r\n");
+                                break;
+                        }
                         putchar(c); // Echo input
 
                         if (i == (sizeof(cmdline) - 1)) {
                                 printf("\nError: command too long\n");
                                 goto prompt;
-                        } else if (c == '\r' || c == '\n') {
-                                cmdline[i] = '\0';
-                                printf("\n");
-                                break;
                         } else {
                                 cmdline[i] = c;
                         }

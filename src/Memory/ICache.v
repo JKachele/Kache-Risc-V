@@ -10,7 +10,8 @@ module ICache (
         input  wire         clk_i,
         input  wire         reset_i,
 
-        input  wire [31:0]  addr_i,
+        input  wire [11:0]  index_offset_i,
+        input  wire [19:0]  tag_i,
         input  wire         rden_i,
         input  wire         mmu_valid_i,
         input  wire         mmu_fault_i,
@@ -25,27 +26,26 @@ module ICache (
         input  wire         mValid_i
 );
 /*****************************************************************
- * 2-Way Set Associative Read-Only Cache
- * LRU Replacement Policy
- * 32KB: 32-byte line size, 2 Ways, 512 Sets
+ * 4-Way Set Associative Read-Only Cache
+ * Pseudo LRU Replacement Policy
+ * 16KB: 32-byte line size, 4 Ways, 128 Sets
  * Address Mapping:
- * 31       14 13 12 11 10 09 08 07 06 05 04 03 02 01 00
- * *---------* *-----------------------*  *-----------*
- *     Tag              Index                Offset
+ * 31       12 11 10 09 08 07 06 05 04 03 02 01 00
+ * *---------* *-----------------*  *-----------*
+ *     Tag           Index             Offset
  *
  *****************************************************************/
-localparam NSETS        = 512;
-localparam TAG_WIDTH    = 18;
-localparam INDEX_WIDTH  = 9;
+localparam NSETS        = 128;
+localparam TAG_WIDTH    = 20;
+localparam INDEX_WIDTH  = 7;
 localparam OFFSET_WIDTH = 5;
 
-`define IC_TAG 31:14
-`define IC_INDEX 13:5
+`define IC_TAG 31:12
+`define IC_INDEX 11:5
 `define IC_OFFSET 4:0
 
-wire [17:0] tag    = addr_i[`IC_TAG];
-wire [8:0]  index  = addr_i[`IC_INDEX];
-wire [4:0]  offset = addr_i[`IC_OFFSET];
+wire [6:0]  index  = index_offset_i[`IC_INDEX];
+wire [4:0]  offset = index_offset_i[`IC_OFFSET];
 
 // Way 0 cache data
 reg [255:0]         mem0   [0:NSETS-1];
@@ -59,16 +59,42 @@ reg [15:0]          cmp1   [0:NSETS-1];
 reg [TAG_WIDTH-1:0] tag1   [0:NSETS-1];
 reg                 valid1 [0:NSETS-1];
 
-reg                 lru    [0:NSETS-1];
+// Way 2 cache data
+reg [255:0]         mem2   [0:NSETS-1];
+reg [15:0]          cmp2   [0:NSETS-1];
+reg [TAG_WIDTH-1:0] tag2   [0:NSETS-1];
+reg                 valid2 [0:NSETS-1];
+
+// Way 3 cache data
+reg [255:0]         mem3   [0:NSETS-1];
+reg [15:0]          cmp3   [0:NSETS-1];
+reg [TAG_WIDTH-1:0] tag3   [0:NSETS-1];
+reg                 valid3 [0:NSETS-1];
+
+// Pseudo Least Recently Used Replacement
+reg lruTop [0:NSETS-1];
+reg lru0   [0:NSETS-1]; // Ways 0 and 1
+reg lru1   [0:NSETS-1]; // Ways 2 and 3
 
 reg  [4:0]   C_offset  = 5'b0;
-reg          C_dataWay = 1'b0;
+reg  [1:0]   C_dataWay = 2'b0;
 reg  [255:0] C_data0;
 reg  [255:0] C_data1;
-wire [255:0] C_data = C_dataWay ? C_data1 : C_data0;
-wire         C_hit0 = (valid0[index] && (tag0[index] == tag));
-wire         C_hit1 = (valid1[index] && (tag1[index] == tag));
-wire         C_hit  = (C_hit0 | C_hit1);
+reg  [255:0] C_data2;
+reg  [255:0] C_data3;
+wire [255:0] C_data = C_dataWay[1] ?
+                      (C_dataWay[0] ? C_data3 : C_data2):
+                      (C_dataWay[0] ? C_data1 : C_data0);
+wire         C_hit0 = (valid0[index] && (tag0[index] == tag_i));
+wire         C_hit1 = (valid1[index] && (tag1[index] == tag_i));
+wire         C_hit2 = (valid2[index] && (tag2[index] == tag_i));
+wire         C_hit3 = (valid3[index] && (tag3[index] == tag_i));
+wire         C_hit  = (C_hit0 | C_hit1 | C_hit2 | C_hit3);
+
+wire         C_cmp0 = cmp0[index][offset[4:1]];
+wire         C_cmp1 = cmp1[index][offset[4:1]];
+wire         C_cmp2 = cmp2[index][offset[4:1]];
+wire         C_cmp3 = cmp3[index][offset[4:1]];
 
 reg [31:0] C_offsetData;
 always @(*) begin
@@ -94,8 +120,8 @@ end
 
 assign valid_o   = cancel_i | mmu_fault_i | (C_curState == IDLE & C_hit & mmu_valid_i) | ~rden_i;
 assign data_o    = C_offsetData;
-assign cmp_o     = C_hit0 ? cmp0[index][offset[4:1]] : cmp1[index][offset[4:1]];
-assign mAddr_o   = {tag, index, 5'b0};
+assign cmp_o     = C_hit0 ? C_cmp0 : (C_hit1 ? C_cmp1 : (C_hit2 ? C_cmp2 : C_cmp3));
+assign mAddr_o   = {tag_i, index, 5'b0};
 assign mRden_o   = C_curState == IDLE & ~C_hit & rden_i & mmu_valid_i & ~cancel_i;
 
 // When loading data into cache, Check if each 16-bit block could be a compressed instruction
@@ -116,6 +142,8 @@ always @(posedge clk_i) begin
                 for (i = 0; i < NSETS; i = i+1) begin
                         valid0[i] <= 0;
                         valid1[i] <= 0;
+                        valid2[i] <= 0;
+                        valid3[i] <= 0;
                 end
                 C_curState <= IDLE;
         end else begin
@@ -127,16 +155,34 @@ always @(posedge clk_i) begin
                                 // Check Way 0
                                 else if (C_hit0) begin
                                         C_data0 <= mem0[index];
-                                        C_dataWay <= 1'b0;
+                                        C_dataWay <= 2'b00;
                                         C_offset <= offset;
-                                        lru[index] <= 1'b1;
+                                        lruTop[index] <= 1'b0;
+                                        lru0[index]   <= 1'b0;
                                 end
                                 // Check Way 1
                                 else if (C_hit1) begin
                                         C_data1 <= mem1[index];
-                                        C_dataWay <= 1'b1;
+                                        C_dataWay <= 2'b01;
                                         C_offset <= offset;
-                                        lru[index] <= 1'b0;
+                                        lruTop[index] <= 1'b0;
+                                        lru0[index]   <= 1'b1;
+                                end
+                                // Check Way 2
+                                else if (C_hit2) begin
+                                        C_data2 <= mem2[index];
+                                        C_dataWay <= 2'b10;
+                                        C_offset <= offset;
+                                        lruTop[index] <= 1'b1;
+                                        lru1[index]   <= 1'b0;
+                                end
+                                // Check Way 3
+                                else if (C_hit3) begin
+                                        C_data3 <= mem3[index];
+                                        C_dataWay <= 2'b11;
+                                        C_offset <= offset;
+                                        lruTop[index] <= 1'b1;
+                                        lru1[index]   <= 1'b1;
                                 end
                                 // Cache Miss
                                 else begin
@@ -150,28 +196,59 @@ always @(posedge clk_i) begin
                                         if (~valid0[index]) begin
                                                 mem0[index] <= mData_i;
                                                 cmp0[index] <= mCmp;
-                                                tag0[index] <= tag;
+                                                tag0[index] <= tag_i;
                                                 valid0[index] <= 1'b1;
                                         end
                                         else if (~valid1[index]) begin
                                                 mem1[index] <= mData_i;
                                                 cmp1[index] <= mCmp;
-                                                tag1[index] <= tag;
+                                                tag1[index] <= tag_i;
                                                 valid1[index] <= 1'b1;
                                         end
-                                        // Way 0 is Least Recently Used
-                                        else if (lru[index] == 1'b0) begin
-                                                mem0[index] <= mData_i;
-                                                cmp0[index] <= mCmp;
-                                                tag0[index] <= tag;
-                                                valid0[index] <= 1'b1;
+                                        else if (~valid2[index]) begin
+                                                mem2[index] <= mData_i;
+                                                cmp2[index] <= mCmp;
+                                                tag2[index] <= tag_i;
+                                                valid2[index] <= 1'b1;
                                         end
-                                        // Way 1 is Least Recently Used
-                                        else if (lru[index] == 1'b1) begin
-                                                mem1[index] <= mData_i;
-                                                cmp1[index] <= mCmp;
-                                                tag1[index] <= tag;
-                                                valid1[index] <= 1'b1;
+                                        else if (~valid3[index]) begin
+                                                mem3[index] <= mData_i;
+                                                cmp3[index] <= mCmp;
+                                                tag3[index] <= tag_i;
+                                                valid3[index] <= 1'b1;
+                                        end
+                                        // All ways are valid, use LRU replacement policy
+                                        else if (lruTop[index] == 1'b0) begin
+                                                // Way 0 is Least Recently Used
+                                                if (lru0[index] == 1'b0) begin
+                                                        mem0[index] <= mData_i;
+                                                        cmp0[index] <= mCmp;
+                                                        tag0[index] <= tag_i;
+                                                        valid0[index] <= 1'b1;
+                                                end
+                                                // Way 1 is Least Recently Used
+                                                else begin
+                                                        mem1[index] <= mData_i;
+                                                        cmp1[index] <= mCmp;
+                                                        tag1[index] <= tag_i;
+                                                        valid1[index] <= 1'b1;
+                                                end
+                                        end
+                                        else if (lruTop[index] == 1'b1) begin
+                                                // Way 2 is Least Recently Used
+                                                if (lru1[index] == 1'b0) begin
+                                                        mem2[index] <= mData_i;
+                                                        cmp2[index] <= mCmp;
+                                                        tag2[index] <= tag_i;
+                                                        valid2[index] <= 1'b1;
+                                                end
+                                                // Way 3 is Least Recently Used
+                                                else begin
+                                                        mem3[index] <= mData_i;
+                                                        cmp3[index] <= mCmp;
+                                                        tag3[index] <= tag_i;
+                                                        valid3[index] <= 1'b1;
+                                                end
                                         end
                                         C_curState <= IDLE;
                                 end
@@ -187,6 +264,8 @@ initial begin
         for (i = 0; i < NSETS; i = i+1) begin
                 valid0[i] = 0;
                 valid1[i] = 0;
+                valid2[i] = 0;
+                valid3[i] = 0;
         end
 end
 
