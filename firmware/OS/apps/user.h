@@ -10,6 +10,7 @@
 
 #include "../kernel/common.h"
 #include "../kernel/libs/printf.h"
+#include "../kernel/libs/string.h"
 
 __attribute__((noreturn)) void exit(void);
 void putchar(char c);

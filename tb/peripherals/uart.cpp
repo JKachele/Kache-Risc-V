@@ -18,6 +18,7 @@ UARTSIM::UARTSIM(const unsigned int clksPerBaud) {
         bauds = clksPerBaud;
         tx_data_wPtr = 0;
         tx_data_rPtr = 0;
+        halt = false;
 }
 
 void UARTSIM::recv_tcp_data() {
@@ -44,6 +45,11 @@ void UARTSIM::recv_tcp_data() {
 
                 // Add message to transmit queue
                 for (int i = 0; i < bytesRecv; i++) {
+                        if (buf[i] == 0x1B) {
+                                // std::cout << "Received ESC, halting simulation" << std::endl;
+                                halt = true;
+                                break;
+                        }
                         tx_data[tx_data_wPtr] = buf[i];
                         tx_data_wPtr = (tx_data_wPtr + 1) % sizeof(tx_data);
                 }
@@ -213,6 +219,11 @@ unsigned char UARTSIM::uartTxd() {
 }
 
 unsigned char UARTSIM::operator()(const unsigned char rxd) {
+        if (halt) {
+                std::cerr << "Simulation halted by client\n";
+                close_socket();
+                exit(0);
+        }
         uartRxd(rxd);
         return uartTxd();
 }

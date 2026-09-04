@@ -39,7 +39,7 @@ BIN_DUMP_DIR := bin/dump
 BUILD_DIR := build
 
 # Application
-SRCAPP := $(wildcard firmware/OS/apps/Shell/*.c)
+SRCAPP := $(wildcard firmware/OS/apps/raystones/*.c)
 SRCAPP += $(wildcard firmware/OS/apps/*.c) $(wildcard firmware/OS/apps/*.S)
 SRCAPP += $(shell find firmware/OS/kernel/libs/ -type f -name '*.c' -o -name '*.S')
 OBJAPP := $(SRCAPP:%=$(BUILD_DIR)/%.o)

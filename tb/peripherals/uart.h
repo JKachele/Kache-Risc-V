@@ -30,6 +30,7 @@ class UARTSIM {
         void sendchar(const unsigned char c);
         void uartRxd(const unsigned char rxd);
         unsigned char uartTxd();
+        bool halt;
 public:
         UARTSIM(const unsigned int bauds);
         int create_socket(const unsigned short port);

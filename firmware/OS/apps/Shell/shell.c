@@ -50,26 +50,39 @@ prompt:
                 char cmdline[128];
                 for (int i = 0;; i++) {
                         char c = getchar();
+                        bool cmd_done = false;
 
-                        if (c == 0x7f) {
+                        switch (c) {
+                        case 0x03:
+                                printf("\n");
+                                goto prompt;
+                        case 0x04:
+                                exit();
+                        case 0x7f:
                                 if (i > 0) {
                                         i -= 2;
                                         printf("\b \b"); // Erase last character
                                 }
-                                continue;
-                        } else if (c == '\r' || c == '\n') {
+                                break;
+                        case 0x0D:
+                        case 0x0A:
                                 cmdline[i] = '\0';
                                 printf("\r\n");
+                                cmd_done = true;
+                                break;
+                        default:
+                                putchar(c); // Echo input
+                                if (i == (sizeof(cmdline) - 1)) {
+                                        printf("\nError: command too long\n");
+                                        goto prompt;
+                                } else {
+                                        cmdline[i] = c;
+                                }
                                 break;
                         }
-                        putchar(c); // Echo input
 
-                        if (i == (sizeof(cmdline) - 1)) {
-                                printf("\nError: command too long\n");
-                                goto prompt;
-                        } else {
-                                cmdline[i] = c;
-                        }
+                        if (cmd_done)
+                                break;
                 }
 
                 if (strcmp(cmdline, "hello") == 0) {

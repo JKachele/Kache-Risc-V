@@ -8,6 +8,7 @@
 
 #include "kernel.h"
 #include "libs/printf.h"
+#include "libs/string.h"
 #include "common.h"
 
 extern char __bss[];

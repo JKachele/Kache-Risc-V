@@ -1,12 +1,12 @@
 /*************************************************
- *File----------common.c
- *Project-------Risc-V-FPGA
+ *File----------string.c
+ *Project-------Kache-Risc-V
  *Author--------Justin Kachele
- *Created-------Wednesday Jan 14, 2026 16:48:42 UTC
+ *Created-------Thursday Sep 03, 2026 10:36:39 EDT
  *License-------GNU GPL-3.0
  ************************************************/
 
-#include "common.h"
+#include "string.h"
 
 void *memcpy(void *dst, const void *src, size_t n) {
         volatile uint8_t *d = (uint8_t *) dst;
