@@ -30,14 +30,14 @@ module DCache (
 /*****************************************************************
  * 8-Way Set Associative Read/Write Cache
  * Pseudo-LRU Replacement Policy, Write-Back, Write-Allocate
- * 32KB: 32-byte line size, 8 Ways, 128 Sets
+ * 16KB: 32-byte line size, 4 Ways, 128 Sets
  * Address Mapping:
  * 31       12 11 10 09 08 07 06 05 04 03 02 01 00
  * *---------* *-----------------*  *-----------*
  *     Tag           Index             Offset
  *
  *****************************************************************/
-localparam NWAYS        = 8;
+localparam NWAYS        = 4;
 localparam NSETS        = 128;
 localparam TAG_WIDTH    = 20;
 localparam INDEX_WIDTH  = 7;
@@ -59,19 +59,13 @@ reg                 C_dirty [NWAYS-1:0][0:NSETS-1];
 // Pseudo Least Recently Used Replacement
 reg lru_0      [0:NSETS-1];
 reg lru_1 [1:0][0:NSETS-1];
-reg lru_2 [3:0][0:NSETS-1];
-reg [2:0] C_lru;
+reg [1:0] C_lru;
 always @(*) begin
-        C_lru[2] = lru_0[index];
-        if (lru_0[index]) begin
-                C_lru[1] = lru_1[1][index];
-                if (lru_1[1][index]) C_lru[0] = lru_2[3][index];
-                else                 C_lru[0] = lru_2[2][index];
-        end else begin
-                C_lru[1] = lru_1[0][index];
-                if (lru_1[0][index]) C_lru[0] = lru_2[1][index];
-                else                 C_lru[0] = lru_2[0][index];
-        end
+        C_lru[1] = lru_0[index];
+        if (lru_0[index])
+                C_lru[0] = lru_1[1][index];
+        else
+                C_lru[0] = lru_1[0][index];
 end
 
 /*verilator public_flat_rw_on*/
@@ -98,14 +92,14 @@ always @(*) begin: all_valid_check
         end
 end
 
-reg  [2:0]   C_dataWay = 3'b0;
+reg  [1:0]   C_dataWay = 2'b0;
 reg  [4:0]   C_offset  = 5'b0;
 reg  [255:0] C_data;
 always @(*) begin: data_mux
         integer w;
         C_data = 256'b0;
         for (w = 0; w < NWAYS; w = w + 1) begin
-                if (C_dataWay == w[2:0])
+                if (C_dataWay == w[1:0])
                         C_data = m_rdata[w];
         end
 end
@@ -173,7 +167,7 @@ always @(*) begin: cache_memory_control
                 end else begin
                         if (C_allValid) begin
                                 for (w = 0; w < NWAYS; w = w + 1) begin
-                                        if (C_lru == w[2:0] && C_dirty[w][index])
+                                        if (C_lru == w[1:0] && C_dirty[w][index])
                                                 m_rden[w] = 1'b1;
                                 end
                         end
@@ -189,7 +183,7 @@ localparam MISS_READ  = 2'b10; // Read data from main memory
 reg [1:0] C_curState = IDLE;
 
 reg [6:0] flushSet;
-reg [7:0] flushWay;
+reg [3:0] flushWay;
 reg       flushBusy;
 reg       flushDone;
 
@@ -224,12 +218,12 @@ always @(posedge clk_i) begin: cache_state_machine
                         end
                         else if (flush_i) begin
                                 if (flushDone) begin
-                                        flushSet <= 0;
+                                        flushSet  <= 0;
                                         flushBusy <= 1'b0;
                                 end
                                 else if (~flushBusy) begin
-                                        flushSet <= 7'h7F;
-                                        flushWay <= 8'b00000001;
+                                        flushSet  <= 7'h7F;
+                                        flushWay  <= 4'b0001;
                                         flushBusy <= 1'b1;
                                 end
                                 else begin
@@ -239,15 +233,15 @@ always @(posedge clk_i) begin: cache_state_machine
                                                                 C_mWren <= 8'hFF;
                                                                 C_mAddr <= {C_tag[w][flushSet],
                                                                         flushSet, 5'b0};
-                                                                C_dataWay <= w[2:0];
+                                                                C_dataWay <= w[1:0];
                                                                 C_curState <= MISS_WRITE;
                                                                 C_dirty[w][flushSet] <= 1'b0;
                                                         end
                                                         if (C_valid[w][flushSet])
                                                                 C_valid[w][flushSet] <= 1'b0;
                                                         flushWay <= flushWay << 1;
-                                                        if (flushWay == 8'b10000000) begin
-                                                                flushWay <= 8'b00000001;
+                                                        if (flushWay == 4'b1000) begin
+                                                                flushWay <= 4'b0001;
                                                                 flushSet <= flushSet - 1;
                                                                 if (flushSet == 0)
                                                                         flushDone <= 1'b1;
@@ -262,16 +256,12 @@ always @(posedge clk_i) begin: cache_state_machine
                                                 if (|wren_i)
                                                         C_dirty[w][index] <= 1'b1;
                                                 C_offset <= offset;
-                                                C_dataWay <= w[2:0];
-                                                lru_0[index] <= w[2];
-                                                if (w[2]) begin
-                                                        lru_1[1][index] <= w[1];
-                                                        if (w[1]) lru_2[3][index] <= w[0];
-                                                        else      lru_2[2][index] <= w[0];
+                                                C_dataWay <= w[1:0];
+                                                lru_0[index] <= w[1];
+                                                if (w[1]) begin
+                                                        lru_1[1][index] <= w[0];
                                                 end else begin
-                                                        lru_1[0][index] <= w[1];
-                                                        if (w[1]) lru_2[1][index] <= w[0];
-                                                        else      lru_2[0][index] <= w[0];
+                                                        lru_1[0][index] <= w[0];
                                                 end
                                         end
                                 end
@@ -286,7 +276,7 @@ always @(posedge clk_i) begin: cache_state_machine
                                                 C_tag[w][index] <= tag;
                                                 C_dirty[w][index] <= 1'b0;
                                                 C_valid[w][index] <= 1'b1;
-                                                C_dataWay <= w[2:0];
+                                                C_dataWay <= w[1:0];
                                                 C_curState <= MISS_READ;
                                                 C_mAddr <= {tag, index, 5'b0};
                                                 C_mRden <= 1'b1;
@@ -295,7 +285,7 @@ always @(posedge clk_i) begin: cache_state_machine
                         end
                         else begin
                                 for (w = 0; w < NWAYS; w = w + 1) begin
-                                        if (C_lru == w[2:0]) begin
+                                        if (C_lru == w[1:0]) begin
                                                 if (C_dirty[w][index]) begin
                                                         C_curState <= MISS_WRITE;
                                                         C_mWren <= 8'hFF;
@@ -308,7 +298,7 @@ always @(posedge clk_i) begin: cache_state_machine
                                                 C_tag[w][index] <= tag;
                                                 C_valid[w][index] <= 1'b1;
                                                 C_dirty[w][index] <= 1'b0;
-                                                C_dataWay <= w[2:0];
+                                                C_dataWay <= w[1:0];
                                         end
                                 end
                         end

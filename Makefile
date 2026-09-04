@@ -39,7 +39,7 @@ BIN_DUMP_DIR := bin/dump
 BUILD_DIR := build
 
 # Application
-SRCAPP := $(wildcard firmware/OS/apps/raystones/*.c)
+SRCAPP := $(wildcard firmware/OS/apps/Shell/*.c)
 SRCAPP += $(wildcard firmware/OS/apps/*.c) $(wildcard firmware/OS/apps/*.S)
 SRCAPP += $(shell find firmware/OS/kernel/libs/ -type f -name '*.c' -o -name '*.S')
 OBJAPP := $(SRCAPP:%=$(BUILD_DIR)/%.o)
@@ -113,7 +113,7 @@ sim: $(BRAM) $(KERNEL)
 	rm -rf ./obj_dir
 	$(TB) $(TBFLAGS) $(TBSRC) $(VSRC)
 	cd obj_dir; make -f V$(TOP).mk
-	cd obj_dir; ./V$(TOP) | tee ../$(BIN_DIR)/sim.log & echo "PID: $$!"
+	cd obj_dir; ./V$(TOP) | tee ../$(BIN_DIR)/sim.log &
 	@sleep 1 # Wait for TCP Socket to be ready
 	@socat -,rawer TCP4:localhost:54000,connect-timeout=5
 
@@ -121,7 +121,7 @@ simt: $(BRAM) $(KERNEL)
 	rm -rf ./obj_dir
 	$(TB) $(TBFLAGS) -CFLAGS -DTRACE $(TBSRC) $(VSRC)
 	cd obj_dir; make -f V$(TOP).mk
-	cd obj_dir; ./V$(TOP) | tee ../$(BIN_DIR)/sim.log & echo "PID: $$!"
+	cd obj_dir; ./V$(TOP) | tee ../$(BIN_DIR)/sim.log &
 	@sleep 1
 	@socat -,rawer TCP4:localhost:54000,connect-timeout=5
 	vcd2fst obj_dir/trace.vcd obj_dir/trace.fst
