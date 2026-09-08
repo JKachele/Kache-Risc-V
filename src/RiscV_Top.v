@@ -14,33 +14,7 @@ module RiscV_Top (
         input  wire        timerIRQ_i,
         input  wire [63:0] csrTime_i,
 
-        // AXI4 Memory Interface
-        output wire [31:0]  m_axi_awaddr_o,
-        output wire [ 7:0]  m_axi_awlen_o,
-        output wire [ 3:0]  m_axi_awid_o,
-        output wire         m_axi_awvalid_o,
-        input  wire         m_axi_awready_i,
-        output wire [31:0]  m_axi_wdata_o,
-        output wire [ 3:0]  m_axi_wstrb_o,
-        output wire         m_axi_wlast_o,
-        output wire         m_axi_wvalid_o,
-        input  wire         m_axi_wready_i,
-        input  wire [ 1:0]  m_axi_bresp_i,
-        input  wire [ 3:0]  m_axi_bid_i,
-        input  wire         m_axi_bvalid_i,
-        output wire         m_axi_bready_o,
-
-        output wire [31:0]  m_axi_araddr_o,
-        output wire [ 7:0]  m_axi_arlen_o,
-        output wire [ 3:0]  m_axi_arid_o,
-        output wire         m_axi_arvalid_o,
-        input  wire         m_axi_arready_i,
-        input  wire [31:0]  m_axi_rdata_i,
-        input  wire [ 1:0]  m_axi_rresp_i,
-        input  wire         m_axi_rlast_i,
-        input  wire [ 3:0]  m_axi_rid_i,
-        input  wire         m_axi_rvalid_i,
-        output wire         m_axi_rready_o,
+        // DDR3 Memory Interface
 
         // IO
         output wire [31:0] IO_addr_o,
@@ -234,32 +208,7 @@ Memory mem(
         .DMemWData_i(DC_mWData),
         .DMemWMask_i(DC_mWren),
         .DMemRData_o(DC_mRData),
-        .DMemValidReady_o(DC_mValidReady),
-        .m_axi_awaddr_o(m_axi_awaddr_o),
-        .m_axi_awlen_o(m_axi_awlen_o),
-        .m_axi_awid_o(m_axi_awid_o),
-        .m_axi_awvalid_o(m_axi_awvalid_o),
-        .m_axi_awready_i(m_axi_awready_i),
-        .m_axi_wdata_o(m_axi_wdata_o),
-        .m_axi_wstrb_o(m_axi_wstrb_o),
-        .m_axi_wlast_o(m_axi_wlast_o),
-        .m_axi_wvalid_o(m_axi_wvalid_o),
-        .m_axi_wready_i(m_axi_wready_i),
-        .m_axi_bresp_i(m_axi_bresp_i),
-        .m_axi_bid_i(m_axi_bid_i),
-        .m_axi_bvalid_i(m_axi_bvalid_i),
-        .m_axi_bready_o(m_axi_bready_o),
-        .m_axi_araddr_o(m_axi_araddr_o),
-        .m_axi_arlen_o(m_axi_arlen_o),
-        .m_axi_arid_o(m_axi_arid_o),
-        .m_axi_arvalid_o(m_axi_arvalid_o),
-        .m_axi_arready_i(m_axi_arready_i),
-        .m_axi_rdata_i(m_axi_rdata_i),
-        .m_axi_rresp_i(m_axi_rresp_i),
-        .m_axi_rlast_i(m_axi_rlast_i),
-        .m_axi_rid_i(m_axi_rid_i),
-        .m_axi_rvalid_i(m_axi_rvalid_i),
-        .m_axi_rready_o(m_axi_rready_o)
+        .DMemValidReady_o(DC_mValidReady)
 );
 
 endmodule

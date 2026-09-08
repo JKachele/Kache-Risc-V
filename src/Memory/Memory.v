@@ -21,35 +21,9 @@ module Memory (
         input  wire [255:0] DMemWData_i,
         input  wire [7:0]   DMemWMask_i,
         output wire [255:0] DMemRData_o,
-        output wire         DMemValidReady_o,
+        output wire         DMemValidReady_o
 
-        // AXI4 Interface
-        output reg  [31:0]  m_axi_awaddr_o,
-        output wire [ 7:0]  m_axi_awlen_o,
-        output wire [ 3:0]  m_axi_awid_o,
-        output reg          m_axi_awvalid_o,
-        input  wire         m_axi_awready_i,
-        output reg  [31:0]  m_axi_wdata_o,
-        output reg  [ 3:0]  m_axi_wstrb_o,
-        output reg          m_axi_wlast_o,
-        output reg          m_axi_wvalid_o,
-        input  wire         m_axi_wready_i,
-        input  wire [ 1:0]  m_axi_bresp_i,
-        input  wire [ 3:0]  m_axi_bid_i,
-        input  wire         m_axi_bvalid_i,
-        output wire         m_axi_bready_o,
-
-        output reg  [31:0]  m_axi_araddr_o,
-        output wire [ 7:0]  m_axi_arlen_o,
-        output wire [ 3:0]  m_axi_arid_o,
-        output reg          m_axi_arvalid_o,
-        input  wire         m_axi_arready_i,
-        input  wire [31:0]  m_axi_rdata_i,
-        input  wire [ 1:0]  m_axi_rresp_i,
-        input  wire         m_axi_rlast_i,
-        input  wire [ 3:0]  m_axi_rid_i,
-        input  wire         m_axi_rvalid_i,
-        output reg          m_axi_rready_o
+        // DDR3 MIG Interface
 );
 
 reg  [31:0]  DMemAddr;
