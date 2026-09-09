@@ -57,38 +57,38 @@ wire         ui_reset;
 wire         init_calib_complete;
 wire [11:0]  mig_device_temp;
 /*-------------------------------- Clock Domain Crosser --------------------------------*/
-// SOC -> MIG FIFO
-// {addr, wdata, wmask, wr}
-fifo_gen_0 fifo_in (
-        .rst(reset_i),
-        .wr_clk(clk25_i),
-        .rd_clk(ui_clk),
-        .din({mem_addr, mem_wdata, mem_wmask, mem_wr}),
-        .wr_en(mem_rd | mem_wr),
-        .rd_en(),
-        .dout(),
-        .full(),
-        .empty()
-);
-reg [296:0] fifo_in [0:15];
-reg  [3:0] fifo_in_wrptr_bin;
-reg  [3:0] fifo_in_rdptr_bin;
-wire [3:0] fifo_in_wrptr_gray = bin_to_gray(fifo_in_wrptr_bin);
-wire [3:0] fifo_in_rdptr_gray = bin_to_gray(fifo_in_rdptr_bin);
-wire fifo_in_empty = (fifo_in_wrptr_gray == fifo_in_rdptr_gray);
-
-// MIG -> SOC FIFO
-// {rdata, rdy}
-reg [256:0] fifo_out [0:15];
-reg  [3:0] fifo_out_wrptr_bin;
-reg  [3:0] fifo_out_rdptr_bin;
-wire [3:0] fifo_out_wrptr_gray = bin_to_gray(fifo_out_wrptr_bin);
-wire [3:0] fifo_out_rdptr_gray = bin_to_gray(fifo_out_rdptr_bin);
-wire fifo_out_empty = (fifo_out_wrptr_gray == fifo_out_rdptr_gray);
-
-// SOC CLock Domain
-always @(posedge clk25_i) begin
-end
+// // SOC -> MIG FIFO
+// // {addr, wdata, wmask, wr}
+// fifo_gen_0 fifo_in (
+//         .rst(reset_i),
+//         .wr_clk(clk25_i),
+//         .rd_clk(ui_clk),
+//         .din({mem_addr, mem_wdata, mem_wmask, mem_wr}),
+//         .wr_en(mem_rd | mem_wr),
+//         .rd_en(),
+//         .dout(),
+//         .full(),
+//         .empty()
+// );
+// reg [296:0] fifo_in [0:15];
+// reg  [3:0] fifo_in_wrptr_bin;
+// reg  [3:0] fifo_in_rdptr_bin;
+// wire [3:0] fifo_in_wrptr_gray = bin_to_gray(fifo_in_wrptr_bin);
+// wire [3:0] fifo_in_rdptr_gray = bin_to_gray(fifo_in_rdptr_bin);
+// wire fifo_in_empty = (fifo_in_wrptr_gray == fifo_in_rdptr_gray);
+// 
+// // MIG -> SOC FIFO
+// // {rdata, rdy}
+// reg [256:0] fifo_out [0:15];
+// reg  [3:0] fifo_out_wrptr_bin;
+// reg  [3:0] fifo_out_rdptr_bin;
+// wire [3:0] fifo_out_wrptr_gray = bin_to_gray(fifo_out_wrptr_bin);
+// wire [3:0] fifo_out_rdptr_gray = bin_to_gray(fifo_out_rdptr_bin);
+// wire fifo_out_empty = (fifo_out_wrptr_gray == fifo_out_rdptr_gray);
+// 
+// // SOC CLock Domain
+// always @(posedge clk25_i) begin
+// end
 
 /*-------------------------------- DDR3 MIG --------------------------------*/
 mig_7series_0 mig (

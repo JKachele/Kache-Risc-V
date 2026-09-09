@@ -72,13 +72,13 @@ PLLE2_ADV #(
         .COMPENSATION         ("ZHOLD"),
         .STARTUP_WAIT         ("FALSE"),
         .DIVCLK_DIVIDE        (1),
-        .CLKFBOUT_MULT        (2),
+        .CLKFBOUT_MULT        (10),
         .CLKFBOUT_PHASE       (0.000),
 
-        .CLKOUT0_DIVIDE       (2),  // 100 MHZ
-        .CLKOUT1_DIVIDE       (1),  // 200 MHZ
-        .CLKOUT2_DIVIDE       (8),  // 25 MHZ
-        .CLKOUT3_DIVIDE       (32), // 6.25 MHZ
+        .CLKOUT0_DIVIDE       (10),  // 100 MHZ
+        .CLKOUT1_DIVIDE       (5),  // 200 MHZ
+        .CLKOUT2_DIVIDE       (60),  // 25 MHZ
+        .CLKOUT3_DIVIDE       (80), // 6.25 MHZ
 
         .CLKOUT0_PHASE        (0.000),
         .CLKOUT1_PHASE        (0.000),
